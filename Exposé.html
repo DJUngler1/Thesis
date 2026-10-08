@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de"><head>
 
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.10.19">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Norah Jones">
-<meta name="dcterms.date" content="2021-05-22">
+<meta name="author" content="Felix Krauß">
 
-<title>Quarto Basics</title>
+<title>Exposé zur Bachelorthesis</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -28,45 +27,11 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for syntax highlighting */
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-  { counter-reset: source-line 0; }
-pre.numberSource code > span
-  { position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-  { content: counter(source-line);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-  }
-pre.numberSource { margin-left: 3em;  padding-left: 4px; }
-div.sourceCode
-  {   }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
 /* CSS for citations */
 div.csl-bib-body { }
 div.csl-entry {
   clear: both;
+  margin-bottom: 0em;
 }
 .hanging-indent div.csl-entry {
   margin-left:2em;
@@ -85,61 +50,18 @@ div.csl-indent {
 }</style>
 
 
-<script src="authoring_files/libs/clipboard/clipboard.min.js"></script>
-<script src="authoring_files/libs/quarto-html/quarto.js" type="module"></script>
-<script src="authoring_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="authoring_files/libs/quarto-html/popper.min.js"></script>
-<script src="authoring_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="authoring_files/libs/quarto-html/anchor.min.js"></script>
-<link href="authoring_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="authoring_files/libs/quarto-html/quarto-syntax-highlighting-dark-3f418c0a1af92b3d03a8c930c3125fbd.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="authoring_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="authoring_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="authoring_files/libs/bootstrap/bootstrap-b79653fcac44100a46fb961f730fd03c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+<script src="Exposé_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Exposé_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="Exposé_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="Exposé_files/libs/quarto-html/popper.min.js"></script>
+<script src="Exposé_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Exposé_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Exposé_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Exposé_files/libs/quarto-html/quarto-syntax-highlighting-dark-3f418c0a1af92b3d03a8c930c3125fbd.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Exposé_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Exposé_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Exposé_files/libs/bootstrap/bootstrap-b79653fcac44100a46fb961f730fd03c.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
 
-  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
-  <script>document.addEventListener("DOMContentLoaded", function () {
- var mathElements = document.getElementsByClassName("math");
- var macros = [];
- for (var i = 0; i < mathElements.length; i++) {
-  var texText = mathElements[i].firstChild;
-  if (mathElements[i].tagName == "SPAN") {
-   katex.render(texText.data, mathElements[i], {
-    displayMode: mathElements[i].classList.contains('display'),
-    throwOnError: false,
-    macros: macros,
-    fleqn: false
-   });
-}}});
-  </script>
-  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
-
-<script type="text/javascript">
-const typesetMath = (el) => {
-  if (window.MathJax) {
-    // MathJax Typeset
-    window.MathJax.typeset([el]);
-  } else if (window.katex) {
-    // KaTeX Render
-    var mathElements = el.getElementsByClassName("math");
-    var macros = [];
-    for (var i = 0; i < mathElements.length; i++) {
-      var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
-        window.katex.render(texText.data, mathElements[i], {
-          displayMode: mathElements[i].classList.contains('display'),
-          throwOnError: false,
-          macros: macros,
-          fleqn: false
-        });
-      }
-    }
-  }
-}
-window.Quarto = {
-  typesetMath
-};
-</script>
 
 </head>
 
@@ -148,26 +70,21 @@ window.Quarto = {
 <div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
 <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
   <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">Table of contents</h2>
+    <h2 id="toc-title">Inhaltsverzeichnis</h2>
    
   <ul>
-  <li><a href="#colors" id="toc-colors" class="nav-link active" data-scroll-target="#colors"><span class="header-section-number">1</span> Colors</a></li>
-  <li><a href="#shapes" id="toc-shapes" class="nav-link" data-scroll-target="#shapes"><span class="header-section-number">2</span> Shapes</a></li>
-  <li><a href="#textures" id="toc-textures" class="nav-link" data-scroll-target="#textures"><span class="header-section-number">3</span> Textures</a></li>
-  <li><a href="#latexx-injection" id="toc-latexx-injection" class="nav-link" data-scroll-target="#latexx-injection"><span class="header-section-number">4</span> LaTexX injection</a></li>
-  <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview"><span class="header-section-number">5</span> Overview</a></li>
-  <li><a href="#overview-the-second" id="toc-overview-the-second" class="nav-link" data-scroll-target="#overview-the-second"><span class="header-section-number">6</span> Overview the second</a></li>
-  <li><a href="#sec-plot" id="toc-sec-plot" class="nav-link" data-scroll-target="#sec-plot"><span class="header-section-number">7</span> Plot</a></li>
-  <li><a href="#sec-equation" id="toc-sec-equation" class="nav-link" data-scroll-target="#sec-equation"><span class="header-section-number">8</span> Equation</a></li>
-  <li><a href="#placing-colorbars" id="toc-placing-colorbars" class="nav-link" data-scroll-target="#placing-colorbars"><span class="header-section-number">9</span> Placing Colorbars</a></li>
+  <li><a href="#zielsetzung-der-arbeit" id="toc-zielsetzung-der-arbeit" class="nav-link active" data-scroll-target="#zielsetzung-der-arbeit"><span class="header-section-number">1</span> Zielsetzung der Arbeit</a></li>
+  <li><a href="#aktueller-stand-der-forschung" id="toc-aktueller-stand-der-forschung" class="nav-link" data-scroll-target="#aktueller-stand-der-forschung"><span class="header-section-number">2</span> Aktueller Stand der Forschung</a></li>
+  <li><a href="#vorläufige-gliederung" id="toc-vorläufige-gliederung" class="nav-link" data-scroll-target="#vorläufige-gliederung"><span class="header-section-number">3</span> Vorläufige Gliederung</a></li>
   </ul>
-<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="authoring.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li><li><a href="authoring.docx"><i class="bi bi-file-word"></i>MS Word</a></li></ul></div></nav>
+<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="Exposé.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li><li><a href="Exposé.docx"><i class="bi bi-file-word"></i>MS Word</a></li></ul></div></nav>
 </div>
-<main class="content page-columns page-full" id="quarto-document-content">
+<main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Quarto Basics</h1>
+<h1 class="title">Exposé zur Bachelorthesis</h1>
+<p class="subtitle lead">{Arbeitstitel}</p>
 </div>
 
 
@@ -175,16 +92,16 @@ window.Quarto = {
 <div class="quarto-title-meta">
 
     <div>
-    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-heading">Autor:in</div>
     <div class="quarto-title-meta-contents">
-             <p>Norah Jones </p>
+             <p>Felix Krauß </p>
           </div>
   </div>
     
     <div>
-    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-heading">Veröffentlichungsdatum</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">May 22, 2021</p>
+      <p class="date">8. Oktober 2026</p>
     </div>
   </div>
   
@@ -196,122 +113,25 @@ window.Quarto = {
 </header>
 
 
-<section id="colors" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="colors"><span class="header-section-number">1</span> Colors</h2>
-<ul>
-<li>Red</li>
-<li>Green</li>
-<li>Blue</li>
-</ul>
+<section id="zielsetzung-der-arbeit" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="zielsetzung-der-arbeit"><span class="header-section-number">1</span> Zielsetzung der Arbeit</h2>
+<p>Test Zitat <span class="citation" data-cites="kumarBiggerIsntAlways2026">(<a href="#ref-kumarBiggerIsntAlways2026" role="doc-biblioref">Kumar et al., 2026</a>)</span></p>
 </section>
-<section id="shapes" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="shapes"><span class="header-section-number">2</span> Shapes</h2>
-<ul>
-<li>Square</li>
-<li>Circle</li>
-<li>Triangle</li>
-</ul>
+<section id="aktueller-stand-der-forschung" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="aktueller-stand-der-forschung"><span class="header-section-number">2</span> Aktueller Stand der Forschung</h2>
 </section>
-<section id="textures" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="textures"><span class="header-section-number">3</span> Textures</h2>
-<ul>
-<li>Smooth</li>
-<li>Bumpy</li>
-<li>Fuzzy</li>
-</ul>
-</section>
-<section id="latexx-injection" class="level2" data-number="4">
-<h2 data-number="4" class="anchored" data-anchor-id="latexx-injection"><span class="header-section-number">4</span> LaTexX injection</h2>
-<p>Einstein’s theory of special relatively that expresses the equivalence of mass and energy: <span class="math display">E = mc^{2}</span></p>
-</section>
-<section id="overview" class="level2" data-number="5">
-<h2 data-number="5" class="anchored" data-anchor-id="overview"><span class="header-section-number">5</span> Overview</h2>
-<p>Knuth says always be literate <span class="citation" data-cites="knuth1984">(<a href="#ref-knuth1984" role="doc-biblioref">Knuth 1984</a>)</span></p>
-</section>
-<section id="overview-the-second" class="level2" data-number="6">
-<h2 data-number="6" class="anchored" data-anchor-id="overview-the-second"><span class="header-section-number">6</span> Overview the second</h2>
-<p>See <a href="#fig-simple" class="quarto-xref">Figure&nbsp;1</a> in <a href="#sec-plot" class="quarto-xref">Section&nbsp;7</a> for a demonstration of a simple plot.</p>
-<p>See <a href="#eq-stddev" class="quarto-xref">Equation&nbsp;1</a> to better understand standard deviation.</p>
-</section>
-<section id="sec-plot" class="level2" data-number="7">
-<h2 data-number="7" class="anchored" data-anchor-id="sec-plot"><span class="header-section-number">7</span> Plot</h2>
-<div id="cell-fig-simple" class="cell" data-execution_count="1">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>plt.plot([<span class="dv">1</span>,<span class="dv">23</span>,<span class="dv">2</span>,<span class="dv">4</span>])</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output cell-output-display">
-<div id="fig-simple" class="quarto-float quarto-figure quarto-figure-center anchored">
-<figure class="quarto-float quarto-float-fig figure">
-<div aria-describedby="fig-simple-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<img src="authoring_files/figure-html/fig-simple-output-1.png" width="566" height="411" class="figure-img">
-</div>
-<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-simple-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Figure&nbsp;1: Simple Plot
-</figcaption>
-</figure>
-</div>
-</div>
-</div>
-</section>
-<section id="sec-equation" class="level2" data-number="8">
-<h2 data-number="8" class="anchored" data-anchor-id="sec-equation"><span class="header-section-number">8</span> Equation</h2>
-<p><span id="eq-stddev"><span class="math display">
-s = \sqrt{\frac{1}{N-1} \sum_{i=1}^N (x_i - \overline{x})^2}
-\tag{1}</span></span></p>
-<div class="callout callout-style-default callout-warning callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Warning
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Note that there are five types of callouts, including: <code>note</code>, <code>tip</code>, <code>warning</code>, <code>caution</code>, and <code>important</code>.</p>
-</div>
-</div>
-</section>
-<section id="placing-colorbars" class="level2 page-columns page-full" data-number="9">
-<h2 data-number="9" class="anchored" data-anchor-id="placing-colorbars"><span class="header-section-number">9</span> Placing Colorbars</h2>
-<p>Colorbars indicate the quantitative extent of image data. Placing in a figure is non-trivial because room needs to be made for them. The simplest case is just attaching a colorbar to each axes:<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>.</p>
-<div class="no-row-height column-margin column-container"><div id="fn1"><p><sup>1</sup>&nbsp;See the <a href="https://matplotlib.org/stable/gallery/subplots_axes_and_figures/colorbar_placement.html">Matplotlib Gallery</a> to explore colorbars further</p></div></div><div id="112a78c5" class="cell page-columns page-full" data-execution_count="2">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>fig, axs <span class="op">=</span> plt.subplots(<span class="dv">2</span>, <span class="dv">2</span>)</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>fig.set_size_inches(<span class="dv">20</span>, <span class="dv">8</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>cmaps <span class="op">=</span> [<span class="st">'RdBu_r'</span>, <span class="st">'viridis'</span>]</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> col <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">2</span>):</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> row <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">2</span>):</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>        ax <span class="op">=</span> axs[row, col]</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>        pcm <span class="op">=</span> ax.pcolormesh(</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>          np.random.random((<span class="dv">20</span>, <span class="dv">20</span>)) <span class="op">*</span> (col <span class="op">+</span> <span class="dv">1</span>),</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>          cmap<span class="op">=</span>cmaps[col]</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        fig.colorbar(pcm, ax<span class="op">=</span>ax)</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output cell-output-display page-columns page-full">
-<div class="page-columns page-full">
-<figure class="figure page-columns page-full">
-<p class="page-columns page-full"><img src="authoring_files/figure-html/cell-3-output-1.png" width="1498" height="638" class="figure-img column-screen-inset"></p>
-</figure>
-</div>
-</div>
-</div>
+<section id="vorläufige-gliederung" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="vorläufige-gliederung"><span class="header-section-number">3</span> Vorläufige Gliederung</h2>
+<ol type="1">
+<li>erstes Kapitel</li>
+<li>zweites Kapitel</li>
+</ol>
 
 </section>
 
-
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
-<div id="ref-knuth1984" class="csl-entry" role="listitem">
-Knuth, Donald E. 1984. <span>“Literate Programming.”</span> <em>The Computer Journal</em> 27 (2): 97–111.
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">Literatur</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
+<div id="ref-kumarBiggerIsntAlways2026" class="csl-entry" role="listitem">
+Kumar, S. P., Bararia, S., &amp; Raj, K. (2026). <em>Bigger <span>Isn</span>’t <span>Always Better</span>: <span>A Comparative Evaluation</span> of <span>LLMs</span> for <span>Automated Code Review</span></em> (arXiv:2606.15689). arXiv. <a href="https://doi.org/10.48550/arXiv.2606.15689">https://doi.org/10.48550/arXiv.2606.15689</a>
 </div>
 </div></section></div></main>
 <!-- /main column -->
@@ -340,12 +160,12 @@ Knuth, Donald E. 1984. <span>“Literate Programming.”</span> <em>The Computer
       // flash "checked"
       button.classList.add('code-copy-button-checked');
       var currentTitle = button.getAttribute("title");
-      button.setAttribute("title", "Copied!");
+      button.setAttribute("title", "Kopiert");
       let tooltip;
       if (window.bootstrap) {
         button.setAttribute("data-bs-toggle", "tooltip");
         button.setAttribute("data-bs-placement", "left");
-        button.setAttribute("data-bs-title", "Copied!");
+        button.setAttribute("data-bs-title", "Kopiert");
         tooltip = new bootstrap.Tooltip(button, 
           { trigger: "manual", 
             customClass: "code-copy-button-tooltip",

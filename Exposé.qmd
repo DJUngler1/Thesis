@@ -1,0 +1,33 @@
+---
+title: "Exposé zur Bachelorthesis"
+subtitle: "{Arbeitstitel}"
+lang: de
+bibliography: references.bib
+csl: apa.csl
+author: "Felix Krauß"
+date: 'October 8, 2026'
+syntax-highlighting: pygments
+reference-location: margin
+toc: true
+number-sections: true
+format: 
+  html: 
+    theme: darkly
+    html-math-method: katex
+  pdf:
+    geometry: 
+      - top=30mm
+      - left=20mm
+  docx: default
+---
+
+## Zielsetzung der Arbeit
+
+Test Zitat [@kumarBiggerIsntAlways2026]
+
+## Aktueller Stand der Forschung
+
+## Vorläufige Gliederung
+
+1. erstes Kapitel
+2. zweites Kapitel
