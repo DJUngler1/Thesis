@@ -4,6 +4,8 @@ jupyter: python3
 format: 
     html: 
         theme: darkly
+        code-fold: true
+        code-tools: true
 ---
 
 ## NumPy
@@ -17,6 +19,9 @@ a
 ## Matplotlib
 
 ```{python}
+#| label: fig-limits
+#| fig-cap: "Errorbar limit selector"
+
 import matplotlib.pyplot as plt
 
 fig = plt.figure()
@@ -41,13 +46,26 @@ plt.show(fig)
 ## Plotly
 
 ```{python}
+#| label: fig-gapminder
+#| fig-cap: "Life Expectancy and GDP"
+#| fig-subcap: 
+#|  - "Gapminder: 1957"
+#|  - "Gapminder: 2007"
+#| layout-ncol: 2
+#| column: page
+
 import plotly.express as px
 import plotly.io as pio
 gapminder = px.data.gapminder()
-gapminder2007 = gapminder.query("year == 2007")
-fig = px.scatter(gapminder2007, 
-                 x="gdpPercap", y="lifeExp", color="continent", 
-                 size="pop", size_max=60,
-                 hover_name="country")
-fig.show()
+def gapminder_plot(year):
+    gapminderYear = gapminder.query("year == " + str(year))
+    fig = px.scatter(gapminderYear, 
+                     x="gdpPercap", y="lifeExp", color="continent", 
+                     size="pop", size_max=60,
+                     hover_name="country")
+    fig.show()
+
+gapminder_plot(1957)
+gapminder_plot(2007)
 ```
+There are `{python} len(gapminder)` rows in the `gapminder` data.
