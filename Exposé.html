@@ -27,27 +27,7 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-/* CSS for citations */
-div.csl-bib-body { }
-div.csl-entry {
-  clear: both;
-  margin-bottom: 0em;
-}
-.hanging-indent div.csl-entry {
-  margin-left:2em;
-  text-indent:-2em;
-}
-div.csl-left-margin {
-  min-width:2em;
-  float:left;
-}
-div.csl-right-inline {
-  margin-left:2em;
-  padding-left:1em;
-}
-div.csl-indent {
-  margin-left: 2em;
-}</style>
+</style>
 
 
 <script src="Exposé_files/libs/clipboard/clipboard.min.js"></script>
@@ -69,16 +49,7 @@ div.csl-indent {
 
 <div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
 <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-  <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">Inhaltsverzeichnis</h2>
-   
-  <ul>
-  <li><a href="#zielsetzung-der-arbeit" id="toc-zielsetzung-der-arbeit" class="nav-link active" data-scroll-target="#zielsetzung-der-arbeit"><span class="header-section-number">1</span> Zielsetzung der Arbeit</a></li>
-  <li><a href="#aktueller-stand-der-forschung" id="toc-aktueller-stand-der-forschung" class="nav-link" data-scroll-target="#aktueller-stand-der-forschung"><span class="header-section-number">2</span> Aktueller Stand der Forschung</a></li>
-  <li><a href="#vorläufige-gliederung" id="toc-vorläufige-gliederung" class="nav-link" data-scroll-target="#vorläufige-gliederung"><span class="header-section-number">3</span> Vorläufige Gliederung</a></li>
-  </ul>
-<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="Exposé.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li><li><a href="Exposé.docx"><i class="bi bi-file-word"></i>MS Word</a></li></ul></div></nav>
-</div>
+<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="Exposé.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li><li><a href="Exposé.docx"><i class="bi bi-file-word"></i>MS Word</a></li></ul></div></div>
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
@@ -113,27 +84,49 @@ div.csl-indent {
 </header>
 
 
-<section id="zielsetzung-der-arbeit" class="level2" data-number="1">
-<h2 data-number="1" class="anchored" data-anchor-id="zielsetzung-der-arbeit"><span class="header-section-number">1</span> Zielsetzung der Arbeit</h2>
-<p>Test Zitat <span class="citation" data-cites="kumarBiggerIsntAlways2026">(<a href="#ref-kumarBiggerIsntAlways2026" role="doc-biblioref">Kumar et al., 2026</a>)</span></p>
+<section id="zentrale-forschungsfrage" class="level2" data-number="1">
+<h2 data-number="1" class="anchored" data-anchor-id="zentrale-forschungsfrage"><span class="header-section-number">1</span> Zentrale Forschungsfrage</h2>
+<p>Inwieweit kann ein regelbasiertes, LLM-basiertes Analyse-Tool Qualitätsmängel und Sicherheitslücken in Quellcode zuverlässig erkennen, und wie schneidet es im Vergleich zu bestehenden Lösungen ab?</p>
 </section>
-<section id="aktueller-stand-der-forschung" class="level2" data-number="2">
-<h2 data-number="2" class="anchored" data-anchor-id="aktueller-stand-der-forschung"><span class="header-section-number">2</span> Aktueller Stand der Forschung</h2>
+<section id="zielsetzung-der-arbeit" class="level2" data-number="2">
+<h2 data-number="2" class="anchored" data-anchor-id="zielsetzung-der-arbeit"><span class="header-section-number">2</span> Zielsetzung der Arbeit</h2>
+<ol type="1">
+<li><p>Überblick über den aktuellen Stand der Wissenschaft zur Verwendung generativer KI-Assistenten als Code-Analyse-Tools.<br>
+<br>
+Fragen, die dazu beantwortet werden sollen:<br>
+<br>
+Wie gut eignen sich laut dem derzeitigen Forschungsstand generative KI-Assistenten zum Erkennen von Qualitätsmängeln und Sicherheitslücken?<br>
+Welche Standards und Kriterien eignen sich, um die Qualität von Software zu bewerten?<br>
+Anhand welcher Kriterien und Klassifikationen werden Sicherheitslücken eingestuft?<br>
+Was sagt der derzeitige Forschungsstand zur Effizienz von KI-Assistenten beim Analysieren von Code, und welche Modelle eignen sich für diese Aufgabe?</p></li>
+<li><p>Recherche, welche Lösungen es bereits gibt, die generative KI-Assistenten als Analyse-Tool verwenden, und was laut der Dokumentation deren Fähigkeiten und Limitationen sind. Die Ergebnisse der Recherche können als Unterstützung verwendet werden, um die Fähigkeiten des eigenen Tools zu definieren und um zu verstehen, welche Limitationen bei der Verwendung von generativen KI-Assistenten zur Analyse von Code existieren.</p></li>
+<li><p>Entwicklung eines eigenen Tools zum Analysieren von Quellcode. Das Tool erhält den Code einer Anwendung als Input und erstellt auf Basis vordefinierter Regeln mithilfe eines LLMs einen Bericht, der die Qualität und Sicherheit des Codes bewertet und Handlungsvorschläge zur Verbesserung gibt.<br>
+<br>
+Anforderungen an das Tool:<br>
+</p></li>
+</ol>
+<ul>
+<li>Es wird ein Regelwerk definiert, das genau vorgibt, wie Qualität und Sicherheit des Codes gemessen werden. Das Tool orientiert seine Auswertung an diesen Regeln.</li>
+<li>Die Regeln sollen so definiert sein, dass diese nicht auf bestimmte Anwendungen, Frameworks oder Programmiersprachen begrenzt sind. Idealerweise sollen die Regeln auf den Code aller möglichen Anwendungen, unabhängig vom Framework oder der verwendeten Programmiersprache, anwendbar sein.</li>
+<li>Das Tool soll lokal deploybar sein und unabhängig von dem verwendeten LLM funktionieren. Das heißt, das verwendete LLM soll austauschbar sein, und es soll möglich sein, sowohl ein Cloud-Modell eines Anbieters als auch ein selbst betriebenes LLM zu verwenden.</li>
+</ul>
+<ol start="4" type="1">
+<li><p>Test des eigenen Tools anhand mehrerer Beispiele, die bekannte Sicherheitslücken und Qualitätsmängel enthalten, unter Verwendung verschiedener LLMs. Anschließend werden die Ergebnisse ausgewertet und mit vorher definierten KPIs abgeglichen, z.&nbsp;B.: Mindestens 95 % der bekannten Qualitätsmängel werden entdeckt, alle als kritisch eingestuften Sicherheitslücken werden erkannt und maximal 10 % der Meldungen sind Fehlalarme. Derselbe Test wird mit anderen Analyse-Tools durchgeführt, deren Ergebnisse nach denselben Kriterien ausgewertet und mit den Ergebnissen des eigenen Tools verglichen werden.</p></li>
+<li><p>(Optional) Einführung des Tools in die Infrastruktur der Hochschule, Dokumentation und eventuell Schulung zur Verwendung des Tools.</p></li>
+</ol>
 </section>
-<section id="vorläufige-gliederung" class="level2" data-number="3">
-<h2 data-number="3" class="anchored" data-anchor-id="vorläufige-gliederung"><span class="header-section-number">3</span> Vorläufige Gliederung</h2>
+<section id="aktueller-stand-der-forschung" class="level2" data-number="3">
+<h2 data-number="3" class="anchored" data-anchor-id="aktueller-stand-der-forschung"><span class="header-section-number">3</span> Aktueller Stand der Forschung</h2>
+</section>
+<section id="vorläufige-gliederung" class="level2" data-number="4">
+<h2 data-number="4" class="anchored" data-anchor-id="vorläufige-gliederung"><span class="header-section-number">4</span> Vorläufige Gliederung</h2>
 <ol type="1">
 <li>erstes Kapitel</li>
 <li>zweites Kapitel</li>
 </ol>
-
 </section>
 
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">Literatur</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
-<div id="ref-kumarBiggerIsntAlways2026" class="csl-entry" role="listitem">
-Kumar, S. P., Bararia, S., &amp; Raj, K. (2026). <em>Bigger <span>Isn</span>’t <span>Always Better</span>: <span>A Comparative Evaluation</span> of <span>LLMs</span> for <span>Automated Code Review</span></em> (arXiv:2606.15689). arXiv. <a href="https://doi.org/10.48550/arXiv.2606.15689">https://doi.org/10.48550/arXiv.2606.15689</a>
-</div>
-</div></section></div></main>
+</main>
 <!-- /main column -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
