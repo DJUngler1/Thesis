@@ -1,0 +1,3 @@
+{
+  "_hinweis": "Zuordnung PDF-Seite -> gedruckte Seite je Quelle (Schlüssel = Dateiname ohne Endung = BibTeX-Key aus references.bib). offset: gedruckt = PDF + offset. ab_pdf_seite: davor keine arabische Zählung (Titelei). roemisch_ab: PDF-Seite 1 entspricht dieser römischen Zahl. ohne_seitenzahlen: Quelle hat keine Seitenzahlen, Abschnitt zitieren. Nur geprüfte Werte eintragen; fehlt eine Quelle, gibt das Skript '?' aus."
+}
