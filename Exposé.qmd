@@ -1,6 +1,6 @@
 ---
 title: "Exposé zur Bachelorthesis"
-subtitle: "{Arbeitstitel}"
+subtitle: "Generative KI als Code-Analyse-Tool: Entwicklung und Evaluation eines LLM-Tools zur Erkennung von Qualitätsmängeln und Sicherheitslücken in Softwareprojekten."
 lang: de
 bibliography: references.bib
 csl: apa.csl
