@@ -32,6 +32,7 @@ format:
           \fancyhead[R]{Studiengang: WiB}
         }
     reference-section-title: Vorläufiges Literaturverzeichnis
+    link-citations: true
   docx: default
 ---
 
