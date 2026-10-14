@@ -69,9 +69,11 @@ Für den Betrieb stellt sich zudem die Frage, ob ein lokales Modell infrage komm
 
 Es gibt Ansätze, die zeigen, dass größere Modelle nicht zwingend bessere Code-Reviews erzeugen: Im Code-Review schlägt das kleinere Claude Haiku 4.5 das größere Sonnet 4.6 bei 3,2-fach geringeren Kosten [@kumarBiggerIsntAlways2026, S. 1], und mehrere Durchläufe kleinerer Modelle erreichen die Leistung eines größeren [@zengSWRBenchAssessingLLM2026, S. 20]. IRIS liefert einen Gegenbefund, denn die Kontextanalyse hilft dort nur bei den größeren Modellen [@ICLR2025_582d4e27, S. 9].
 
-### Schlüsse aus der Forschung und mögliche Auswirkungen auf das zu entwicklende Tool
+### Fazit zur Forschung und mögliche Auswirkungen auf das Tool
 
 Die betrachteten Studien legen nahe, dass LLMs als Analysewerkzeug vielversprechend sind, die Kombination mit statischer Analyse und menschlicher Kontrolle die Zuverlässigkeit verbessern kann und Tests mit synthetischen Daten dazu führen können, dass die Leistung der LLMs überschätzt wird. Außerdem kann man aus den Studien die Hypothese ableiten, dass lokale LLMs mit der richtigen Feinabstimmung genauso gut oder sogar besser geeignet sind wie Cloud-Modelle. Für das zu entwickelnde Tool bedeutet das, dass ein lokales feinabgestimmtes LLM in Kombination mit statischen Analyse-Tools einen realistischen Lösungsansatz darstellt. Für die Tests des Tools sollten, wenn möglich, reale Daten herangezogen werden, da synthetische Daten die Leistung des Tools überschätzen könnten. Da das Tool nur einen Bericht mit Handlungsempfehlung generieren soll und nichts direkt geändert wird, bleibt eine menschliche Kontrolle sowieso unerlässlich.
+
+{{< pagebreak >}}
 
 ## Vorläufige Gliederung
 
@@ -109,3 +111,4 @@ Die betrachteten Studien legen nahe, dass LLMs als Analysewerkzeug vielversprech
   7.1 Beantwortung der Forschungsfrage\
   7.2 Ausblick
 
+{{< pagebreak >}}
