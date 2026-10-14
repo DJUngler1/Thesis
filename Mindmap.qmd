@@ -1,0 +1,158 @@
+## Fragen und Ideen zum Tool
+
+- Welche Frameworks bzw. Programmiersprachen soll das Tool auswerten können? Alle sind wohl kaum möglich hier z.B. auf die am weitesten verbreitesten Beschränken, aber das Tool so schreiben dass das Regelwerk nachträglich einfach angepasst werden kann.
+- Trennung bei Sicherheitslücken zwischen Sicherheit des eigens geschreibenen Codes und der verwendeten Bibliotheken, für das Scannen von Bibliotheken Vorschlag Owasp macht genau das und kannn lokal ausgeführt werden. Für Bewertung von Sicherheit des geschriebenen Codes - LLM.
+- Bei Qualität auch die Frage was gibt es schon und kann man genauso nehmen, z.B. EsLint, TsLint bei JavScript oder Typescript. Für Struktur könnte man bei z.B. clean Architecture anwenden. Hier auch dann die Frage für was davon braucht man überhaupt ein LLM und wie weit kann ich durch bestehende Checks, Tools oder eigene Skripte Qualität bewerten.
+Die KI müsste in den Fällen die Ergebnisse dann nur noch zusammenfassen und hübsch aufbereiten.
+- Generell Tools die determistische Cheks durchführen könnnen Evaluation durch LLM vorziehen, da dort das Ergebnis erwartbar ist. Und bei LLMs, in der Aufbereitung der Ergebnisse ist eine gewisse unregelmäßigkeit eher akzeptabel.
+- Regeln werden dann nach meiner jetztigen Ideen grob so aussehen. Zuerst Anweisung an die LLM: Wete dieses Softwareprojekt anhand den hier [pfad zum Regelwerk] definierten Regeln diese Softwareanwendung [pfad zur Anwenung, url zum git repo] aus. Dann folgender Ablauf als Vorschlag:
+    1. Techstack der Anwendung ermittlen.
+    2. Was für eine Anwendung ist das, welchen Zweck soll sie erfüllen - Extraktion aus Doku, Vergleich mit tatsächlicher Funktionalität der Anwedung.
+    3. Security check der verwendeten Libraries, scan z.B. mit OWASP ausführen.
+    4. Passenden Linter ausführen, Projekt bauen, Anwendung starten ? Klappt das
+    5. Gibt es Tests wenn ja: Tests laufen lassen und schauen ob tests durchlaufen.
+    6. Testabdeckung mit einem selbst definierten Skript oder einem Tool prüfen. Wie viel Prozent der Zeilen, der Komponenten,... ,usw. werden von den Tests abgedeckt, abgleich mit vordefinierten limits wie hoch die Abdeckung der Tests ist. 
+    7. Testmutationen ausführen z.B. mit Stryker – Anwendungscode gezielt verändern und dann tests ausführen um auszuwerten wie robust diese sind.
+    8. Tests passsend zur Anwendung erstellen und ausführen, wo eigene noch nicht abecken, basierend darauf und den vorhandenen tests bewerten ob die Anwendung funktioniert wie erwartet, gefundene Bugs dokumentieren.
+    9. Erfüllt die Projektstruktur gängige Standards, z.B. ist das Projekt nach den Regeln von Clean Architecture aufgebaut?
+    10. Namensgebung von Klassen, Funktionen, Dateien prüfen, beschreiben die gut was darin tatsächlich umgesetzt wird?
+    11. Sind die Dateien/Komponenten der Anwendung entprechend ihrer Funktionalität sinnvoll aufgeteitl? z.B. Gibt es Dateien die sehr groß oder Komplex sind die man aufteilen sollte?
+    12. Gibt es Dokumentation, wie viel der tatsächlich erkannten Funktionalität deckt die Dukumentation ab? 
+    13. Analysiere den Quellcode der Anwendung, wurden dort Fehler gemacht die Sicherheitskritisch sind. z.B. kann bei der Übertragung von Werten eingegriffen und die Werte abgeändert werden? Hier genau definieren Anhand welcher Kriterien und Klassifikationen Sicherheit ausgwertet werden soll.
+    14. Ausführlichen Bericht erstellen, der die Ergebnisse von allen ausgeführten Analysen zussammenfasst, eine Einschätzung abgibt wie verständlich, funktional, sicher und wartbar die Anwenung ist und Handlungsvorschläge daraus generiert.
+    15. Handlungsvorschläge als konkrete Schritt für Schritt-Anleitung generieren, so dass ein Programierer oder ein KI-Assistent das direkt umsetzen könnte.
+
+## Überblick
+
+- LLMs sind als Analyse-Werkzeug vielversprechend, aber nur in Kombination mit klassischer
+  Analyse, mit Prüfung durch Menschen und mit sauberer Evaluation. Allein eingesetzt fallen sie in realistischen
+  Szenarien deutlich ab.
+- Liteartur hat 2 Betrachtungen Sicherheit (Schwachstellen finden) und Qualität (Code-Review, Code-Smells). Beide
+  werden fast immer getrennt untersucht.
+- Benchmarks und Datensätze sind zu einfach oder fehlerhaft, die Ergebnisse brechen auf
+  realen Daten ein.
+
+## 1. Ausgangslage
+
+- Schwachstellen nehmen zu
+    - Veröffentlichte CVE-Einträge: 59.487 (2005–2014) auf 194.049 (2015–2024) [@parkEffectivenessInstructionTuningLocal2025, S. 1]
+    - Über 20.000 neue CVEs pro Jahr, nicht alle lassen sich in einen Prompt packen [@kaniewskiVulnerabilityHandlingAIGenerated2024, Abschn. III]
+- Klassische statische Analyse (SAST) hat bekannte Schwächen ★
+    - viele Fehlalarme, hoher manueller Prüfaufwand (10–20 Minuten je Alarm im Industriefall) [@duReducingFalsePositives2026, Abstract]
+    - braucht von Menschen gepflegte Spezifikationen [@liIRISLLMAssistedStatic2025, S. 1]
+    - Präzision bei großen, komplexen Codebasen begrenzt [@liEnhancingStaticAnalysis2024, Abstract]
+- KI-generierter Code bringt Schwachstellen mit, teils aus fehlerhaften Trainingsdaten, teils in leicht abgewandelter,
+  redundanter Form [@kaniewskiVulnerabilityHandlingAIGenerated2024, Abstract]
+    - Bezug zum Thema „vibe-gecodete Anwendungen“ aus der Besprechung
+
+## 2. Standards, Kriterien und Klassifikationen (Zielsetzung 1, Fragen 2 und 3)
+
+- Qualität: ISO/IEC 25010:2023
+    - Produktqualitätsmodell mit neun Merkmalen: Funktionale Eignung, Leistungseffizienz, Kompatibilität,
+      Interaktionsfähigkeit, Zuverlässigkeit, Informationssicherheit (Security), Wartbarkeit, Flexibilität und
+      Sicherheit im Sinne von Safety [@ISO25010_2023, S. 9]
+    - Das Modell ist ausdrücklich als Grundlage für Anforderungen, Messung und Bewertung gedacht [@ISO25010_2023, S. 1]
+    - Einordnung: die Studien nutzen eigene, enger gefasste Qualitätsmaße
+        - SonarQube-Regeln und Issue-Reduktion [@patcasEvaluationStudyLarge2026, S. 1]
+        - bestandene Unit-Tests als Kriterium für Korrektheit [@cihanEvaluatingLargeLanguage2025, Abschn. I]
+        - Treffer gegen Ground-Truth, Precision/Recall/F1 [@zengSWRBenchAssessingLLM2026, S. 1; @kumarBiggerIsntAlways2026, S. 1]
+- Sicherheit: CWE, CVE, CVSS (hängen zusammen)
+    - CWE: Katalog von Schwachstellentypen, Ziel ist, Ursachen vor dem Einsatz zu beseitigen [@CWE]
+    - CVE: Einträge zu veröffentlichten Schwachstellen; das CVE-Programm führt Metriken dazu und verlangt von hervorgehobenen Meldestellen (CNAs) CVSS- und CWE-Angaben in den Einträgen [@CVE_Metrics]
+    - CVSS: numerischer Schweregrad, der in Stufen (z. B. niedrig bis kritisch) übersetzt wird [@zotero-item-54]
+    - Forschung nutzt CWE als Ausgabeformat und Datenbasis ★
+        - Modell nennt den CWE-Typ statt nur „verwundbar/nicht verwundbar“ [@parkEffectivenessInstructionTuningLocal2025, S. 1]
+        - CWE-Bench-Java mit 120 validierten Schwachstellen [@liIRISLLMAssistedStatic2025, S. 1]
+        - Einordnung der Datensätze nach CWE-1000-Kategorien, Empfehlung: CWE-Typklassifikation und Berichtsausgabe [@kaniewskiSystematicLiteratureReview2026, S. 42–43]
+- Offen für die Arbeit: welche Teilmenge der ISO-Merkmale und der CWE-Typen das Regelwerk abdeckt (Festlegung im Methodenteil)
+
+## 3. Sicherheitslücken erkennen mit LLMs (Zielsetzung 1, Frage 1)
+
+- Überblick über das Feld
+    - 263 Studien kategorisiert [@kaniewskiSystematicLiteratureReview2026, S. 43]
+    - die meisten Studien klassifizieren nur binär (verwundbar ja/nein) [@kaniewskiSystematicLiteratureReview2026, S. 43]
+    - Leitfaden zu Modellen, Methoden, Datensätzen und Metriken [@taghavifarLargeLanguageModels2025, S. 1]
+- ⚡ Positiver Befund
+    - LLMs können bei guter Anbindung klassische Analysewerkzeuge übertreffen und Fixes vorschlagen [@taghavifarLargeLanguageModels2025, S. 60]
+    - IRIS (LLM + CodeQL): 55 von 120 Schwachstellen gefunden, CodeQL allein 27 [@liIRISLLMAssistedStatic2025, S. 1]
+    - Einschränkung: Taghavi Far und Feyzi nehmen im Abstract ausdrücklich keinen direkten Vergleich vor [@taghavifarLargeLanguageModels2025, S. 1]
+- ⚡ Negativer Befund
+    - Ein Modell mit 68,26 % F1 auf BigVul erreicht auf dem bereinigten PrimeVul nur 3,09 %, GPT-3.5 und GPT-4 liegen in strengen Settings nahe am Zufall [@dingVulnerabilityDetectionCode2024, S. 1]
+    - Ursache: schlechte Labels, Duplikate, Datenlecks in den gängigen Datensätzen ★ [@dingVulnerabilityDetectionCode2024, S. 1; @kaniewskiSystematicLiteratureReview2026, S. 38]
+    - verteilte Schwachstellen über mehrere Funktionen bleiben schwierig [@kaniewskiSystematicLiteratureReview2026, S. 37]
+- Auflösung des Widerspruchs (eigene Deutung, noch zu belegen)
+    - positive Ergebnisse stammen hier aus Hybridansätzen (IRIS) oder Übersichten, negative aus der Prüfung auf
+      bereinigten, realistischen Daten (Ding). Das stützt die Idee, LLM und klassische Analyse zu verbinden (Zweig 5).
+
+## 4. Qualitätsmängel und Code-Review mit LLMs (Zielsetzung 1, Fragen 1 und 4)
+
+- Review-Fähigkeit ist moderat ★
+    - GPT-4o stuft Korrektheit in 68,50 % der Fälle richtig ein, Gemini 2.0 Flash in 63,89 % [@cihanEvaluatingLargeLanguage2025, Abstract]
+    - beste Kombination im SWR-Bench erreicht nur 19,38 % F1, Hauptproblem ist niedrige Precision [@zengSWRBenchAssessingLLM2026, S. 13]
+    - auf echten Pull Requests fällt F1 von 0,847 (synthetisch) auf 0,066 [@kumarBiggerIsntAlways2026, S. 1]
+- Fehlalarme und fehlender Kontext sind das zentrale Praxisproblem ★
+    - ein Großteil entsteht durch fehlenden Kontext und unbekannte Projektkonventionen [@zengSWRBenchAssessingLLM2026, S. 20]
+    - Agenten, die möglichst alle Fehler finden sollen, liefern ein niedriges Signal-Rausch-Verhältnis [@pereiraCRBenchEvaluatingRealWorld2026, S. 1]
+    - Wirkung der Eingabe: ohne Aufgabenbeschreibung sinkt die Leistung [@cihanEvaluatingLargeLanguage2025, Abstract]
+- Qualitätsprobleme beheben
+    - Fixes für SonarQube-Findings: im Mittel 36,02 % weniger gemeldete Issues, bester Einzelfall 71,54 % [@patcasEvaluationStudyLarge2026, S. 1]
+    - Fixes führen teils neue Probleme ein, Validierung und menschliche Kontrolle nötig [@patcasEvaluationStudyLarge2026, S. 42]
+- Auch bei Review gilt: Was gefunden wird, hängt vom Fehlertyp ab
+    - funktionale Fehler werden zuverlässiger erkannt als Verbesserungsvorschläge zur Wartbarkeit [@zengSWRBenchAssessingLLM2026, S. 20]
+    - Performance-Probleme werden von allen getesteten Modellen kaum erkannt [@kumarBiggerIsntAlways2026, S. 1]
+- Evaluationsproblem ★
+    - synthetische Benchmarks überschätzen die Leistung [@kumarBiggerIsntAlways2026, S. 1; @dingVulnerabilityDetectionCode2024, S. 1]
+    - Benchmarks sind zu kleinteilig, ohne Projektkontext oder vermischen Fehler und Stilfragen [@zengSWRBenchAssessingLLM2026, S. 1; @pereiraCRBenchEvaluatingRealWorld2026, S. 2]
+
+## 5. LLM mit statischer Analyse kombinieren (Zielsetzung 1, Frage 4; Grundlage für Zielsetzung 2)
+
+- Empfehlung der Übersichtsarbeiten ★
+    - SAST liefert Kandidaten, das LLM filtert Fehlalarme; umgekehrt kann die statische Analyse LLM-Vorschläge verifizieren [@kaniewskiSystematicLiteratureReview2026, S. 42]
+    - Integration mit vorhandenen Werkzeugen wie statischen Analysatoren nennen sie als einen von mehreren Wegen, die Wirksamkeit zu erhöhen [@taghavifarLargeLanguageModels2025, S. 60]
+    - hybride Systeme aus LLM und Regelwerkzeug als nächster Schritt [@patcasEvaluationStudyLarge2026, S. 42]
+- Konkrete Ansätze
+    - LLift: LLM + Pfadanalyse, vier neue Fehler im Linux-Kernel [@liEnhancingStaticAnalysis2024, Abstract]
+    - IRIS: LLM leitet Taint-Spezifikationen ab und prüft Kontext, Fehlentdeckungsrate −5 Prozentpunkte gegenüber CodeQL [@liIRISLLMAssistedStatic2025, S. 1]
+    - Tencent-Industriestudie: hybride Verfahren beseitigen 94–98 % der Fehlalarme bei hoher Recall [@duReducingFalsePositives2026, Abstract]
+- ⚡ Kombination ist nicht automatisch gut
+    - Hybrid-Review (Berichte statischer Tools einfach in den Prompt gegeben) schneidet im SWR-Bench am schlechtesten ab, mittlerer F1 4,87 % [@zengSWRBenchAssessingLLM2026, S. 13]
+    - Das spricht für eine strukturierte Verbindung, nicht nur Berichte als Kontext mitzugeben
+
+## 6. Modelle, Kosten und lokaler Betrieb (Zielsetzung 1, Frage 5; Anforderung „lokal deploybar“)
+
+- Cloud-APIs setzen voraus, dass der Quellcode das Haus verlässt, lokale Modelle vermeiden das [@parkEffectivenessInstructionTuningLocal2025, S. 1]
+- Kleinere Modelle können reichen ★
+    - angepasste lokale Modelle erreichen besseres Kosten-Leistungs-Verhältnis als API-Modelle [@parkEffectivenessInstructionTuningLocal2025, S. 1]
+    - Feintuning kleiner Modelle für den On-Premise-Einsatz ist praktikabel und datenschutzfreundlich [@kaniewskiSystematicLiteratureReview2026, S. 42]
+    - Claude Haiku 4.5 schlägt das größere Sonnet 4.6 bei F1 und Recall und ist 3,2-mal günstiger [@kumarBiggerIsntAlways2026, S. 1]
+    - mehrere Durchläufe kleinerer Modelle erreichen die Leistung eines größeren [@zengSWRBenchAssessingLLM2026, S. 20]
+- ⚡ Gegenbefund: bei IRIS hilft die Kontextanalyse nur mit GPT-4, GPT-3.5 und Llama-3 70B, bei kleineren Modellen
+  verschlechtert sie das Ergebnis, weil sie häufiger „verwundbar“ antworten [@liIRISLLMAssistedStatic2025, S. 9]
+- Kosten je Alarm sind sehr gering: 0,0011–0,12 US-Dollar [@duReducingFalsePositives2026, Abstract]
+- Technische Grenzen: Kontextfenster bei großen Repositories, Ansatz über RAG [@kaniewskiVulnerabilityHandlingAIGenerated2024, Abschn. III]
+- Konsequenz für das Tool: LLM austauschbar halten und Modelle unterschiedlicher Größe vergleichen
+
+## 7. Grenzen und Risiken
+
+- Erklärbarkeit: halluzinierte oder widersprüchliche Begründungen [@kaniewskiSystematicLiteratureReview2026, S. 38]
+- Lange Funktionen, verschachtelte Bedingungen und ungewöhnliche Konstrukte überfordern LLMs [@duReducingFalsePositives2026, RQ4]
+- Streuung: einzelne Durchläufe verpassen jeweils andere Fehler, Aggregation mehrerer Berichte hebt F1 um bis zu 43,67 % [@zengSWRBenchAssessingLLM2026, S. 1; @zengSWRBenchAssessingLLM2026, S. 20]
+- Mensch im Prozess bleibt nötig ★ [@cihanEvaluatingLargeLanguage2025, Abstract; @patcasEvaluationStudyLarge2026, S. 42]
+- Veraltetes Wissen: Datensätze altern, Neutraining ist teuer, RAG und kontinuierliches Lernen als Ansätze [@kaniewskiSystematicLiteratureReview2026, S. 38]
+
+## 8. Einordnung der eigenen Arbeit (Forschungslücke und Anschluss)
+
+- Die meisten Studien arbeiten auf Funktionsebene und mit C/C++, Forderung nach Mehrsprachigkeit und Projektebene
+  [@kaniewskiSystematicLiteratureReview2026, S. 38]
+    - passt zur Anforderung, dass das Regelwerk nicht auf eine Sprache oder ein Framework beschränkt ist
+- Wenige Evaluationen in realen Entwicklungsabläufen, Forderung nach Integration in IDE und CI/CD
+  [@kaniewskiSystematicLiteratureReview2026, S. 38]
+    - passt zur Anforderung, dass das Tool in der CI/CD-Pipeline läuft
+- Vergleichbarkeit fehlt (uneinheitliche Datensätze, keine festen Splits), Forderung nach standardisierten Protokollen
+  [@kaniewskiSystematicLiteratureReview2026, S. 38]
+    - passt zum Vorhaben, mehrere Tools nach denselben Kriterien und mit vorab definierten KPIs zu vergleichen
+- Ausgabe als Typ statt nur Ja/Nein (CWE) [@parkEffectivenessInstructionTuningLocal2025, S. 1; @kaniewskiSystematicLiteratureReview2026, S. 42]
+    - passt zum geplanten Bericht mit Handlungsvorschlägen
+- Beobachtung an der Quellenauswahl (kein Beleg für eine Lücke in der Forschung): Sicherheit und Qualität werden in
+  getrennten Studien behandelt, ganze Anwendungen und Themen wie DSGVO-Konformität aus der Besprechung kommen in den
+  vorliegenden Quellen nicht vor. Das müsste vor einer Aussage im Exposé belegt oder abgeschwächt werden.

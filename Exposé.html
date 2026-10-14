@@ -27,7 +27,27 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="Exposé_files/libs/clipboard/clipboard.min.js"></script>
@@ -55,7 +75,7 @@ ul.task-list li input[type="checkbox"] {
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <h1 class="title">Exposé zur Bachelorthesis</h1>
-<p class="subtitle lead">Generative KI als Code-Analyse-Tool: Entwicklung und Evaluation eines LLM-Tools zur Erkennung von Qualitätsmängeln und Sicherheitslücken in Softwareprojekten.</p>
+<p class="subtitle lead">Generative KI als Code-Analyse-Tool: Entwicklung und Evaluation eines LLM-Tools zur Erkennung von Qualitätsmängeln und Sicherheitslücken in Softwareanwendungen.</p>
 </div>
 
 
@@ -72,7 +92,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Veröffentlichungsdatum</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">8. Oktober 2026</p>
+      <p class="date">14. Oktober 2026</p>
     </div>
   </div>
   
@@ -86,29 +106,32 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="zentrale-forschungsfrage" class="level2" data-number="1">
 <h2 data-number="1" class="anchored" data-anchor-id="zentrale-forschungsfrage"><span class="header-section-number">1</span> Zentrale Forschungsfrage</h2>
-<p>Inwieweit kann ein regelbasiertes, LLM-basiertes Analyse-Tool Qualitätsmängel und Sicherheitslücken in Quellcode zuverlässig erkennen, und wie schneidet es im Vergleich zu bestehenden Lösungen ab?</p>
+<p>Inwieweit kann ein regelbasiertes, LLM-basiertes Analyse-Tool Qualitätsmängel und Sicherheitslücken in Softwareanwendungen zuverlässig erkennen, und wie schneidet es im Vergleich zu bestehenden Lösungen ab?</p>
 </section>
 <section id="zielsetzung-der-arbeit" class="level2" data-number="2">
 <h2 data-number="2" class="anchored" data-anchor-id="zielsetzung-der-arbeit"><span class="header-section-number">2</span> Zielsetzung der Arbeit</h2>
 <ol type="1">
-<li><p>Überblick über den aktuellen Stand der Wissenschaft zur Verwendung generativer KI-Assistenten als Code-Analyse-Tools.<br>
+<li>Überblick über den aktuellen Stand der Wissenschaft zur Verwendung generativer KI-Assistenten als Code-Analyse-Tools.<br>
 <br>
-Fragen, die dazu beantwortet werden sollen:<br>
-<br>
-Wie gut eignen sich laut dem derzeitigen Forschungsstand generative KI-Assistenten zum Erkennen von Qualitätsmängeln und Sicherheitslücken?<br>
-Welche Standards und Kriterien eignen sich, um die Qualität von Software zu bewerten?<br>
-Anhand welcher Kriterien und Klassifikationen werden Sicherheitslücken eingestuft?<br>
-Was sagt der derzeitige Forschungsstand zur Effizienz von KI-Assistenten beim Analysieren von Code, und welche Modelle eignen sich für diese Aufgabe?</p></li>
-<li><p>Recherche, welche Lösungen es bereits gibt, die generative KI-Assistenten als Analyse-Tool verwenden, und was laut der Dokumentation deren Fähigkeiten und Limitationen sind. Die Ergebnisse der Recherche können als Unterstützung verwendet werden, um die Fähigkeiten des eigenen Tools zu definieren und um zu verstehen, welche Limitationen bei der Verwendung von generativen KI-Assistenten zur Analyse von Code existieren.</p></li>
-<li><p>Entwicklung eines eigenen Tools zum Analysieren von Quellcode. Das Tool erhält den Code einer Anwendung als Input und erstellt auf Basis vordefinierter Regeln mithilfe eines LLMs einen Bericht, der die Qualität und Sicherheit des Codes bewertet und Handlungsvorschläge zur Verbesserung gibt.<br>
-<br>
-Anforderungen an das Tool:<br>
-</p></li>
+Fragen, die dazu beantwortet werden sollen:</li>
 </ol>
 <ul>
-<li>Es wird ein Regelwerk definiert, das genau vorgibt, wie Qualität und Sicherheit des Codes gemessen werden. Das Tool orientiert seine Auswertung an diesen Regeln.</li>
-<li>Die Regeln sollen so definiert sein, dass diese nicht auf bestimmte Anwendungen, Frameworks oder Programmiersprachen begrenzt sind. Idealerweise sollen die Regeln auf den Code aller möglichen Anwendungen, unabhängig vom Framework oder der verwendeten Programmiersprache, anwendbar sein.</li>
-<li>Das Tool soll lokal deploybar sein und unabhängig von dem verwendeten LLM funktionieren. Das heißt, das verwendete LLM soll austauschbar sein, und es soll möglich sein, sowohl ein Cloud-Modell eines Anbieters als auch ein selbst betriebenes LLM zu verwenden.</li>
+<li>Wie gut eignen sich laut dem derzeitigen Forschungsstand generative KI-Assistenten zum Erkennen von Qualitätsmängeln und Sicherheitslücken?</li>
+<li>Welche Standards und Kriterien eignen sich, um die Qualität von Software zu bewerten?</li>
+<li>Anhand welcher Kriterien und Klassifikationen werden Sicherheitslücken eingestuft?</li>
+<li>Welche Tools zur Evaluation von Sicherheit und Qualität gibt es bereits und was ist deren Funktionsweise?</li>
+<li>Was sagt der derzeitige Forschungsstand zur Effizienz von KI-Assistenten beim Analysieren von Softwareanwendungen und welche Modelle eignen sich für diese Aufgabe?</li>
+</ul>
+<ol start="2" type="1">
+<li><p>Welche Lösungen gibt es bereits, die generative KI-Assistenten als Analyse-Tool verwenden, und was sind laut Dokumentation deren Fähigkeiten und Limitationen? Basierend darauf und auf den Ergebnissen aus 1 festlegen, anhand welcher Kriterien und mithilfe welcher Werkzeuge ein eigenes Tool Qualität und Sicherheit bewertet.</p></li>
+<li><p>Entwicklung eines eigenen Tools zum Analysieren von Quellcode. Das Tool erhält den Code einer Anwendung als Input und erstellt auf Basis vordefinierter Regeln mithilfe eines LLMs einen Bericht, der die Qualität und Sicherheit des Codes bewertet und Handlungsvorschläge zur Verbesserung gibt.<br>
+<br>
+Anforderungen an das Tool:</p></li>
+</ol>
+<ul>
+<li>Es gibt ein Regelwerk, das genau vorgibt, wie Qualität und Sicherheit des Codes gemessen werden. Das Tool orientiert seine Auswertung an diesen Regeln.</li>
+<li>Die Regeln sollen so definiert sein, dass diese auf den Code aller möglichen Anwendungen anwendbar sind, die auf den am weitesten verbreiteten Frameworks und Programmiersprachen basieren. Das Anpassen des Regelwerks an sich verändernde Anforderungen oder an spezifische Frameworks und Programmiersprachen soll nachträglich möglich sein.</li>
+<li>Das Tool soll lokal deploybar sein und unabhängig von dem verwendeten LLM funktionieren. Das bedeutet, das verwendete LLM soll austauschbar sein, und es soll möglich sein, sowohl ein Cloud-Modell eines Anbieters als auch ein selbst betriebenes LLM zu verwenden.</li>
 </ul>
 <ol start="4" type="1">
 <li><p>Test des eigenen Tools anhand mehrerer Beispiele, die bekannte Sicherheitslücken und Qualitätsmängel enthalten, unter Verwendung verschiedener LLMs. Anschließend werden die Ergebnisse ausgewertet und mit vorher definierten KPIs abgeglichen, z.&nbsp;B.: Mindestens 95 % der bekannten Qualitätsmängel werden entdeckt, alle als kritisch eingestuften Sicherheitslücken werden erkannt und maximal 10 % der Meldungen sind Fehlalarme. Derselbe Test wird mit anderen Analyse-Tools durchgeführt, deren Ergebnisse nach denselben Kriterien ausgewertet und mit den Ergebnissen des eigenen Tools verglichen werden.</p></li>
@@ -117,16 +140,114 @@ Anforderungen an das Tool:<br>
 </section>
 <section id="aktueller-stand-der-forschung" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="aktueller-stand-der-forschung"><span class="header-section-number">3</span> Aktueller Stand der Forschung</h2>
+<p>Die Verwendung von LLMs zur Analyse von Quellcode ist in den letzten Jahren stark angestiegen. Allein zur Erkennung von Sicherheitslücken wertet die systematische Literaturanalyse von <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">Kaniewski et al. (<a href="#ref-kaniewskiSystematicLiteratureReview2026" role="doc-biblioref">2026, S. 43</a>)</span> 263 Studien aus. Ein Grund, aus dem vermehrt untersucht wird, inwieweit sich LLMs zum Erkennen von Sicherheitslücken eignen, ist, dass statische Analysewerkzeuge zwar weit verbreitet sind, aber häufig Fehlalarme produzieren, die von Hand geprüft werden müssen <span class="citation" data-cites="duReducingFalsePositives2026a">(<a href="#ref-duReducingFalsePositives2026a" role="doc-biblioref">Du et al., 2026</a>, Abstract)</span>. Ein weiterer Grund ist, dass diese Tools zum Teil auf Spezifikationen angewiesen sind, die von Menschen definiert werden. Bei diesem Prozess passieren Fehler, und es können Spezifikationen übersehen werden <span class="citation" data-cites="ICLR2025_582d4e27">(<a href="#ref-ICLR2025_582d4e27" role="doc-biblioref">Z. Li et al., 2025, S. 1</a>)</span>.</p>
+<p>Als Maßstab für Qualität beschreibt der Standard ISO/IEC 25010 ein Modell mit neun Merkmalen, darunter Wartbarkeit und Sicherheit <span class="citation" data-cites="ISO25010_2023">(<a href="#ref-ISO25010_2023" role="doc-biblioref">ISO/IEC, 2023, S. 9</a>)</span>. Die hier betrachteten Studien messen die Qualität der Ergebnisse, die LLMs produzieren, enger, etwa über das Bestehen von vordefinierten Unit-Tests <span class="citation" data-cites="cihanEvaluatingLargeLanguage2025">(<a href="#ref-cihanEvaluatingLargeLanguage2025" role="doc-biblioref">Cihan et al., 2025, Abschnitt I</a>)</span>, ob von SonarQube gemeldete Issues korrekt gelöst werden <span class="citation" data-cites="patcasEvaluationStudyLarge2026">(<a href="#ref-patcasEvaluationStudyLarge2026" role="doc-biblioref">Patcas &amp; Motogna, 2026, S. 1</a>)</span> oder über Trefferquoten gegenüber manuell erstellten Referenzen <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">(<a href="#ref-zengSWRBenchAssessingLLM2026" role="doc-biblioref">Zeng et al., 2026, S. 1</a>)</span>. Die meisten von <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">Kaniewski et al. (<a href="#ref-kaniewskiSystematicLiteratureReview2026" role="doc-biblioref">2026, S. 43</a>)</span> betrachteten Studien klassifizieren sogar nur binär, ob eine Schwachstelle vorliegt oder nicht. In manchen Studien werden Sicherheitslücken über CWE als Katalog von Schwachstellentypen <span class="citation" data-cites="CWE">(<a href="#ref-CWE" role="doc-biblioref">Corporation, 2026</a>)</span>, über CVE-Einträge zu bekannten Schwachstellen <span class="citation" data-cites="CVE_Metrics">(<a href="#ref-CVE_Metrics" role="doc-biblioref">Corporation, o.&nbsp;J.</a>)</span> und über den CVSS-Schweregrad <span class="citation" data-cites="zotero-item-54">(<a href="#ref-zotero-item-54" role="doc-biblioref">Forum of Incident Response and Security Teams, Inc, o.&nbsp;J.</a>)</span> eingeordnet. Einige Arbeiten nutzen CWE auch als Ausgabeformat, das Modell nennt dann den Typ der Schwachstelle statt nur ja oder nein <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025">(<a href="#ref-parkEffectivenessInstructionTuningLocal2025" role="doc-biblioref">Park et al., 2025, S. 1</a>)</span>, was auch von <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">Kaniewski et al. (<a href="#ref-kaniewskiSystematicLiteratureReview2026" role="doc-biblioref">2026, S. 42</a>)</span> empfohlen wird.</p>
+<p>Wie gut LLMs Sicherheitslücken erkennen, wird unterschiedlich beurteilt. <span class="citation" data-cites="taghavifarLargeLanguageModels2025">Taghavi Far &amp; Feyzi (<a href="#ref-taghavifarLargeLanguageModels2025" role="doc-biblioref">2025, S. 60</a>)</span> kommen zu dem Schluss, dass LLMs, unter geeigneten Bedingungen, statische Analysewerkzeuge übertreffen und zusätzlich Korrekturen vorschlagen können. Wichtig zu berücksichtigen ist, dass sie im Abstract ausdrücklich erwähnen, dass sie keinen direkten Vergleich vornehmen <span class="citation" data-cites="taghavifarLargeLanguageModels2025">(<a href="#ref-taghavifarLargeLanguageModels2025" role="doc-biblioref">Taghavi Far &amp; Feyzi, 2025, S. 1</a>)</span>. Zurückhaltender fällt das Bild bei <span class="citation" data-cites="11029911">Ding et al. (<a href="#ref-11029911" role="doc-biblioref">2025, S. 1736</a>)</span> aus: Dasselbe Modell schneidet dort je nach Datensatz völlig unterschiedlich ab, unter anderem weil ältere Datensätze falsche Labels und viele Duplikate enthalten; dadurch wird die Leistung überschätzt <span class="citation" data-cites="11029911">(<a href="#ref-11029911" role="doc-biblioref">Ding et al., 2025, S. 1729</a>)</span>. <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">Kaniewski et al. (<a href="#ref-kaniewskiSystematicLiteratureReview2026" role="doc-biblioref">2026, S. 38</a>)</span> nennen nebst vielen weiteren Limitationen genau diese Probleme bei den von Studien verwendeten Datensätzen. Außerdem erreichen, laut <span class="citation" data-cites="11029911">Ding et al. (<a href="#ref-11029911" role="doc-biblioref">2025, S. 1738</a>)</span> GPT-3.5 und GPT-4 beim Einstufen, ob es sich um verwundbaren oder bereits korrigierten Code handelt, nur eine Trefferquote, die auch bei zufälligem Auswählen plausibel wäre. Diese Aussage zu GPT-3.5 und GPT-4 lässt sich aber nicht ohne Weiteres auf aktuellere Modelle übertragen. Neuere Arbeiten zeigen, wie stark das Ergebnis vom Bewertungsrahmen abhängt: Erhalten Modelle wie DeepSeek-R1 im Strict Mode den Kontext des Codes, steigen Accuracy und Precision gegenüber der Bewertung isolierter Funktionen merklich, weshalb die Autoren die schlechten Werte früherer Studien auf fehlenden Kontext in der Evaluation zurückführen <span class="citation" data-cites="liEverythingYouWanted2025">(<a href="#ref-liEverythingYouWanted2025" role="doc-biblioref">Y. Li et al., 2025, Abschnitte 5.2–5.3</a>)</span>. Dass ein richtiges Urteil allein wenig über die Qualität der Analyse aussagt, zeigen <span class="citation" data-cites="luEvaluatingEnhancingVulnerability2026">Lu et al. (<a href="#ref-luEvaluatingEnhancingVulnerability2026" role="doc-biblioref">2026, S. 8–9</a>)</span>: In den dort ausgewerteten Ergebnissen beruhten bei zehn Modellen über ein Drittel der richtigen Urteile auf einer falschen Begründung; basierend darauf wird die Vermutung aufgestellt, dass bei früheren Studien die Ergebnisse dadurch verwässert wurden.</p>
+<p>Für die Verwendung von LLMs zum Erkennen von Qualitätsmängeln und für Code-Reviews fällt das Urteil ähnlich zurückhaltend aus. Laut <span class="citation" data-cites="cihanEvaluatingLargeLanguage2025">Cihan et al. (<a href="#ref-cihanEvaluatingLargeLanguage2025" role="doc-biblioref">2025</a>, Abstract)</span> stuft GPT-4o die Korrektheit von Code in 68,50 % der Fälle richtig ein und Gemini 2.0 Flash in 63,89 % der Fälle, wenn die Problembeschreibung Teil des Kontextes war; aufgrund des Risikos fehlerhafter Ausgaben empfehlen die Autoren aber menschliche Reviews. Auf echten Pull Requests bricht die Leistung von LLMs ein, im SWR-Bench erreicht die beste Kombination, im Hauptvergleich, nur einen F1-Wert von 19,38 %, vor allem durch niedrige Precision-Werte <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">(<a href="#ref-zengSWRBenchAssessingLLM2026" role="doc-biblioref">Zeng et al., 2026, S. 13</a>)</span>. Bei <span class="citation" data-cites="kumarBiggerIsntAlways2026">Kumar et al. (<a href="#ref-kumarBiggerIsntAlways2026" role="doc-biblioref">2026, S. 1</a>)</span> erreicht das beste Modell auf realen Pull Requests einen F1-Wert von 0,066, auf synthetischen Beispielen einen Wert von 0,847, sie bestätigen damit den Eindruck, dass LLMs in echten Anwendungsfällen deutlich schlechter abschneiden. Außerdem können Code-Review-Agenten, wenn sie die Aufgabe bekommen, alle versteckten Probleme zu finden, laut <span class="citation" data-cites="pereiraCRBenchEvaluatingRealWorld2026">Pereira et al. (<a href="#ref-pereiraCRBenchEvaluatingRealWorld2026" role="doc-biblioref">2026, S. 1</a>)</span> im Verhältnis zu den tatsächlich relevanten Problemen viele unbegründete Befunde erzeugen. <span class="citation" data-cites="patcasEvaluationStudyLarge2026">Patcas &amp; Motogna (<a href="#ref-patcasEvaluationStudyLarge2026" role="doc-biblioref">2026, S. 1</a>)</span> untersuchen die Eignung von LLMs für die Generierung von Fixes für die von SonarQube gefundenen Probleme. Im Mittel reduzieren die Fixes der LLMs die gefundenen Probleme um 36,02&nbsp;%.</p>
+<p>Als sinnvolle Anwendung in der Praxis wird die Kombination von LLMs mit klassischen statischen Analysen empfohlen. <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">Kaniewski et al. (<a href="#ref-kaniewskiSystematicLiteratureReview2026" role="doc-biblioref">2026, S. 42</a>)</span> beschreiben Pipelines, in denen statische Werkzeuge Kandidaten liefern und das LLM Fehlalarme herausfiltert, oder umgekehrt die statische Analyse die Vorschläge des LLMs prüft, und auch <span class="citation" data-cites="patcasEvaluationStudyLarge2026">Patcas &amp; Motogna (<a href="#ref-patcasEvaluationStudyLarge2026" role="doc-biblioref">2026, S. 42</a>)</span> sehen hybride Systeme als möglichen nächsten Schritt. Konkrete Ansätze stützen das: IRIS nutzt eine Kombination aus statischen Analysen und LLMs, um Sicherheitslücken zu identifizieren, im Versuchsaufbau von <span class="citation" data-cites="ICLR2025_582d4e27">Z. Li et al. (<a href="#ref-ICLR2025_582d4e27" role="doc-biblioref">2025, S. 1</a>)</span> wird das Ergebnis von IRIS mit GPT-4 mit dem Ergebnis von CodeQL, einem weit verbreiteten Werkzeug für statische Code-Analyse, verglichen. IRIS hat dabei 55 Sicherheitslücken erkannt, während CodeQL nur 27 erkannte. In einer weiteren Industriestudie wird beobachtet, dass die getesteten hybriden Verfahren 94 bis 98 % der Fehlalarme beseitigen <span class="citation" data-cites="duReducingFalsePositives2026a">(<a href="#ref-duReducingFalsePositives2026a" role="doc-biblioref">Du et al., 2026, S. 716</a>)</span>. LLift, ein Framework, das statische Analysen und LLMs kombiniert, mit dem Ziel, Bugs im Linuxkernel zu identifizieren, findet vier bislang unbekannte Fehler im Linuxkernel <span class="citation" data-cites="liEnhancingStaticAnalysis2024">(<a href="#ref-liEnhancingStaticAnalysis2024" role="doc-biblioref">H. Li et al., 2024</a>, Abstract)</span>.</p>
+<p>Für den Betrieb stellt sich zudem die Frage, ob ein lokales Modell infrage kommt. Im Hinblick auf die Anforderung der lokalen Deploybarkeit des Tools wäre ein lokales LLM besser, da so keine Daten an Cloud-Anbieter übertragen werden. Laut <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025">Park et al. (<a href="#ref-parkEffectivenessInstructionTuningLocal2025" role="doc-biblioref">2025, S. 1</a>)</span> können angepasste lokale Modelle die Leistung von Cloud-Modellen übertreffen und ein besseres Kosten-Nutzen-Verhältnis erreichen. Laut <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">Kaniewski et al. (<a href="#ref-kaniewskiSystematicLiteratureReview2026" role="doc-biblioref">2026, S. 42</a>)</span> gilt das Feintuning kleiner Modelle für den Betrieb im eigenen Haus als praktikabel.</p>
+<p>Es gibt Ansätze, die zeigen, dass größere Modelle nicht zwingend bessere Code-Reviews erzeugen: Im Code-Review schlägt das kleinere Claude Haiku 4.5 das größere Sonnet 4.6 bei 3,2-fach geringeren Kosten <span class="citation" data-cites="kumarBiggerIsntAlways2026">(<a href="#ref-kumarBiggerIsntAlways2026" role="doc-biblioref">Kumar et al., 2026, S. 1</a>)</span>, und mehrere Durchläufe kleinerer Modelle erreichen die Leistung eines größeren <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">(<a href="#ref-zengSWRBenchAssessingLLM2026" role="doc-biblioref">Zeng et al., 2026, S. 20</a>)</span>. IRIS liefert einen Gegenbefund, denn die Kontextanalyse hilft dort nur bei den größeren Modellen <span class="citation" data-cites="ICLR2025_582d4e27">(<a href="#ref-ICLR2025_582d4e27" role="doc-biblioref">Z. Li et al., 2025, S. 9</a>)</span>.</p>
+<section id="schlüsse-aus-der-forschung-und-mögliche-auswirkungen-auf-das-zu-entwicklende-tool" class="level3" data-number="3.1">
+<h3 data-number="3.1" class="anchored" data-anchor-id="schlüsse-aus-der-forschung-und-mögliche-auswirkungen-auf-das-zu-entwicklende-tool"><span class="header-section-number">3.1</span> Schlüsse aus der Forschung und mögliche Auswirkungen auf das zu entwicklende Tool</h3>
+<p>Die betrachteten Studien legen nahe, dass LLMs als Analysewerkzeug vielversprechend sind, die Kombination mit statischer Analyse und menschlicher Kontrolle die Zuverlässigkeit verbessern kann und Tests mit synthetischen Daten dazu führen können, dass die Leistung der LLMs überschätzt wird. Außerdem kann man aus den Studien die Hypothese ableiten, dass lokale LLMs mit der richtigen Feinabstimmung genauso gut oder sogar besser geeignet sind wie Cloud-Modelle. Für das zu entwickelnde Tool bedeutet das, dass ein lokales feinabgestimmtes LLM in Kombination mit statischen Analyse-Tools einen realistischen Lösungsansatz darstellt. Für die Tests des Tools sollten, wenn möglich, reale Daten herangezogen werden, da synthetische Daten die Leistung des Tools überschätzen könnten. Da das Tool nur einen Bericht mit Handlungsempfehlung generieren soll und nichts direkt geändert wird, bleibt eine menschliche Kontrolle sowieso unerlässlich.</p>
+</section>
 </section>
 <section id="vorläufige-gliederung" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="vorläufige-gliederung"><span class="header-section-number">4</span> Vorläufige Gliederung</h2>
 <ol type="1">
-<li>erstes Kapitel</li>
-<li>zweites Kapitel</li>
+<li>Einleitung<br>
+1.1 Motivation und Problemstellung<br>
+1.2 Forschungsfrage und Zielsetzung<br>
+1.3 Abgrenzung und Aufbau der Arbeit</li>
+<li>Grundlagen<br>
+2.1 Standards und Kriterien für Softwarequlität<br>
+2.2 Sicherheitslücken und Klassifikationen<br>
+2.3 Statische Code-Analyse<br>
+2.4 Betrieb und Funktion von Large Language Models</li>
+<li>Stand der Forschung<br>
+3.1 Verwendung von LLMs zur Erkennung von Sicherheitslücken und Qualitätsmägneln<br>
+3.2 Hypbride Ansätze (statische Analys + LLM)<br>
+3.3 Eignung lokaler Modelle<br>
+3.4 Limitationen bisheriger Sutdien<br>
+3.5 Fazit und Konsquenzen für das eigene Tool</li>
+<li>Prüfrahmen des eigenen Tools<br>
+4.1 Überblick über ähnliche vorhandene Lösungen<br>
+4.2 Kriterien für Qualität und Sicherheit<br>
+4.3 Anforderungen an das Regelwerk.</li>
+<li>Entwicklung des Tools<br>
+5.1 Architektur<br>
+5.2 Regelwerk und Erweiterbarkeit des Regelwerks<br>
+5.3 Austauschbarkeit des LLMs<br>
+5.4 Integration in das lokale System<br>
+5.5 Umsetzung</li>
+<li>Evaluation<br>
+6.1 Evaluationsdesign<br>
+6.2 Vergleichswerkzeuge und Vorgehen<br>
+6.3 Auswertung der Ergebnisse<br>
+6.4 Vergelich mit bestehenden Tools</li>
+<li>Fazit und Ausblick<br>
+7.1 Beantwortung der Forschungsfrage<br>
+7.2 Ausblick</li>
 </ol>
+
 </section>
 
-</main>
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">Literatur</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
+<div id="ref-cihanEvaluatingLargeLanguage2025" class="csl-entry" role="listitem">
+Cihan, U., İçöz, A., Haratian, V., &amp; Tüzün, E. (2025). <em>Evaluating <span>Large Language Models</span> for <span>Code Review</span></em> (arXiv:2505.20206). arXiv. <a href="https://doi.org/10.48550/arXiv.2505.20206">https://doi.org/10.48550/arXiv.2505.20206</a>
+</div>
+<div id="ref-CVE_Metrics" class="csl-entry" role="listitem">
+Corporation, T. M. (o.&nbsp;J.). <em>Common Vulnerabilities and <span>Exposures</span> (<span>CVE</span>)</em>. https://www.cve.org/About/Metrics.
+</div>
+<div id="ref-CWE" class="csl-entry" role="listitem">
+Corporation, T. M. (2026). <em><span>CWE</span> - <span>Common Weakness Enumeration</span></em>. https://cwe.mitre.org/.
+</div>
+<div id="ref-11029911" class="csl-entry" role="listitem">
+Ding, Y., Fu, Y., Ibrahim, O., Sitawarin, C., Chen, X., Alomair, B., Wagner, D., Ray, B., &amp; Chen, Y. (2025). Vulnerability Detection with Code Language Models: <span>How</span> Far Are We? <em>2025 <span>IEEE</span>/<span>ACM</span> 47th International Conference on Software Engineering (<span>ICSE</span>)</em>, 1729–1741. <a href="https://doi.org/10.1109/ICSE55347.2025.00038">https://doi.org/10.1109/ICSE55347.2025.00038</a>
+</div>
+<div id="ref-duReducingFalsePositives2026a" class="csl-entry" role="listitem">
+Du, X., Feng, J., Zou, Y., Xu, W., Ma, J., Zhang, W., Liu, S., Peng, X., &amp; Lou, Y. (2026). Reducing <span>False Positives</span> in <span>Static Bug Detection</span> with <span>LLMs</span>: <span>An Empirical Study</span> in <span>Industry</span>. <em>Proceedings of the <span>IEEE</span>/<span>ACM</span> 48th <span>International Conference</span> on <span>Software Engineering</span>: <span>Software Engineering</span> in <span>Practice</span></em>, 716–727. <a href="https://doi.org/10.1145/3786583.3786910">https://doi.org/10.1145/3786583.3786910</a>
+</div>
+<div id="ref-zotero-item-54" class="csl-entry" role="listitem">
+Forum of Incident Response and Security Teams, Inc. (o.&nbsp;J.). <em>Common <span>Vulnerability Scoring System SIG</span></em>. https://www.first.org/cvss/.
+</div>
+<div id="ref-ISO25010_2023" class="csl-entry" role="listitem">
+ISO/IEC. (2023). <em>Systems and Software Engineering — <span>Systems</span> and Software <span>Quality Requirements</span> and <span>Evaluation</span> (<span>SQuaRE</span>) — <span>Product</span> Quality Model</em> (ISO/IEC 25010:2023).
+</div>
+<div id="ref-kaniewskiSystematicLiteratureReview2026" class="csl-entry" role="listitem">
+Kaniewski, S., Schmidt, F., Enzweiler, M., Menth, M., &amp; Heer, T. (2026). A <span>Systematic Literature Review</span> on <span>Detecting Software Vulnerabilities</span> with <span>Large Language Models</span>. <em>ACM Transactions on Software Engineering and Methodology</em>, 3815425. <a href="https://doi.org/10.1145/3815425">https://doi.org/10.1145/3815425</a>
+</div>
+<div id="ref-kumarBiggerIsntAlways2026" class="csl-entry" role="listitem">
+Kumar, S. P., Bararia, S., &amp; Raj, K. (2026). <em>Bigger <span>Isn</span>’t <span>Always Better</span>: <span>A Comparative Evaluation</span> of <span>LLMs</span> for <span>Automated Code Review</span></em> (arXiv:2606.15689). arXiv. <a href="https://doi.org/10.48550/arXiv.2606.15689">https://doi.org/10.48550/arXiv.2606.15689</a>
+</div>
+<div id="ref-liEnhancingStaticAnalysis2024" class="csl-entry" role="listitem">
+Li, H., Hao, Y., Zhai, Y., &amp; Qian, Z. (2024). Enhancing <span>Static Analysis</span> for <span>Practical Bug Detection</span>: <span>An LLM-Integrated Approach</span>. <em>Proceedings of the ACM on Programming Languages</em>, <em>8</em>(OOPSLA1), 474–499. <a href="https://doi.org/10.1145/3649828">https://doi.org/10.1145/3649828</a>
+</div>
+<div id="ref-liEverythingYouWanted2025" class="csl-entry" role="listitem">
+Li, Y., Li, X., Wu, H., Xu, M., Zhang, Y., Cheng, X., Xu, F., &amp; Zhong, S. (2025). <em>Everything <span>You Wanted</span> to <span>Know About LLM</span>-Based <span>Vulnerability Detection But Were Afraid</span> to <span>Ask</span></em> (arXiv:2504.13474). arXiv. <a href="https://doi.org/10.48550/arXiv.2504.13474">https://doi.org/10.48550/arXiv.2504.13474</a>
+</div>
+<div id="ref-ICLR2025_582d4e27" class="csl-entry" role="listitem">
+Li, Z., Dutta, S., &amp; Naik, M. (2025). <span>IRIS</span>: <span>LLM</span>-Assisted Static Analysis for Detecting Security Vulnerabilities. In Y. Yue, A. Garg, N. Peng, F. Sha, &amp; R. Yu (Hrsg.), <em>International Conference on Learning Representations</em> (Bd. 2025, S. 35735–35758).
+</div>
+<div id="ref-luEvaluatingEnhancingVulnerability2026" class="csl-entry" role="listitem">
+Lu, L., Zhao, Y., Rao, H., Zhang, K., &amp; Wang, H. (2026). <em>Evaluating and <span>Enhancing</span> the <span>Vulnerability Reasoning Capabilities</span> of <span>Large Language Models</span></em> (arXiv:2602.06687). arXiv. <a href="https://doi.org/10.48550/arXiv.2602.06687">https://doi.org/10.48550/arXiv.2602.06687</a>
+</div>
+<div id="ref-parkEffectivenessInstructionTuningLocal2025" class="csl-entry" role="listitem">
+Park, S., Ko, G., &amp; Cho, H. (2025). <em>On the <span>Effectiveness</span> of <span>Instruction-Tuning Local LLMs</span> for <span>Identifying Software Vulnerabilities</span></em> (arXiv:2512.20062). arXiv. <a href="https://doi.org/10.48550/arXiv.2512.20062">https://doi.org/10.48550/arXiv.2512.20062</a>
+</div>
+<div id="ref-patcasEvaluationStudyLarge2026" class="csl-entry" role="listitem">
+Patcas, R., &amp; Motogna, S. (2026). An Evaluation Study of Large Language Models for Addressing Code Quality Issues. <em>Empirical Software Engineering</em>, <em>31</em>(5), 118. <a href="https://doi.org/10.1007/s10664-026-10858-8">https://doi.org/10.1007/s10664-026-10858-8</a>
+</div>
+<div id="ref-pereiraCRBenchEvaluatingRealWorld2026" class="csl-entry" role="listitem">
+Pereira, K., Sinha, N., Ghosh, R., &amp; Dutta, D. (2026). <em><span>CR-Bench</span>: <span>Evaluating</span> the <span>Real-World Utility</span> of <span>AI Code Review Agents</span></em> (arXiv:2603.11078). arXiv. <a href="https://doi.org/10.48550/arXiv.2603.11078">https://doi.org/10.48550/arXiv.2603.11078</a>
+</div>
+<div id="ref-taghavifarLargeLanguageModels2025" class="csl-entry" role="listitem">
+Taghavi Far, S. M., &amp; Feyzi, F. (2025). Large Language Models for Software Vulnerability Detection: A Guide for Researchers on Models, Methods, Techniques, Datasets, and Metrics. <em>International Journal of Information Security</em>, <em>24</em>(2), 78. <a href="https://doi.org/10.1007/s10207-025-00992-7">https://doi.org/10.1007/s10207-025-00992-7</a>
+</div>
+<div id="ref-zengSWRBenchAssessingLLM2026" class="csl-entry" role="listitem">
+Zeng, Z., Shi, R., Han, K., Li, Y., Sun, K., Wang, Y., Yu, Z., Xie, R., Ye, W., &amp; Zhang, S. (2026). <span>SWR-Bench</span>: <span>Assessing LLM Performance</span> in <span>Real-World Code Review Comment Generation</span>. <em>Proceedings of the ACM on Software Engineering</em>, <em>3</em>(FSE), 3093–3115. <a href="https://doi.org/10.1145/3808144">https://doi.org/10.1145/3808144</a>
+</div>
+</div></section></div></main>
 <!-- /main column -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
