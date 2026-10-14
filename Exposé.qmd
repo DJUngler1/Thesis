@@ -19,6 +19,18 @@ format:
     geometry: 
       - top=30mm
       - left=20mm
+    include-in-header: 
+     text: |
+        \usepackage{fancyhdr}
+        \pagestyle{fancy}
+        \fancyhf{}
+        \fancyhead[L]{Autor: Felix Krauß, Matrikelnummer: 63525}
+        \fancyhead[R]{Studiengang: WiB}
+        \fancypagestyle{plain}{%
+          \fancyhf{}
+          \fancyhead[L]{Autor: Felix Krauß, Matrikelnummer: 63525}
+          \fancyhead[R]{Studiengang: WiB}
+        }
     reference-section-title: Vorläufiges Literaturverzeichnis
   docx: default
 ---
