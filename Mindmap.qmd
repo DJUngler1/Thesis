@@ -199,9 +199,7 @@ Daraus folgt:
 
 - Besser wäre es, ein Regelwerk für Sicherheitslücken aufzustellen. Aus diesem Regelwerk generiert ein sehr
   leistungsfähiges LLM einmalig Regeln für Opengrep oder CodeQL.
-- Rauschen und Duplikate können über ein Skript entfernt werden.
-- Bei jedem Durchlauf wird dann Opengrep für die Prüfung der Sicherheitslücken verwendet. Ein leichtgewichtigeres LLM
-  entfernt anschließend die Fehlalarme aus dem Bericht.
+- Bei jedem Durchlauf wird dann Opengrep für die Prüfung der Sicherheitslücken verwendet. Rauschen und Duplikate können      danach über ein Skript entfernt werden. Ein leichtgewichtigeres LLMentfernt anschließend die Fehlalarme aus dem Bericht.
 - Dasselbe Regelwerk kann für beides verwendet werden: für die Erstellung der Opengrep-Regeln und für das Filtern
   von Fehlalarmen.
 
