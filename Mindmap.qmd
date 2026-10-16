@@ -156,3 +156,72 @@ Die KI müsste in den Fällen die Ergebnisse dann nur noch zusammenfassen und h�
 - Beobachtung an der Quellenauswahl (kein Beleg für eine Lücke in der Forschung): Sicherheit und Qualität werden in
   getrennten Studien behandelt, ganze Anwendungen und Themen wie DSGVO-Konformität aus der Besprechung kommen in den
   vorliegenden Quellen nicht vor. Das müsste vor einer Aussage im Exposé belegt oder abgeschwächt werden.
+
+## Erster MVP
+
+### Aufbau
+
+Ein mit Hilfe von Claude erstelltes Projekt, das ein zu prüfendes Projekt einliest und jede Datei anhand der
+definierten Regeln validiert:
+
+1. Zuerst wird das SAST-Tool Opengrep verwendet.
+2. Dann wird pro Datei für jede Regel ein Prompt erstellt, der die Datei auf diese Regel prüft.
+3. Die Prompts werden sequentiell, also für jede Kombination aus Datei und Regel einzeln, an das LLM gesendet. Im
+   ersten Beispiel ist das qwen2.5-coder:7b, lokal über Ollama ausgeführt.
+4. Danach vergleicht das LLM die Ergebnisse von Opengrep und der Prompts und erstellt einen kumulierten Bericht.
+5. Zum Schluss werden die drei Ergebnisse (nur LLM, nur Opengrep, kombiniert) miteinander und mit den vorher
+   definierten, tatsächlich bekannten Fehlern verglichen.
+
+### Probleme
+
+- Die sequentielle Abarbeitung führt im MVP bei gerade einmal 5 Dateien und 38 Regeln zu 190 Prompts, die im Schnitt
+  je 40 Sekunden dauern. Allein das dauert über 2 Stunden.
+- Bei Projekten mit 50+ Dateien, die geprüft werden müssen, ist das nicht realistisch.
+- Dadurch, dass jede Regel einen eigenen Prompt hat, wird so lange halluziniert, bis eine auffällige Stelle zur Regel
+  passt.
+
+### Lösung
+
+- vLLM, um die Prompts parallel abzuarbeiten
+- Nicht für jede Kombination aus Regel und Datei einen Prompt an das LLM senden, sondern:
+    1. generelle Prüfung jeder Datei durch das LLM, die Kandidaten liefert
+    2. jeden Kandidaten der Regel zuordnen, die am ehesten zutrifft
+    3. nur sinnvolle Kandidaten genau auf diese Regel prüfen
+- Frage dazu: Wie viele Regeln und Dateien passen in einen Prompt, ohne dass der Kontext vollläuft oder etwas
+  übersehen wird?
+
+## Schluss aus Tests mit dem MVP
+
+Nach ersten Tests mit dem MVP stellt sich heraus, dass das LLM zur Erkennung von Sicherheitslücken zu ungenau ist.
+Daraus folgt:
+
+**Sicherheit**
+
+- Besser wäre es, ein Regelwerk für Sicherheitslücken aufzustellen. Aus diesem Regelwerk generiert ein sehr
+  leistungsfähiges LLM einmalig Regeln für Opengrep oder CodeQL.
+- Rauschen und Duplikate können über ein Skript entfernt werden.
+- Bei jedem Durchlauf wird dann Opengrep für die Prüfung der Sicherheitslücken verwendet. Ein leichtgewichtigeres LLM
+  entfernt anschließend die Fehlalarme aus dem Bericht.
+- Dasselbe Regelwerk kann für beides verwendet werden: für die Erstellung der Opengrep-Regeln und für das Filtern
+  von Fehlalarmen.
+
+**Qualität**
+
+- Gemessen wird, was sich empirisch messen lässt:
+    - Existieren Tests? Wie hoch ist die Testabdeckung?
+    - Dateigröße, Methodenlänge und Komplexität
+    - Konventionen (camelCase, PascalCase, Präfixe) über Checkstyle prüfen
+    - Sind Dokumentation und Review vorhanden?
+    - Konventionen für die Projektstruktur und Abhängigkeiten zwischen Schichten prüfen
+- Ein LLM tritt dann eher als Prüfer auf, der auf Grundlage der Qualitätsdaten argumentiert, z. B.:
+    - Datei x hat 1400 Zeilen und 48 Methoden aus 4 Zuständigkeiten, eine Trennung wird angeraten.
+    - Eine Testabdeckung von x ist zu niedrig, die Tests selbst decken die Funktionalität aber gut ab. Oder: zwar
+      hohe Testabdeckung, aber schlechte Tests.
+    - Passt die Doku auch zum Code?
+    - Werden die Konventionen eingehalten? Wenn ja, wurden aussagekräftige Namen verwendet?
+    - Ergebnis der Strukturprüfung auswerten: Ist die Struktur für das Projekt insgesamt sinnvoll?
+
+**Laufzeit**
+
+- Die beiden oberen Punkte machen die Anwendung generell relativ schnell. Nur wenn neue Regeln hinzugefügt oder Regeln
+  angepasst werden, folgt ein langer Durchlauf, da das LLM dann die Regeln für das SAST-Tool neu erstellen muss.
