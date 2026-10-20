@@ -95,7 +95,7 @@ Die betrachteten Studien legen nahe, dass LLMs als Analysewerkzeug vielversprech
   1.2 Forschungsfrage und Zielsetzung\
   1.3 Abgrenzung und Aufbau der Arbeit
 2. Grundlagen\
-  2.1 Standards und Kriterien für Softwarequlität\
+  2.1 Standards und Kriterien für Softwarequalität\
   2.2 Sicherheitslücken und Klassifikationen\
   2.3 Statische Code-Analyse\
   2.4 Betrieb und Funktion von Large Language Models
@@ -103,8 +103,8 @@ Die betrachteten Studien legen nahe, dass LLMs als Analysewerkzeug vielversprech
   3.1 Verwendung von LLMs zur Erkennung von Sicherheitslücken und Qualitätsmägneln\
   3.2 Hypbride Ansätze (statische Analys + LLM)\
   3.3 Eignung lokaler Modelle\
-  3.4 Limitationen bisheriger Sutdien\
-  3.5 Fazit und Konsquenzen für das eigene Tool
+  3.4 Limitationen bisheriger Studien\
+  3.5 Fazit und Konsequenzen für das eigene Tool
 4. Prüfrahmen des eigenen Tools\
   4.1 Überblick über ähnliche vorhandene Lösungen\
   4.2 Kriterien für Qualität und Sicherheit\
@@ -119,7 +119,7 @@ Die betrachteten Studien legen nahe, dass LLMs als Analysewerkzeug vielversprech
   6.1 Evaluationsdesign\
   6.2 Vergleichswerkzeuge und Vorgehen\
   6.3 Auswertung der Ergebnisse\
-  6.4 Vergelich mit bestehenden Tools
+  6.4 Vergleich mit bestehenden Tools
 7. Fazit und Ausblick\
   7.1 Beantwortung der Forschungsfrage\
   7.2 Ausblick
