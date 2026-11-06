@@ -1,3 +1,11 @@
+---
+format: 
+  html: 
+    theme: darkly
+    html-math-method: katex
+---
+
+
 ## Fragen und Ideen zum Tool
 
 - Welche Frameworks bzw. Programmiersprachen soll das Tool auswerten können? Alle sind wohl kaum möglich hier z.B. auf die am weitesten verbreitesten Beschränken, aber das Tool so schreiben dass das Regelwerk nachträglich einfach angepasst werden kann.
@@ -21,6 +29,7 @@ Die KI müsste in den Fällen die Ergebnisse dann nur noch zusammenfassen und h�
     13. Analysiere den Quellcode der Anwendung, wurden dort Fehler gemacht die Sicherheitskritisch sind. z.B. kann bei der Übertragung von Werten eingegriffen und die Werte abgeändert werden? Hier genau definieren Anhand welcher Kriterien und Klassifikationen Sicherheit ausgwertet werden soll.
     14. Ausführlichen Bericht erstellen, der die Ergebnisse von allen ausgeführten Analysen zussammenfasst, eine Einschätzung abgibt wie verständlich, funktional, sicher und wartbar die Anwenung ist und Handlungsvorschläge daraus generiert.
     15. Handlungsvorschläge als konkrete Schritt für Schritt-Anleitung generieren, so dass ein Programierer oder ein KI-Assistent das direkt umsetzen könnte.
+- SOll das Tool eher benutzt werdne oder in einer Pipeline laufen ?
 
 ## Überblick
 
@@ -223,3 +232,178 @@ Daraus folgt:
 
 - Die beiden oberen Punkte machen die Anwendung generell relativ schnell. Nur wenn neue Regeln hinzugefügt oder Regeln
   angepasst werden, folgt ein langer Durchlauf, da das LLM dann die Regeln für das SAST-Tool neu erstellen muss.
+
+- Das erstellen von Regeln für Sicherheitslücken nach CWE ergibt leider auch wenig Sinn, es dauert sehr lange die KI erstellt Regeln die nicht bedeutend besser sind als das was sowieso schon durch SASTs abgedeckt wird.
+  -> Regelerstellung möglich, aber wenn dann eher für Regeln die es so nicht offiziell gibt, z.B. spezifische Anwendungsanforderungen oder Anforderungen der Hochschule die Erfüllt werden müssen.
+  Sonst filter die KI nur die Ergebnisse des Sast Tools.
+- Für Regelerstellung auf CodeQL wechseln, ist stärker bei Opensource free und der Grund für die Verwendung von Opengrep war die leichtere Regelerstellung. 
+
+## Resultierende Erkenntnisse, Toolvorschlag:
+
+- Vulnerabilities im Code werden mit OpenGrep erkannt, weil es komplett kostenlos ist. Auf jeden Fall erfolgt ein Vergleich mit CodeQL (ist für akademische Nutzung frei). Je nachdem, wie die Performance ist und ob der Kauf einer Lizenz eine Option ist, erfolgt ein Wechsel zu CodeQL oder SonarQube Enterprise.
+- Einfache Vulnerabilities, Code Smells, Bugs, Duplikate usw. werden mit SonarQube Community erkannt. Warum nicht nur SonarQube? Die Community-Version deckt bei Sicherheitslücken nur einfache Regeln ab, nicht aber komplexe XSS- oder Injection-Probleme über mehrere Dateien hinweg.
+- Folgende Sprachen werden von dem Tool akzeptiert: C, C++, C#, Java, JavaScript, TypeScript, Python und Rust.
+- Begründung: Diese Sprachen werden von OpenGrep und SonarQube unterstützt, haben laut Statista alle einen Marktanteil von über 1 % und kommen zusammen auf fast 75 % Marktanteil.
+- Sicherheitslücken in Abhängigkeiten werden in erster Instanz mit dem OSV-Scanner geprüft. Warum? Er stammt von Google, hat eine große Datenbasis und funktioniert für alle Sprachen. Er kann also einmal konfiguriert und für alles verwendet werden. Außerdem kombiniert er viele Quellen.
+- In Stufe 2 wird, wenn ein Paketmanager vorhanden ist, dessen Audit für die Erkennung von Sicherheitslücken in Abhängigkeiten eingesetzt, sonst Trivy als Fallback.
+- Pro Sprache werden ein entsprechender Linter für Konventionen und Codequalität sowie ein Formatter für eine einheitliche Formatierung ausgeführt. Für die Linter und Formatter werden für jede Sprache gängige Konventionen festgelegt und definiert. Wenn es im Projekt schon Linter und Formatter gibt, werden diese genutzt.
+- Gibt es Tests? Wenn ja, werden sie ausgeführt und die Ergebnisse dokumentiert, auch im Fehlerfall.
+- Falls Tests vorhanden sind, wird die Testabdeckung mit dem entsprechenden Tool geprüft, das im Projekt existiert. Wenn es kein entsprechendes Tool gibt, wird pro Sprache eines definiert. Hier könnte man eine Mindestabdeckung festlegen, die eingehalten werden muss.
+- Danach folgt ein Mutation Testing mit dem entsprechenden Tool pro Sprache oder mit dem, das im Projekt schon existiert. Es prüft, ob die Tests tatsächlich etwas prüfen, indem es kleine Fehler in den Code einbaut.
+- Der Ablauf wird wahrscheinlich mit Python-Skripten gesteuert: Programmiersprache erkennen, alles ausführen und die Ergebnisse in einem Ordner ablegen.
+- Danach erfolgt der LLM-Einsatz:
+  + Die Ergebnisse von OpenGrep, SonarQube, OSV-Scanner und den nativen Dependency-Check-Tools/Trivy werden zusammengeführt; Duplikate, Rauschen und Fehlalarme werden gefiltert. Die Ergebnisse werden eingeordnet, und es werden Handlungsvorschläge gegeben.
+  + Die Ergebnisse der Linter und Formatter werden zusammengefasst, interpretiert und gefiltert, und es werden Handlungsvorschläge gegeben. Außerdem wird geprüft, ob die Namen von Klassen, Parametern, Funktionen usw. auch deren Funktionalität beschreiben. Wie ist die Projektstruktur, und ist diese sinnvoll und nachvollziehbar?
+  + Die Tests werden ausgeführt: Funktionieren sie? Die Qualität der Tests wird durch die Interpretation der Stryker-Ergebnisse und den Abgleich der Tests mit dem zu testenden Code bewertet. 
+  + Am Ende wird alles in einem Endbericht zusammengefasst und ausgegeben.
+- Zusätzlich können eigene Regeln als Markdown definiert werden, anwendungsspezifisch oder hochschulspezifisch. Das LLM prüft diese spezifischen Regeln und fügt das Ergebnis dem Bericht hinzu.
+- Das LLM wird über Ollama betrieben. Ollama wird lokal gehostet und kann sowohl lokal gehostete LLMs als auch Cloud-Modelle verwenden. Da die Cloud-Modelle Kosten verursachen, muss hier geschaut werden.
+
+## Metriken: Wie messe ich den Erfolg des Tools und die Weiterentwicklung?
+
+- Für die Erkennung von Sicherheitslücken erfolgt ein Vergleich mit den Ergebnissen verschiedener SAST-Tools sowie ein Vergleich mit bestehenden Review-Tools, wie z. B. der Code-Review-Funktion von Claude. Für eine bessere Messbarkeit wird dies mit Testprojekten durchgeführt, bei denen bekannte Fehler gelistet sind. So kann man genau sehen, wie viel Prozent der Lücken erkannt wurden, wie viele Duplikate, Fehlalarme und wie viel Rauschen es jeweils gab. Beim Tool selbst werden verschiedene LLMs, lokal und in der Cloud, getestet und verglichen.
+- Die Geschwindigkeit wird mit anderen Tools sowie bei der Verwendung verschiedener LLMs (lokal und Cloud) verglichen.
+- Bei den Abhängigkeitstests werden die Ergebnisse mit denen der einzelnen Tools verglichen: Wie viel Prozent der Lücken werden erkannt, und wie viel Rauschen gibt es?
+- Die Ergebnisse werden mit denen der Linter und Formatter verglichen: Gibt es Rauschen, das gefiltert wird? Bringt die Zusammenfassung der Ergebnisse einen Mehrwert?
+- Bei der Testausführung wird subjektiv bewertet: Bringen die Interpretation und Zusammenfassung einen aussagekräftigen Mehrwert?
+- Auch die Qualität des Endberichts kann nur subjektiv bewertet werden. Hier wenn möglich ein Experteninterview bzw. Tester, die Feedback geben. Eventuell Rapha und Johannes, die gehen auf das Tool bestimmt ab.
+- Wenn getestet und sich endgültig für das am besten performende Modell entschieden wurde, erfolgt eventuell ein Fine-Tuning des Modells.
+
+## Besprechung
+
+- Wenn kein Paketmanager nciht akzeptieren
+- Bei Tests keine Mindestabdeckung, nur Auswertung ob die richtigen Stellen auch getestet werdnen
+- Linter Formatter, fixe Vorgaben definieren diese müssen eingehalten werden evlt. auch direkt als export für Studenten.
+- Modell lokal laufen lassen gar nicht unbedingt zentral -> bestcase wäre es wenn das Tool auf einem normalen Entwoickler Laptop läuft.
+
+## Toolablauf als Flowchart
+
+```{=html}
+<style>
+/* ---- Farben & Grundwerte (hier zentral anpassbar) ---- */
+.tp {
+  --tp-bg: #1A1A19;
+  --tp-text: #ECEAE3;  --tp-muted: #A8A69C;  --tp-hint: #77756E;
+  --tp-card: #232321;  --tp-box: #2E2E2B;    --tp-border: #3A3A37;  --tp-border-strong: #4A4945;
+  --tp-dec-bg: #3A2A10; --tp-dec-border: #BA7517; --tp-dec-text: #FAC775;
+  --tp-abort-bg: #3D1616; --tp-abort-border: #E24B4A; --tp-abort-text: #F7C1C1;
+  --tp-llm-bg: #222040; --tp-llm-border: #534AB7; --tp-llm-text: #CECBF6;
+  display: flex; flex-direction: column; gap: 0; max-width: 760px; margin: 1.5rem auto;
+  background: var(--tp-bg); padding: 18px; border-radius: 16px;
+  font-size: 13px; line-height: 1.4; color: var(--tp-text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.tp * { box-sizing: border-box; }
+.tp p { margin: 0; }
+.tp-ph { border: 0.5px solid var(--tp-border); border-radius: 12px; padding: 12px 14px; background: var(--tp-card); }
+.tp-ph.llm { background: var(--tp-llm-bg); border-color: var(--tp-llm-border); }
+.tp-pt { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--tp-muted); margin: 0 0 8px !important; display: flex; align-items: center; gap: 6px; }
+.tp-ph.llm .tp-pt { color: var(--tp-llm-text); }
+.tp-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; align-items: start; }
+.tp-n { border: 0.5px solid var(--tp-border-strong); border-radius: 8px; padding: 8px 10px; background: var(--tp-box); }
+.tp-n b { font-weight: 600; display: block; }
+.tp-n span { color: var(--tp-muted); font-size: 12px; }
+.tp-n span.lb { display: block; font-size: 11px; color: var(--tp-hint); }
+.tp-n.d { border: 0.5px dashed var(--tp-dec-border); background: var(--tp-dec-bg); color: var(--tp-dec-text); }
+.tp-n.d span { color: var(--tp-dec-text); }
+.tp-n.x { border-color: var(--tp-abort-border); background: var(--tp-abort-bg); color: var(--tp-abort-text); }
+.tp-n.x span { color: var(--tp-abort-text); }
+.tp-n.io { border-radius: 999px; text-align: center; padding: 9px; border-color: #6B6A65; }
+.tp-ar { text-align: center; color: var(--tp-hint); font-size: 18px; line-height: 1; padding: 4px 0; }
+.tp-ph.llm .tp-n { background: #2B2950; border-color: #3C3489; }
+.tp-col { display: flex; flex-direction: column; gap: 6px; }
+</style>
+
+<div class="tp">
+
+<div class="tp-n io"><b>Softwareprojekt (Repository)</b></div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 1 · Orchestrierung ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">1 · Orchestrierung (Python-Skripte)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Programmiersprache erkennen</b><span>Dateien, Build-Configs</span></div>
+    <div class="tp-n d"><b>Sprache unterstützt?</b><span>C, C++, C#, Java, JS, TS, Python, Rust</span></div>
+    <div class="tp-col">
+      <div class="tp-n x"><span class="lb">nein</span><b>Abbruch</b><span>Hinweis: Sprache nicht unterstützt</span></div>
+      <div class="tp-n"><span class="lb">ja</span><b>Weiter mit Analyse</b></div>
+    </div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 2 · Statische Code-Analyse ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">2 · Statische Code-Analyse (parallel)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>OpenGrep</b><span>Vulnerabilities, dateiübergreifend (XSS, Injection) · Vergleich CodeQL, ggf. Wechsel zu CodeQL / SonarQube Enterprise</span></div>
+    <div class="tp-n"><b>SonarQube Community</b><span>Einfache Vulns, Code Smells, Bugs, Duplikate</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 3 · Abhängigkeiten ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">3 · Abhängigkeiten</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Stufe 1: OSV-Scanner</b><span>Alle Sprachen, viele Quellen</span></div>
+    <div class="tp-col">
+      <div class="tp-n d"><b>Stufe 2: Paketmanager vorhanden?</b></div>
+      <div class="tp-n"><span class="lb">ja</span><b>Natives Audit</b><span>z. B. npm audit, cargo audit</span></div>
+      <div class="tp-n"><span class="lb">nein</span><b>Trivy (Fallback)</b></div>
+    </div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 4 · Konventionen ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">4 · Konventionen &amp; Formatierung (pro Sprache)</p>
+  <div class="tp-row">
+    <div class="tp-n d"><b>Linter / Formatter im Projekt?</b></div>
+    <div class="tp-n"><span class="lb">ja</span><b>Projekt-Konfiguration nutzen</b></div>
+    <div class="tp-n"><span class="lb">nein</span><b>Definierte Standards</b><span>gängige Konventionen je Sprache</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 5 · Tests ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">5 · Tests</p>
+  <div class="tp-row">
+    <div class="tp-col">
+      <div class="tp-n d"><b>Tests vorhanden?</b></div>
+      <div class="tp-n"><span class="lb">nein</span><b>Im Bericht vermerken</b></div>
+    </div>
+    <div class="tp-col">
+      <div class="tp-n"><span class="lb">ja</span><b>Tests ausführen</b><span>Ergebnisse dokumentieren, auch bei Fehlern</span></div>
+      <div class="tp-n"><b>Testabdeckung messen</b><span>Projekt-Tool oder pro Sprache definiert</span></div>
+      <div class="tp-n d"><b>Mindestabdeckung erreicht?</b><span>nein → markieren und einstufen, kein Abbruch</span></div>
+      <div class="tp-n"><b>Mutation Testing</b><span>Projekt-Tool oder definiert (z. B. Stryker)</span></div>
+    </div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<div class="tp-n"><b>Rohergebnisse im Ergebnisordner ablegen</b><span>alle Tool-Outputs gesammelt</span></div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 6 · LLM-Auswertung ===== -->
+<div class="tp-ph llm">
+  <p class="tp-pt">6 · LLM-Auswertung über Ollama (lokale oder Cloud-Modelle, Kosten prüfen)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Sicherheit</b><span>OpenGrep, SonarQube, OSV, Audit/Trivy zusammenführen · Duplikate, Rauschen, Fehlalarme filtern · einordnen, Handlungsvorschläge</span></div>
+    <div class="tp-n"><b>Codequalität</b><span>Linter/Formatter zusammenfassen und filtern · Benennungen prüfen · Projektstruktur bewerten</span></div>
+    <div class="tp-n"><b>Testqualität</b><span>Funktionieren die Tests? · Mutation-Ergebnisse interpretieren · Tests vs. Code abgleichen · ungetestete Stellen: kritisch oder unkritisch?</span></div>
+    <div class="tp-n"><b>Eigene Regeln</b><span>Markdown, anwendungs- oder hochschulspezifisch</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<div class="tp-n io"><b>Endbericht</b></div>
+
+</div>
+```
+
+<small>Das Diagramm wurde von Claude generiert.</small>

@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>mindmap</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="Mindmap_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Mindmap_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="Mindmap_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="Mindmap_files/libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="Mindmap_files/libs/quarto-html/popper.min.js"></script>
+<script src="Mindmap_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Mindmap_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Mindmap_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Mindmap_files/libs/quarto-html/quarto-syntax-highlighting-dark-447e42e69aaa9833c0ba1b986f430b20.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Mindmap_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Mindmap_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Mindmap_files/libs/bootstrap/bootstrap-d0a4af45de66b11030a5673244ae2f01.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+
+
+</head>
+
+<body class="fullcontent quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Skip to main content</a>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+
+
+
+<section id="fragen-und-ideen-zum-tool" class="level2">
+<h2 class="anchored" data-anchor-id="fragen-und-ideen-zum-tool">Fragen und Ideen zum Tool</h2>
+<ul>
+<li>Welche Frameworks bzw. Programmiersprachen soll das Tool auswerten können? Alle sind wohl kaum möglich hier z.B. auf die am weitesten verbreitesten Beschränken, aber das Tool so schreiben dass das Regelwerk nachträglich einfach angepasst werden kann.</li>
+<li>Trennung bei Sicherheitslücken zwischen Sicherheit des eigens geschreibenen Codes und der verwendeten Bibliotheken, für das Scannen von Bibliotheken Vorschlag Owasp macht genau das und kannn lokal ausgeführt werden. Für Bewertung von Sicherheit des geschriebenen Codes - LLM.</li>
+<li>Bei Qualität auch die Frage was gibt es schon und kann man genauso nehmen, z.B. EsLint, TsLint bei JavScript oder Typescript. Für Struktur könnte man bei z.B. clean Architecture anwenden. Hier auch dann die Frage für was davon braucht man überhaupt ein LLM und wie weit kann ich durch bestehende Checks, Tools oder eigene Skripte Qualität bewerten. Die KI müsste in den Fällen die Ergebnisse dann nur noch zusammenfassen und hübsch aufbereiten.</li>
+<li>Generell Tools die determistische Cheks durchführen könnnen Evaluation durch LLM vorziehen, da dort das Ergebnis erwartbar ist. Und bei LLMs, in der Aufbereitung der Ergebnisse ist eine gewisse unregelmäßigkeit eher akzeptabel.</li>
+<li>Regeln werden dann nach meiner jetztigen Ideen grob so aussehen. Zuerst Anweisung an die LLM: Wete dieses Softwareprojekt anhand den hier [pfad zum Regelwerk] definierten Regeln diese Softwareanwendung [pfad zur Anwenung, url zum git repo] aus. Dann folgender Ablauf als Vorschlag:
+<ol type="1">
+<li>Techstack der Anwendung ermittlen.</li>
+<li>Was für eine Anwendung ist das, welchen Zweck soll sie erfüllen - Extraktion aus Doku, Vergleich mit tatsächlicher Funktionalität der Anwedung.</li>
+<li>Security check der verwendeten Libraries, scan z.B. mit OWASP ausführen.</li>
+<li>Passenden Linter ausführen, Projekt bauen, Anwendung starten ? Klappt das</li>
+<li>Gibt es Tests wenn ja: Tests laufen lassen und schauen ob tests durchlaufen.</li>
+<li>Testabdeckung mit einem selbst definierten Skript oder einem Tool prüfen. Wie viel Prozent der Zeilen, der Komponenten,… ,usw. werden von den Tests abgedeckt, abgleich mit vordefinierten limits wie hoch die Abdeckung der Tests ist.</li>
+<li>Testmutationen ausführen z.B. mit Stryker – Anwendungscode gezielt verändern und dann tests ausführen um auszuwerten wie robust diese sind.</li>
+<li>Tests passsend zur Anwendung erstellen und ausführen, wo eigene noch nicht abecken, basierend darauf und den vorhandenen tests bewerten ob die Anwendung funktioniert wie erwartet, gefundene Bugs dokumentieren.</li>
+<li>Erfüllt die Projektstruktur gängige Standards, z.B. ist das Projekt nach den Regeln von Clean Architecture aufgebaut?</li>
+<li>Namensgebung von Klassen, Funktionen, Dateien prüfen, beschreiben die gut was darin tatsächlich umgesetzt wird?</li>
+<li>Sind die Dateien/Komponenten der Anwendung entprechend ihrer Funktionalität sinnvoll aufgeteitl? z.B. Gibt es Dateien die sehr groß oder Komplex sind die man aufteilen sollte?</li>
+<li>Gibt es Dokumentation, wie viel der tatsächlich erkannten Funktionalität deckt die Dukumentation ab?</li>
+<li>Analysiere den Quellcode der Anwendung, wurden dort Fehler gemacht die Sicherheitskritisch sind. z.B. kann bei der Übertragung von Werten eingegriffen und die Werte abgeändert werden? Hier genau definieren Anhand welcher Kriterien und Klassifikationen Sicherheit ausgwertet werden soll.</li>
+<li>Ausführlichen Bericht erstellen, der die Ergebnisse von allen ausgeführten Analysen zussammenfasst, eine Einschätzung abgibt wie verständlich, funktional, sicher und wartbar die Anwenung ist und Handlungsvorschläge daraus generiert.</li>
+<li>Handlungsvorschläge als konkrete Schritt für Schritt-Anleitung generieren, so dass ein Programierer oder ein KI-Assistent das direkt umsetzen könnte.</li>
+</ol></li>
+<li>SOll das Tool eher benutzt werdne oder in einer Pipeline laufen ?</li>
+</ul>
+</section>
+<section id="überblick" class="level2">
+<h2 class="anchored" data-anchor-id="überblick">Überblick</h2>
+<ul>
+<li>LLMs sind als Analyse-Werkzeug vielversprechend, aber nur in Kombination mit klassischer Analyse, mit Prüfung durch Menschen und mit sauberer Evaluation. Allein eingesetzt fallen sie in realistischen Szenarien deutlich ab.</li>
+<li>Liteartur hat 2 Betrachtungen Sicherheit (Schwachstellen finden) und Qualität (Code-Review, Code-Smells). Beide werden fast immer getrennt untersucht.</li>
+<li>Benchmarks und Datensätze sind zu einfach oder fehlerhaft, die Ergebnisse brechen auf realen Daten ein.</li>
+</ul>
+</section>
+<section id="ausgangslage" class="level2">
+<h2 class="anchored" data-anchor-id="ausgangslage">1. Ausgangslage</h2>
+<ul>
+<li>Schwachstellen nehmen zu
+<ul>
+<li>Veröffentlichte CVE-Einträge: 59.487 (2005–2014) auf 194.049 (2015–2024) <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025">[@parkEffectivenessInstructionTuningLocal2025, S. 1]</span></li>
+<li>Über 20.000 neue CVEs pro Jahr, nicht alle lassen sich in einen Prompt packen <span class="citation" data-cites="kaniewskiVulnerabilityHandlingAIGenerated2024">[@kaniewskiVulnerabilityHandlingAIGenerated2024, Abschn. III]</span></li>
+</ul></li>
+<li>Klassische statische Analyse (SAST) hat bekannte Schwächen ★
+<ul>
+<li>viele Fehlalarme, hoher manueller Prüfaufwand (10–20 Minuten je Alarm im Industriefall) <span class="citation" data-cites="duReducingFalsePositives2026">[@duReducingFalsePositives2026, Abstract]</span></li>
+<li>braucht von Menschen gepflegte Spezifikationen <span class="citation" data-cites="liIRISLLMAssistedStatic2025">[@liIRISLLMAssistedStatic2025, S. 1]</span></li>
+<li>Präzision bei großen, komplexen Codebasen begrenzt <span class="citation" data-cites="liEnhancingStaticAnalysis2024">[@liEnhancingStaticAnalysis2024, Abstract]</span></li>
+</ul></li>
+<li>KI-generierter Code bringt Schwachstellen mit, teils aus fehlerhaften Trainingsdaten, teils in leicht abgewandelter, redundanter Form <span class="citation" data-cites="kaniewskiVulnerabilityHandlingAIGenerated2024">[@kaniewskiVulnerabilityHandlingAIGenerated2024, Abstract]</span>
+<ul>
+<li>Bezug zum Thema „vibe-gecodete Anwendungen“ aus der Besprechung</li>
+</ul></li>
+</ul>
+</section>
+<section id="standards-kriterien-und-klassifikationen-zielsetzung-1-fragen-2-und-3" class="level2">
+<h2 class="anchored" data-anchor-id="standards-kriterien-und-klassifikationen-zielsetzung-1-fragen-2-und-3">2. Standards, Kriterien und Klassifikationen (Zielsetzung 1, Fragen 2 und 3)</h2>
+<ul>
+<li>Qualität: ISO/IEC 25010:2023
+<ul>
+<li>Produktqualitätsmodell mit neun Merkmalen: Funktionale Eignung, Leistungseffizienz, Kompatibilität, Interaktionsfähigkeit, Zuverlässigkeit, Informationssicherheit (Security), Wartbarkeit, Flexibilität und Sicherheit im Sinne von Safety <span class="citation" data-cites="ISO25010_2023">[@ISO25010_2023, S. 9]</span></li>
+<li>Das Modell ist ausdrücklich als Grundlage für Anforderungen, Messung und Bewertung gedacht <span class="citation" data-cites="ISO25010_2023">[@ISO25010_2023, S. 1]</span></li>
+<li>Einordnung: die Studien nutzen eigene, enger gefasste Qualitätsmaße
+<ul>
+<li>SonarQube-Regeln und Issue-Reduktion <span class="citation" data-cites="patcasEvaluationStudyLarge2026">[@patcasEvaluationStudyLarge2026, S. 1]</span></li>
+<li>bestandene Unit-Tests als Kriterium für Korrektheit <span class="citation" data-cites="cihanEvaluatingLargeLanguage2025">[@cihanEvaluatingLargeLanguage2025, Abschn. I]</span></li>
+<li>Treffer gegen Ground-Truth, Precision/Recall/F1 <span class="citation" data-cites="zengSWRBenchAssessingLLM2026 kumarBiggerIsntAlways2026">[@zengSWRBenchAssessingLLM2026, S. 1; @kumarBiggerIsntAlways2026, S. 1]</span></li>
+</ul></li>
+</ul></li>
+<li>Sicherheit: CWE, CVE, CVSS (hängen zusammen)
+<ul>
+<li>CWE: Katalog von Schwachstellentypen, Ziel ist, Ursachen vor dem Einsatz zu beseitigen <span class="citation" data-cites="CWE">[@CWE]</span></li>
+<li>CVE: Einträge zu veröffentlichten Schwachstellen; das CVE-Programm führt Metriken dazu und verlangt von hervorgehobenen Meldestellen (CNAs) CVSS- und CWE-Angaben in den Einträgen <span class="citation" data-cites="CVE_Metrics">[@CVE_Metrics]</span></li>
+<li>CVSS: numerischer Schweregrad, der in Stufen (z. B. niedrig bis kritisch) übersetzt wird <span class="citation" data-cites="zotero-item-54">[@zotero-item-54]</span></li>
+<li>Forschung nutzt CWE als Ausgabeformat und Datenbasis ★
+<ul>
+<li>Modell nennt den CWE-Typ statt nur „verwundbar/nicht verwundbar“ <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025">[@parkEffectivenessInstructionTuningLocal2025, S. 1]</span></li>
+<li>CWE-Bench-Java mit 120 validierten Schwachstellen <span class="citation" data-cites="liIRISLLMAssistedStatic2025">[@liIRISLLMAssistedStatic2025, S. 1]</span></li>
+<li>Einordnung der Datensätze nach CWE-1000-Kategorien, Empfehlung: CWE-Typklassifikation und Berichtsausgabe <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 42–43]</span></li>
+</ul></li>
+</ul></li>
+<li>Offen für die Arbeit: welche Teilmenge der ISO-Merkmale und der CWE-Typen das Regelwerk abdeckt (Festlegung im Methodenteil)</li>
+</ul>
+</section>
+<section id="sicherheitslücken-erkennen-mit-llms-zielsetzung-1-frage-1" class="level2">
+<h2 class="anchored" data-anchor-id="sicherheitslücken-erkennen-mit-llms-zielsetzung-1-frage-1">3. Sicherheitslücken erkennen mit LLMs (Zielsetzung 1, Frage 1)</h2>
+<ul>
+<li>Überblick über das Feld
+<ul>
+<li>263 Studien kategorisiert <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 43]</span></li>
+<li>die meisten Studien klassifizieren nur binär (verwundbar ja/nein) <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 43]</span></li>
+<li>Leitfaden zu Modellen, Methoden, Datensätzen und Metriken <span class="citation" data-cites="taghavifarLargeLanguageModels2025">[@taghavifarLargeLanguageModels2025, S. 1]</span></li>
+</ul></li>
+<li>⚡ Positiver Befund
+<ul>
+<li>LLMs können bei guter Anbindung klassische Analysewerkzeuge übertreffen und Fixes vorschlagen <span class="citation" data-cites="taghavifarLargeLanguageModels2025">[@taghavifarLargeLanguageModels2025, S. 60]</span></li>
+<li>IRIS (LLM + CodeQL): 55 von 120 Schwachstellen gefunden, CodeQL allein 27 <span class="citation" data-cites="liIRISLLMAssistedStatic2025">[@liIRISLLMAssistedStatic2025, S. 1]</span></li>
+<li>Einschränkung: Taghavi Far und Feyzi nehmen im Abstract ausdrücklich keinen direkten Vergleich vor <span class="citation" data-cites="taghavifarLargeLanguageModels2025">[@taghavifarLargeLanguageModels2025, S. 1]</span></li>
+</ul></li>
+<li>⚡ Negativer Befund
+<ul>
+<li>Ein Modell mit 68,26 % F1 auf BigVul erreicht auf dem bereinigten PrimeVul nur 3,09 %, GPT-3.5 und GPT-4 liegen in strengen Settings nahe am Zufall <span class="citation" data-cites="dingVulnerabilityDetectionCode2024">[@dingVulnerabilityDetectionCode2024, S. 1]</span></li>
+<li>Ursache: schlechte Labels, Duplikate, Datenlecks in den gängigen Datensätzen ★ <span class="citation" data-cites="dingVulnerabilityDetectionCode2024 kaniewskiSystematicLiteratureReview2026">[@dingVulnerabilityDetectionCode2024, S. 1; @kaniewskiSystematicLiteratureReview2026, S. 38]</span></li>
+<li>verteilte Schwachstellen über mehrere Funktionen bleiben schwierig <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 37]</span></li>
+</ul></li>
+<li>Auflösung des Widerspruchs (eigene Deutung, noch zu belegen)
+<ul>
+<li>positive Ergebnisse stammen hier aus Hybridansätzen (IRIS) oder Übersichten, negative aus der Prüfung auf bereinigten, realistischen Daten (Ding). Das stützt die Idee, LLM und klassische Analyse zu verbinden (Zweig 5).</li>
+</ul></li>
+</ul>
+</section>
+<section id="qualitätsmängel-und-code-review-mit-llms-zielsetzung-1-fragen-1-und-4" class="level2">
+<h2 class="anchored" data-anchor-id="qualitätsmängel-und-code-review-mit-llms-zielsetzung-1-fragen-1-und-4">4. Qualitätsmängel und Code-Review mit LLMs (Zielsetzung 1, Fragen 1 und 4)</h2>
+<ul>
+<li>Review-Fähigkeit ist moderat ★
+<ul>
+<li>GPT-4o stuft Korrektheit in 68,50 % der Fälle richtig ein, Gemini 2.0 Flash in 63,89 % <span class="citation" data-cites="cihanEvaluatingLargeLanguage2025">[@cihanEvaluatingLargeLanguage2025, Abstract]</span></li>
+<li>beste Kombination im SWR-Bench erreicht nur 19,38 % F1, Hauptproblem ist niedrige Precision <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">[@zengSWRBenchAssessingLLM2026, S. 13]</span></li>
+<li>auf echten Pull Requests fällt F1 von 0,847 (synthetisch) auf 0,066 <span class="citation" data-cites="kumarBiggerIsntAlways2026">[@kumarBiggerIsntAlways2026, S. 1]</span></li>
+</ul></li>
+<li>Fehlalarme und fehlender Kontext sind das zentrale Praxisproblem ★
+<ul>
+<li>ein Großteil entsteht durch fehlenden Kontext und unbekannte Projektkonventionen <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">[@zengSWRBenchAssessingLLM2026, S. 20]</span></li>
+<li>Agenten, die möglichst alle Fehler finden sollen, liefern ein niedriges Signal-Rausch-Verhältnis <span class="citation" data-cites="pereiraCRBenchEvaluatingRealWorld2026">[@pereiraCRBenchEvaluatingRealWorld2026, S. 1]</span></li>
+<li>Wirkung der Eingabe: ohne Aufgabenbeschreibung sinkt die Leistung <span class="citation" data-cites="cihanEvaluatingLargeLanguage2025">[@cihanEvaluatingLargeLanguage2025, Abstract]</span></li>
+</ul></li>
+<li>Qualitätsprobleme beheben
+<ul>
+<li>Fixes für SonarQube-Findings: im Mittel 36,02 % weniger gemeldete Issues, bester Einzelfall 71,54 % <span class="citation" data-cites="patcasEvaluationStudyLarge2026">[@patcasEvaluationStudyLarge2026, S. 1]</span></li>
+<li>Fixes führen teils neue Probleme ein, Validierung und menschliche Kontrolle nötig <span class="citation" data-cites="patcasEvaluationStudyLarge2026">[@patcasEvaluationStudyLarge2026, S. 42]</span></li>
+</ul></li>
+<li>Auch bei Review gilt: Was gefunden wird, hängt vom Fehlertyp ab
+<ul>
+<li>funktionale Fehler werden zuverlässiger erkannt als Verbesserungsvorschläge zur Wartbarkeit <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">[@zengSWRBenchAssessingLLM2026, S. 20]</span></li>
+<li>Performance-Probleme werden von allen getesteten Modellen kaum erkannt <span class="citation" data-cites="kumarBiggerIsntAlways2026">[@kumarBiggerIsntAlways2026, S. 1]</span></li>
+</ul></li>
+<li>Evaluationsproblem ★
+<ul>
+<li>synthetische Benchmarks überschätzen die Leistung <span class="citation" data-cites="kumarBiggerIsntAlways2026 dingVulnerabilityDetectionCode2024">[@kumarBiggerIsntAlways2026, S. 1; @dingVulnerabilityDetectionCode2024, S. 1]</span></li>
+<li>Benchmarks sind zu kleinteilig, ohne Projektkontext oder vermischen Fehler und Stilfragen <span class="citation" data-cites="zengSWRBenchAssessingLLM2026 pereiraCRBenchEvaluatingRealWorld2026">[@zengSWRBenchAssessingLLM2026, S. 1; @pereiraCRBenchEvaluatingRealWorld2026, S. 2]</span></li>
+</ul></li>
+</ul>
+</section>
+<section id="llm-mit-statischer-analyse-kombinieren-zielsetzung-1-frage-4-grundlage-für-zielsetzung-2" class="level2">
+<h2 class="anchored" data-anchor-id="llm-mit-statischer-analyse-kombinieren-zielsetzung-1-frage-4-grundlage-für-zielsetzung-2">5. LLM mit statischer Analyse kombinieren (Zielsetzung 1, Frage 4; Grundlage für Zielsetzung 2)</h2>
+<ul>
+<li>Empfehlung der Übersichtsarbeiten ★
+<ul>
+<li>SAST liefert Kandidaten, das LLM filtert Fehlalarme; umgekehrt kann die statische Analyse LLM-Vorschläge verifizieren <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 42]</span></li>
+<li>Integration mit vorhandenen Werkzeugen wie statischen Analysatoren nennen sie als einen von mehreren Wegen, die Wirksamkeit zu erhöhen <span class="citation" data-cites="taghavifarLargeLanguageModels2025">[@taghavifarLargeLanguageModels2025, S. 60]</span></li>
+<li>hybride Systeme aus LLM und Regelwerkzeug als nächster Schritt <span class="citation" data-cites="patcasEvaluationStudyLarge2026">[@patcasEvaluationStudyLarge2026, S. 42]</span></li>
+</ul></li>
+<li>Konkrete Ansätze
+<ul>
+<li>LLift: LLM + Pfadanalyse, vier neue Fehler im Linux-Kernel <span class="citation" data-cites="liEnhancingStaticAnalysis2024">[@liEnhancingStaticAnalysis2024, Abstract]</span></li>
+<li>IRIS: LLM leitet Taint-Spezifikationen ab und prüft Kontext, Fehlentdeckungsrate −5 Prozentpunkte gegenüber CodeQL <span class="citation" data-cites="liIRISLLMAssistedStatic2025">[@liIRISLLMAssistedStatic2025, S. 1]</span></li>
+<li>Tencent-Industriestudie: hybride Verfahren beseitigen 94–98 % der Fehlalarme bei hoher Recall <span class="citation" data-cites="duReducingFalsePositives2026">[@duReducingFalsePositives2026, Abstract]</span></li>
+</ul></li>
+<li>⚡ Kombination ist nicht automatisch gut
+<ul>
+<li>Hybrid-Review (Berichte statischer Tools einfach in den Prompt gegeben) schneidet im SWR-Bench am schlechtesten ab, mittlerer F1 4,87 % <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">[@zengSWRBenchAssessingLLM2026, S. 13]</span></li>
+<li>Das spricht für eine strukturierte Verbindung, nicht nur Berichte als Kontext mitzugeben</li>
+</ul></li>
+</ul>
+</section>
+<section id="modelle-kosten-und-lokaler-betrieb-zielsetzung-1-frage-5-anforderung-lokal-deploybar" class="level2">
+<h2 class="anchored" data-anchor-id="modelle-kosten-und-lokaler-betrieb-zielsetzung-1-frage-5-anforderung-lokal-deploybar">6. Modelle, Kosten und lokaler Betrieb (Zielsetzung 1, Frage 5; Anforderung „lokal deploybar“)</h2>
+<ul>
+<li>Cloud-APIs setzen voraus, dass der Quellcode das Haus verlässt, lokale Modelle vermeiden das <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025">[@parkEffectivenessInstructionTuningLocal2025, S. 1]</span></li>
+<li>Kleinere Modelle können reichen ★
+<ul>
+<li>angepasste lokale Modelle erreichen besseres Kosten-Leistungs-Verhältnis als API-Modelle <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025">[@parkEffectivenessInstructionTuningLocal2025, S. 1]</span></li>
+<li>Feintuning kleiner Modelle für den On-Premise-Einsatz ist praktikabel und datenschutzfreundlich <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 42]</span></li>
+<li>Claude Haiku 4.5 schlägt das größere Sonnet 4.6 bei F1 und Recall und ist 3,2-mal günstiger <span class="citation" data-cites="kumarBiggerIsntAlways2026">[@kumarBiggerIsntAlways2026, S. 1]</span></li>
+<li>mehrere Durchläufe kleinerer Modelle erreichen die Leistung eines größeren <span class="citation" data-cites="zengSWRBenchAssessingLLM2026">[@zengSWRBenchAssessingLLM2026, S. 20]</span></li>
+</ul></li>
+<li>⚡ Gegenbefund: bei IRIS hilft die Kontextanalyse nur mit GPT-4, GPT-3.5 und Llama-3 70B, bei kleineren Modellen verschlechtert sie das Ergebnis, weil sie häufiger „verwundbar“ antworten <span class="citation" data-cites="liIRISLLMAssistedStatic2025">[@liIRISLLMAssistedStatic2025, S. 9]</span></li>
+<li>Kosten je Alarm sind sehr gering: 0,0011–0,12 US-Dollar <span class="citation" data-cites="duReducingFalsePositives2026">[@duReducingFalsePositives2026, Abstract]</span></li>
+<li>Technische Grenzen: Kontextfenster bei großen Repositories, Ansatz über RAG <span class="citation" data-cites="kaniewskiVulnerabilityHandlingAIGenerated2024">[@kaniewskiVulnerabilityHandlingAIGenerated2024, Abschn. III]</span></li>
+<li>Konsequenz für das Tool: LLM austauschbar halten und Modelle unterschiedlicher Größe vergleichen</li>
+</ul>
+</section>
+<section id="grenzen-und-risiken" class="level2">
+<h2 class="anchored" data-anchor-id="grenzen-und-risiken">7. Grenzen und Risiken</h2>
+<ul>
+<li>Erklärbarkeit: halluzinierte oder widersprüchliche Begründungen <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 38]</span></li>
+<li>Lange Funktionen, verschachtelte Bedingungen und ungewöhnliche Konstrukte überfordern LLMs <span class="citation" data-cites="duReducingFalsePositives2026">[@duReducingFalsePositives2026, RQ4]</span></li>
+<li>Streuung: einzelne Durchläufe verpassen jeweils andere Fehler, Aggregation mehrerer Berichte hebt F1 um bis zu 43,67 % <span class="citation" data-cites="zengSWRBenchAssessingLLM2026 zengSWRBenchAssessingLLM2026">[@zengSWRBenchAssessingLLM2026, S. 1; @zengSWRBenchAssessingLLM2026, S. 20]</span></li>
+<li>Mensch im Prozess bleibt nötig ★ <span class="citation" data-cites="cihanEvaluatingLargeLanguage2025 patcasEvaluationStudyLarge2026">[@cihanEvaluatingLargeLanguage2025, Abstract; @patcasEvaluationStudyLarge2026, S. 42]</span></li>
+<li>Veraltetes Wissen: Datensätze altern, Neutraining ist teuer, RAG und kontinuierliches Lernen als Ansätze <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 38]</span></li>
+</ul>
+</section>
+<section id="einordnung-der-eigenen-arbeit-forschungslücke-und-anschluss" class="level2">
+<h2 class="anchored" data-anchor-id="einordnung-der-eigenen-arbeit-forschungslücke-und-anschluss">8. Einordnung der eigenen Arbeit (Forschungslücke und Anschluss)</h2>
+<ul>
+<li>Die meisten Studien arbeiten auf Funktionsebene und mit C/C++, Forderung nach Mehrsprachigkeit und Projektebene <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 38]</span>
+<ul>
+<li>passt zur Anforderung, dass das Regelwerk nicht auf eine Sprache oder ein Framework beschränkt ist</li>
+</ul></li>
+<li>Wenige Evaluationen in realen Entwicklungsabläufen, Forderung nach Integration in IDE und CI/CD <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 38]</span>
+<ul>
+<li>passt zur Anforderung, dass das Tool in der CI/CD-Pipeline läuft</li>
+</ul></li>
+<li>Vergleichbarkeit fehlt (uneinheitliche Datensätze, keine festen Splits), Forderung nach standardisierten Protokollen <span class="citation" data-cites="kaniewskiSystematicLiteratureReview2026">[@kaniewskiSystematicLiteratureReview2026, S. 38]</span>
+<ul>
+<li>passt zum Vorhaben, mehrere Tools nach denselben Kriterien und mit vorab definierten KPIs zu vergleichen</li>
+</ul></li>
+<li>Ausgabe als Typ statt nur Ja/Nein (CWE) <span class="citation" data-cites="parkEffectivenessInstructionTuningLocal2025 kaniewskiSystematicLiteratureReview2026">[@parkEffectivenessInstructionTuningLocal2025, S. 1; @kaniewskiSystematicLiteratureReview2026, S. 42]</span>
+<ul>
+<li>passt zum geplanten Bericht mit Handlungsvorschlägen</li>
+</ul></li>
+<li>Beobachtung an der Quellenauswahl (kein Beleg für eine Lücke in der Forschung): Sicherheit und Qualität werden in getrennten Studien behandelt, ganze Anwendungen und Themen wie DSGVO-Konformität aus der Besprechung kommen in den vorliegenden Quellen nicht vor. Das müsste vor einer Aussage im Exposé belegt oder abgeschwächt werden.</li>
+</ul>
+</section>
+<section id="erster-mvp" class="level2">
+<h2 class="anchored" data-anchor-id="erster-mvp">Erster MVP</h2>
+<section id="aufbau" class="level3">
+<h3 class="anchored" data-anchor-id="aufbau">Aufbau</h3>
+<p>Ein mit Hilfe von Claude erstelltes Projekt, das ein zu prüfendes Projekt einliest und jede Datei anhand der definierten Regeln validiert:</p>
+<ol type="1">
+<li>Zuerst wird das SAST-Tool Opengrep verwendet.</li>
+<li>Dann wird pro Datei für jede Regel ein Prompt erstellt, der die Datei auf diese Regel prüft.</li>
+<li>Die Prompts werden sequentiell, also für jede Kombination aus Datei und Regel einzeln, an das LLM gesendet. Im ersten Beispiel ist das qwen2.5-coder:7b, lokal über Ollama ausgeführt.</li>
+<li>Danach vergleicht das LLM die Ergebnisse von Opengrep und der Prompts und erstellt einen kumulierten Bericht.</li>
+<li>Zum Schluss werden die drei Ergebnisse (nur LLM, nur Opengrep, kombiniert) miteinander und mit den vorher definierten, tatsächlich bekannten Fehlern verglichen.</li>
+</ol>
+</section>
+<section id="probleme" class="level3">
+<h3 class="anchored" data-anchor-id="probleme">Probleme</h3>
+<ul>
+<li>Die sequentielle Abarbeitung führt im MVP bei gerade einmal 5 Dateien und 38 Regeln zu 190 Prompts, die im Schnitt je 40 Sekunden dauern. Allein das dauert über 2 Stunden.</li>
+<li>Bei Projekten mit 50+ Dateien, die geprüft werden müssen, ist das nicht realistisch.</li>
+<li>Dadurch, dass jede Regel einen eigenen Prompt hat, wird so lange halluziniert, bis eine auffällige Stelle zur Regel passt.</li>
+</ul>
+</section>
+<section id="lösung" class="level3">
+<h3 class="anchored" data-anchor-id="lösung">Lösung</h3>
+<ul>
+<li>vLLM, um die Prompts parallel abzuarbeiten</li>
+<li>Nicht für jede Kombination aus Regel und Datei einen Prompt an das LLM senden, sondern:
+<ol type="1">
+<li>generelle Prüfung jeder Datei durch das LLM, die Kandidaten liefert</li>
+<li>jeden Kandidaten der Regel zuordnen, die am ehesten zutrifft</li>
+<li>nur sinnvolle Kandidaten genau auf diese Regel prüfen</li>
+</ol></li>
+<li>Frage dazu: Wie viele Regeln und Dateien passen in einen Prompt, ohne dass der Kontext vollläuft oder etwas übersehen wird?</li>
+</ul>
+</section>
+</section>
+<section id="schluss-aus-tests-mit-dem-mvp" class="level2">
+<h2 class="anchored" data-anchor-id="schluss-aus-tests-mit-dem-mvp">Schluss aus Tests mit dem MVP</h2>
+<p>Nach ersten Tests mit dem MVP stellt sich heraus, dass das LLM zur Erkennung von Sicherheitslücken zu ungenau ist. Daraus folgt:</p>
+<p><strong>Sicherheit</strong></p>
+<ul>
+<li>Besser wäre es, ein Regelwerk für Sicherheitslücken aufzustellen. Aus diesem Regelwerk generiert ein sehr leistungsfähiges LLM einmalig Regeln für Opengrep oder CodeQL.</li>
+<li>Bei jedem Durchlauf wird dann Opengrep für die Prüfung der Sicherheitslücken verwendet. Rauschen und Duplikate können danach über ein Skript entfernt werden. Ein leichtgewichtigeres LLMentfernt anschließend die Fehlalarme aus dem Bericht.</li>
+<li>Dasselbe Regelwerk kann für beides verwendet werden: für die Erstellung der Opengrep-Regeln und für das Filtern von Fehlalarmen.</li>
+</ul>
+<p><strong>Qualität</strong></p>
+<ul>
+<li>Gemessen wird, was sich empirisch messen lässt:
+<ul>
+<li>Existieren Tests? Wie hoch ist die Testabdeckung?</li>
+<li>Dateigröße, Methodenlänge und Komplexität</li>
+<li>Konventionen (camelCase, PascalCase, Präfixe) über Checkstyle prüfen</li>
+<li>Sind Dokumentation und Review vorhanden?</li>
+<li>Konventionen für die Projektstruktur und Abhängigkeiten zwischen Schichten prüfen</li>
+</ul></li>
+<li>Ein LLM tritt dann eher als Prüfer auf, der auf Grundlage der Qualitätsdaten argumentiert, z. B.:
+<ul>
+<li>Datei x hat 1400 Zeilen und 48 Methoden aus 4 Zuständigkeiten, eine Trennung wird angeraten.</li>
+<li>Eine Testabdeckung von x ist zu niedrig, die Tests selbst decken die Funktionalität aber gut ab. Oder: zwar hohe Testabdeckung, aber schlechte Tests.</li>
+<li>Passt die Doku auch zum Code?</li>
+<li>Werden die Konventionen eingehalten? Wenn ja, wurden aussagekräftige Namen verwendet?</li>
+<li>Ergebnis der Strukturprüfung auswerten: Ist die Struktur für das Projekt insgesamt sinnvoll?</li>
+</ul></li>
+</ul>
+<p><strong>Laufzeit</strong></p>
+<ul>
+<li><p>Die beiden oberen Punkte machen die Anwendung generell relativ schnell. Nur wenn neue Regeln hinzugefügt oder Regeln angepasst werden, folgt ein langer Durchlauf, da das LLM dann die Regeln für das SAST-Tool neu erstellen muss.</p></li>
+<li><p>Das erstellen von Regeln für Sicherheitslücken nach CWE ergibt leider auch wenig Sinn, es dauert sehr lange die KI erstellt Regeln die nicht bedeutend besser sind als das was sowieso schon durch SASTs abgedeckt wird. -&gt; Regelerstellung möglich, aber wenn dann eher für Regeln die es so nicht offiziell gibt, z.B. spezifische Anwendungsanforderungen oder Anforderungen der Hochschule die Erfüllt werden müssen. Sonst filter die KI nur die Ergebnisse des Sast Tools.</p></li>
+<li><p>Für Regelerstellung auf CodeQL wechseln, ist stärker bei Opensource free und der Grund für die Verwendung von Opengrep war die leichtere Regelerstellung.</p></li>
+</ul>
+</section>
+<section id="resultierende-erkenntnisse-toolvorschlag" class="level2">
+<h2 class="anchored" data-anchor-id="resultierende-erkenntnisse-toolvorschlag">Resultierende Erkenntnisse, Toolvorschlag:</h2>
+<ul>
+<li>Vulnerabilities im Code werden mit OpenGrep erkannt, weil es komplett kostenlos ist. Auf jeden Fall erfolgt ein Vergleich mit CodeQL (ist für akademische Nutzung frei). Je nachdem, wie die Performance ist und ob der Kauf einer Lizenz eine Option ist, erfolgt ein Wechsel zu CodeQL oder SonarQube Enterprise.</li>
+<li>Einfache Vulnerabilities, Code Smells, Bugs, Duplikate usw. werden mit SonarQube Community erkannt. Warum nicht nur SonarQube? Die Community-Version deckt bei Sicherheitslücken nur einfache Regeln ab, nicht aber komplexe XSS- oder Injection-Probleme über mehrere Dateien hinweg.</li>
+<li>Folgende Sprachen werden von dem Tool akzeptiert: C, C++, C#, Java, JavaScript, TypeScript, Python und Rust.</li>
+<li>Begründung: Diese Sprachen werden von OpenGrep und SonarQube unterstützt, haben laut Statista alle einen Marktanteil von über 1 % und kommen zusammen auf fast 75 % Marktanteil.</li>
+<li>Sicherheitslücken in Abhängigkeiten werden in erster Instanz mit dem OSV-Scanner geprüft. Warum? Er stammt von Google, hat eine große Datenbasis und funktioniert für alle Sprachen. Er kann also einmal konfiguriert und für alles verwendet werden. Außerdem kombiniert er viele Quellen.</li>
+<li>In Stufe 2 wird, wenn ein Paketmanager vorhanden ist, dessen Audit für die Erkennung von Sicherheitslücken in Abhängigkeiten eingesetzt, sonst Trivy als Fallback.</li>
+<li>Pro Sprache werden ein entsprechender Linter für Konventionen und Codequalität sowie ein Formatter für eine einheitliche Formatierung ausgeführt. Für die Linter und Formatter werden für jede Sprache gängige Konventionen festgelegt und definiert. Wenn es im Projekt schon Linter und Formatter gibt, werden diese genutzt.</li>
+<li>Gibt es Tests? Wenn ja, werden sie ausgeführt und die Ergebnisse dokumentiert, auch im Fehlerfall.</li>
+<li>Falls Tests vorhanden sind, wird die Testabdeckung mit dem entsprechenden Tool geprüft, das im Projekt existiert. Wenn es kein entsprechendes Tool gibt, wird pro Sprache eines definiert. Hier könnte man eine Mindestabdeckung festlegen, die eingehalten werden muss.</li>
+<li>Danach folgt ein Mutation Testing mit dem entsprechenden Tool pro Sprache oder mit dem, das im Projekt schon existiert. Es prüft, ob die Tests tatsächlich etwas prüfen, indem es kleine Fehler in den Code einbaut.</li>
+<li>Der Ablauf wird wahrscheinlich mit Python-Skripten gesteuert: Programmiersprache erkennen, alles ausführen und die Ergebnisse in einem Ordner ablegen.</li>
+<li>Danach erfolgt der LLM-Einsatz:
+<ul>
+<li>Die Ergebnisse von OpenGrep, SonarQube, OSV-Scanner und den nativen Dependency-Check-Tools/Trivy werden zusammengeführt; Duplikate, Rauschen und Fehlalarme werden gefiltert. Die Ergebnisse werden eingeordnet, und es werden Handlungsvorschläge gegeben.</li>
+<li>Die Ergebnisse der Linter und Formatter werden zusammengefasst, interpretiert und gefiltert, und es werden Handlungsvorschläge gegeben. Außerdem wird geprüft, ob die Namen von Klassen, Parametern, Funktionen usw. auch deren Funktionalität beschreiben. Wie ist die Projektstruktur, und ist diese sinnvoll und nachvollziehbar?</li>
+<li>Die Tests werden ausgeführt: Funktionieren sie? Die Qualität der Tests wird durch die Interpretation der Stryker-Ergebnisse und den Abgleich der Tests mit dem zu testenden Code bewertet.</li>
+<li>Am Ende wird alles in einem Endbericht zusammengefasst und ausgegeben.</li>
+</ul></li>
+<li>Zusätzlich können eigene Regeln als Markdown definiert werden, anwendungsspezifisch oder hochschulspezifisch. Das LLM prüft diese spezifischen Regeln und fügt das Ergebnis dem Bericht hinzu.</li>
+<li>Das LLM wird über Ollama betrieben. Ollama wird lokal gehostet und kann sowohl lokal gehostete LLMs als auch Cloud-Modelle verwenden. Da die Cloud-Modelle Kosten verursachen, muss hier geschaut werden.</li>
+</ul>
+</section>
+<section id="metriken-wie-messe-ich-den-erfolg-des-tools-und-die-weiterentwicklung" class="level2">
+<h2 class="anchored" data-anchor-id="metriken-wie-messe-ich-den-erfolg-des-tools-und-die-weiterentwicklung">Metriken: Wie messe ich den Erfolg des Tools und die Weiterentwicklung?</h2>
+<ul>
+<li>Für die Erkennung von Sicherheitslücken erfolgt ein Vergleich mit den Ergebnissen verschiedener SAST-Tools sowie ein Vergleich mit bestehenden Review-Tools, wie z. B. der Code-Review-Funktion von Claude. Für eine bessere Messbarkeit wird dies mit Testprojekten durchgeführt, bei denen bekannte Fehler gelistet sind. So kann man genau sehen, wie viel Prozent der Lücken erkannt wurden, wie viele Duplikate, Fehlalarme und wie viel Rauschen es jeweils gab. Beim Tool selbst werden verschiedene LLMs, lokal und in der Cloud, getestet und verglichen.</li>
+<li>Die Geschwindigkeit wird mit anderen Tools sowie bei der Verwendung verschiedener LLMs (lokal und Cloud) verglichen.</li>
+<li>Bei den Abhängigkeitstests werden die Ergebnisse mit denen der einzelnen Tools verglichen: Wie viel Prozent der Lücken werden erkannt, und wie viel Rauschen gibt es?</li>
+<li>Die Ergebnisse werden mit denen der Linter und Formatter verglichen: Gibt es Rauschen, das gefiltert wird? Bringt die Zusammenfassung der Ergebnisse einen Mehrwert?</li>
+<li>Bei der Testausführung wird subjektiv bewertet: Bringen die Interpretation und Zusammenfassung einen aussagekräftigen Mehrwert?</li>
+<li>Auch die Qualität des Endberichts kann nur subjektiv bewertet werden. Hier wenn möglich ein Experteninterview bzw. Tester, die Feedback geben. Eventuell Rapha und Johannes, die gehen auf das Tool bestimmt ab.</li>
+<li>Wenn getestet und sich endgültig für das am besten performende Modell entschieden wurde, erfolgt eventuell ein Fine-Tuning des Modells.</li>
+</ul>
+</section>
+<section id="toolablauf-als-flowchart" class="level2">
+<h2 class="anchored" data-anchor-id="toolablauf-als-flowchart">Toolablauf als Flowchart</h2>
+<style>
+/* ---- Farben & Grundwerte (hier zentral anpassbar) ---- */
+.tp {
+  --tp-bg: #1A1A19;
+  --tp-text: #ECEAE3;  --tp-muted: #A8A69C;  --tp-hint: #77756E;
+  --tp-card: #232321;  --tp-box: #2E2E2B;    --tp-border: #3A3A37;  --tp-border-strong: #4A4945;
+  --tp-dec-bg: #3A2A10; --tp-dec-border: #BA7517; --tp-dec-text: #FAC775;
+  --tp-abort-bg: #3D1616; --tp-abort-border: #E24B4A; --tp-abort-text: #F7C1C1;
+  --tp-llm-bg: #222040; --tp-llm-border: #534AB7; --tp-llm-text: #CECBF6;
+  display: flex; flex-direction: column; gap: 0; max-width: 760px; margin: 1.5rem auto;
+  background: var(--tp-bg); padding: 18px; border-radius: 16px;
+  font-size: 13px; line-height: 1.4; color: var(--tp-text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.tp * { box-sizing: border-box; }
+.tp p { margin: 0; }
+.tp-ph { border: 0.5px solid var(--tp-border); border-radius: 12px; padding: 12px 14px; background: var(--tp-card); }
+.tp-ph.llm { background: var(--tp-llm-bg); border-color: var(--tp-llm-border); }
+.tp-pt { font-size: 12px; font-weight: 600; letter-spacing: .01em; color: var(--tp-muted); margin: 0 0 8px !important; display: flex; align-items: center; gap: 6px; }
+.tp-ph.llm .tp-pt { color: var(--tp-llm-text); }
+.tp-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; align-items: start; }
+.tp-n { border: 0.5px solid var(--tp-border-strong); border-radius: 8px; padding: 8px 10px; background: var(--tp-box); }
+.tp-n b { font-weight: 600; display: block; }
+.tp-n span { color: var(--tp-muted); font-size: 12px; }
+.tp-n span.lb { display: block; font-size: 11px; color: var(--tp-hint); }
+.tp-n.d { border: 0.5px dashed var(--tp-dec-border); background: var(--tp-dec-bg); color: var(--tp-dec-text); }
+.tp-n.d span { color: var(--tp-dec-text); }
+.tp-n.x { border-color: var(--tp-abort-border); background: var(--tp-abort-bg); color: var(--tp-abort-text); }
+.tp-n.x span { color: var(--tp-abort-text); }
+.tp-n.io { border-radius: 999px; text-align: center; padding: 9px; border-color: #6B6A65; }
+.tp-ar { text-align: center; color: var(--tp-hint); font-size: 18px; line-height: 1; padding: 4px 0; }
+.tp-ph.llm .tp-n { background: #2B2950; border-color: #3C3489; }
+.tp-col { display: flex; flex-direction: column; gap: 6px; }
+</style>
+
+<div class="tp">
+
+<div class="tp-n io"><b>Softwareprojekt (Repository)</b></div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 1 · Orchestrierung ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">1 · Orchestrierung (Python-Skripte)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Programmiersprache erkennen</b><span>Dateien, Build-Configs</span></div>
+    <div class="tp-n d"><b>Sprache unterstützt?</b><span>C, C++, C#, Java, JS, TS, Python, Rust</span></div>
+    <div class="tp-col">
+      <div class="tp-n x"><span class="lb">nein</span><b>Abbruch</b><span>Hinweis: Sprache nicht unterstützt</span></div>
+      <div class="tp-n"><span class="lb">ja</span><b>Weiter mit Analyse</b></div>
+    </div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 2 · Statische Code-Analyse ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">2 · Statische Code-Analyse (parallel)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>OpenGrep</b><span>Vulnerabilities, dateiübergreifend (XSS, Injection) · Vergleich CodeQL, ggf. Wechsel zu CodeQL / SonarQube Enterprise</span></div>
+    <div class="tp-n"><b>SonarQube Community</b><span>Einfache Vulns, Code Smells, Bugs, Duplikate</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 3 · Abhängigkeiten ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">3 · Abhängigkeiten</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Stufe 1: OSV-Scanner</b><span>Alle Sprachen, viele Quellen</span></div>
+    <div class="tp-col">
+      <div class="tp-n d"><b>Stufe 2: Paketmanager vorhanden?</b></div>
+      <div class="tp-n"><span class="lb">ja</span><b>Natives Audit</b><span>z. B. npm audit, cargo audit</span></div>
+      <div class="tp-n"><span class="lb">nein</span><b>Trivy (Fallback)</b></div>
+    </div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 4 · Konventionen ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">4 · Konventionen &amp; Formatierung (pro Sprache)</p>
+  <div class="tp-row">
+    <div class="tp-n d"><b>Linter / Formatter im Projekt?</b></div>
+    <div class="tp-n"><span class="lb">ja</span><b>Projekt-Konfiguration nutzen</b></div>
+    <div class="tp-n"><span class="lb">nein</span><b>Definierte Standards</b><span>gängige Konventionen je Sprache</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 5 · Tests ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">5 · Tests</p>
+  <div class="tp-row">
+    <div class="tp-col">
+      <div class="tp-n d"><b>Tests vorhanden?</b></div>
+      <div class="tp-n"><span class="lb">nein</span><b>Im Bericht vermerken</b></div>
+    </div>
+    <div class="tp-col">
+      <div class="tp-n"><span class="lb">ja</span><b>Tests ausführen</b><span>Ergebnisse dokumentieren, auch bei Fehlern</span></div>
+      <div class="tp-n"><b>Testabdeckung messen</b><span>Projekt-Tool oder pro Sprache definiert</span></div>
+      <div class="tp-n d"><b>Mindestabdeckung erreicht?</b><span>nein → markieren und einstufen, kein Abbruch</span></div>
+      <div class="tp-n"><b>Mutation Testing</b><span>Projekt-Tool oder definiert (z. B. Stryker)</span></div>
+    </div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<div class="tp-n"><b>Rohergebnisse im Ergebnisordner ablegen</b><span>alle Tool-Outputs gesammelt</span></div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 6 · LLM-Auswertung ===== -->
+<div class="tp-ph llm">
+  <p class="tp-pt">6 · LLM-Auswertung über Ollama (lokale oder Cloud-Modelle, Kosten prüfen)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Sicherheit</b><span>OpenGrep, SonarQube, OSV, Audit/Trivy zusammenführen · Duplikate, Rauschen, Fehlalarme filtern · einordnen, Handlungsvorschläge</span></div>
+    <div class="tp-n"><b>Codequalität</b><span>Linter/Formatter zusammenfassen und filtern · Benennungen prüfen · Projektstruktur bewerten</span></div>
+    <div class="tp-n"><b>Testqualität</b><span>Funktionieren die Tests? · Mutation-Ergebnisse interpretieren · Tests vs. Code abgleichen · ungetestete Stellen: kritisch oder unkritisch?</span></div>
+    <div class="tp-n"><b>Eigene Regeln</b><span>Markdown, anwendungs- oder hochschulspezifisch</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<div class="tp-n io"><b>Endbericht</b></div>
+
+</div>
+<p><small>Das Diagramm wurde von Claude generiert.</small></p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollable code","output":"Scrollable output"};
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
