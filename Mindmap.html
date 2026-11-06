@@ -376,6 +376,16 @@ ul.task-list li input[type="checkbox"] {
 <li>Wenn getestet und sich endgültig für das am besten performende Modell entschieden wurde, erfolgt eventuell ein Fine-Tuning des Modells.</li>
 </ul>
 </section>
+<section id="besprechung" class="level2">
+<h2 class="anchored" data-anchor-id="besprechung">Besprechung</h2>
+<ul>
+<li>Wenn kein Paketmanager nciht akzeptieren</li>
+<li>Bei Tests keine Mindestabdeckung, nur Auswertung ob die richtigen Stellen auch getestet werdnen</li>
+<li>Linter Formatter, fixe Vorgaben definieren diese müssen eingehalten werden evlt. auch direkt als export für Studenten.</li>
+<li>Modell lokal laufen lassen gar nicht unbedingt zentral -&gt; bestcase wäre es wenn das Tool auf einem normalen Entwoickler Laptop läuft.</li>
+<li>Eigene Regeln erstmal weglassen, Fokus auf das Standard Tool ohne eigene Regeln.</li>
+</ul>
+</section>
 <section id="toolablauf-als-flowchart" class="level2">
 <h2 class="anchored" data-anchor-id="toolablauf-als-flowchart">Toolablauf als Flowchart</h2>
 <style>
@@ -420,21 +430,34 @@ ul.task-list li input[type="checkbox"] {
 
 <!-- ===== 1 · Orchestrierung ===== -->
 <div class="tp-ph">
-  <p class="tp-pt">1 · Orchestrierung (Python-Skripte)</p>
+  <p class="tp-pt">1 · Orchestrierung und Annahmeprüfung (Python-Skripte)</p>
   <div class="tp-row">
     <div class="tp-n"><b>Programmiersprache erkennen</b><span>Dateien, Build-Configs</span></div>
-    <div class="tp-n d"><b>Sprache unterstützt?</b><span>C, C++, C#, Java, JS, TS, Python, Rust</span></div>
     <div class="tp-col">
+      <div class="tp-n d"><b>Sprache unterstützt?</b><span>C, C++, C#, Java, JS, TS, Python, Rust · ja → weiter</span></div>
       <div class="tp-n x"><span class="lb">nein</span><b>Abbruch</b><span>Hinweis: Sprache nicht unterstützt</span></div>
-      <div class="tp-n"><span class="lb">ja</span><b>Weiter mit Analyse</b></div>
+    </div>
+    <div class="tp-col">
+      <div class="tp-n d"><b>Paketmanager vorhanden?</b><span>ja → weiter mit Analyse</span></div>
+      <div class="tp-n x"><span class="lb">nein</span><b>Abbruch</b><span>Projekt wird nicht akzeptiert</span></div>
     </div>
   </div>
 </div>
 <div class="tp-ar">↓</div>
 
-<!-- ===== 2 · Statische Code-Analyse ===== -->
+<!-- ===== 2 · Konventionen ===== -->
 <div class="tp-ph">
-  <p class="tp-pt">2 · Statische Code-Analyse (parallel)</p>
+  <p class="tp-pt">2 · Konventionen &amp; Formatierung (pro Sprache)</p>
+  <div class="tp-row">
+    <div class="tp-n"><b>Linter / Formatter installieren</b><span>feste Vorgaben je Sprache (eigene Konfiguration)</span></div>
+    <div class="tp-n"><b>Über das Projekt laufen lassen</b><span>Ergebnisse dokumentieren</span></div>
+  </div>
+</div>
+<div class="tp-ar">↓</div>
+
+<!-- ===== 3 · Statische Code-Analyse ===== -->
+<div class="tp-ph">
+  <p class="tp-pt">3 · Statische Code-Analyse (parallel)</p>
   <div class="tp-row">
     <div class="tp-n"><b>OpenGrep</b><span>Vulnerabilities, dateiübergreifend (XSS, Injection) · Vergleich CodeQL, ggf. Wechsel zu CodeQL / SonarQube Enterprise</span></div>
     <div class="tp-n"><b>SonarQube Community</b><span>Einfache Vulns, Code Smells, Bugs, Duplikate</span></div>
@@ -442,27 +465,12 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <div class="tp-ar">↓</div>
 
-<!-- ===== 3 · Abhängigkeiten ===== -->
+<!-- ===== 4 · Abhängigkeiten ===== -->
 <div class="tp-ph">
-  <p class="tp-pt">3 · Abhängigkeiten</p>
+  <p class="tp-pt">4 · Abhängigkeiten</p>
   <div class="tp-row">
     <div class="tp-n"><b>Stufe 1: OSV-Scanner</b><span>Alle Sprachen, viele Quellen</span></div>
-    <div class="tp-col">
-      <div class="tp-n d"><b>Stufe 2: Paketmanager vorhanden?</b></div>
-      <div class="tp-n"><span class="lb">ja</span><b>Natives Audit</b><span>z. B. npm audit, cargo audit</span></div>
-      <div class="tp-n"><span class="lb">nein</span><b>Trivy (Fallback)</b></div>
-    </div>
-  </div>
-</div>
-<div class="tp-ar">↓</div>
-
-<!-- ===== 4 · Konventionen ===== -->
-<div class="tp-ph">
-  <p class="tp-pt">4 · Konventionen &amp; Formatierung (pro Sprache)</p>
-  <div class="tp-row">
-    <div class="tp-n d"><b>Linter / Formatter im Projekt?</b></div>
-    <div class="tp-n"><span class="lb">ja</span><b>Projekt-Konfiguration nutzen</b></div>
-    <div class="tp-n"><span class="lb">nein</span><b>Definierte Standards</b><span>gängige Konventionen je Sprache</span></div>
+    <div class="tp-n"><b>Stufe 2: Audit des Paketmanagers</b><span>z. B. npm audit, cargo audit</span></div>
   </div>
 </div>
 <div class="tp-ar">↓</div>
@@ -477,8 +485,7 @@ ul.task-list li input[type="checkbox"] {
     </div>
     <div class="tp-col">
       <div class="tp-n"><span class="lb">ja</span><b>Tests ausführen</b><span>Ergebnisse dokumentieren, auch bei Fehlern</span></div>
-      <div class="tp-n"><b>Testabdeckung messen</b><span>Projekt-Tool oder pro Sprache definiert</span></div>
-      <div class="tp-n d"><b>Mindestabdeckung erreicht?</b><span>nein → markieren und einstufen, kein Abbruch</span></div>
+      <div class="tp-n"><b>Testabdeckung messen</b><span>Projekt-Tool oder pro Sprache definiert · keine Mindestabdeckung</span></div>
       <div class="tp-n"><b>Mutation Testing</b><span>Projekt-Tool oder definiert (z. B. Stryker)</span></div>
     </div>
   </div>
@@ -492,10 +499,9 @@ ul.task-list li input[type="checkbox"] {
 <div class="tp-ph llm">
   <p class="tp-pt">6 · LLM-Auswertung über Ollama (lokale oder Cloud-Modelle, Kosten prüfen)</p>
   <div class="tp-row">
-    <div class="tp-n"><b>Sicherheit</b><span>OpenGrep, SonarQube, OSV, Audit/Trivy zusammenführen · Duplikate, Rauschen, Fehlalarme filtern · einordnen, Handlungsvorschläge</span></div>
+    <div class="tp-n"><b>Sicherheit</b><span>OpenGrep, SonarQube, OSV, Paketmanager-Audit zusammenführen · Duplikate, Rauschen, Fehlalarme filtern · einordnen, Handlungsvorschläge</span></div>
     <div class="tp-n"><b>Codequalität</b><span>Linter/Formatter zusammenfassen und filtern · Benennungen prüfen · Projektstruktur bewerten</span></div>
     <div class="tp-n"><b>Testqualität</b><span>Funktionieren die Tests? · Mutation-Ergebnisse interpretieren · Tests vs. Code abgleichen · ungetestete Stellen: kritisch oder unkritisch?</span></div>
-    <div class="tp-n"><b>Eigene Regeln</b><span>Markdown, anwendungs- oder hochschulspezifisch</span></div>
   </div>
 </div>
 <div class="tp-ar">↓</div>
