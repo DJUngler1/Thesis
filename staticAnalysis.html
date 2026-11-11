@@ -1,0 +1,1640 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Felix Krauß">
+
+<title>Statische Codeanalyse</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="staticAnalysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="staticAnalysis_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="staticAnalysis_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="staticAnalysis_files/libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="staticAnalysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="staticAnalysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="staticAnalysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="staticAnalysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="staticAnalysis_files/libs/quarto-html/quarto-syntax-highlighting-dark-447e42e69aaa9833c0ba1b986f430b20.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="staticAnalysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="staticAnalysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="staticAnalysis_files/libs/bootstrap/bootstrap-d0a4af45de66b11030a5673244ae2f01.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+
+
+</head>
+
+<body class="quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Zum Hauptinhalt springen</a>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">Inhaltsverzeichnis</h2>
+   
+  <ul>
+  <li><a href="#zweck-und-vorgehen" id="toc-zweck-und-vorgehen" class="nav-link active" data-scroll-target="#zweck-und-vorgehen"><span class="header-section-number">1</span> Zweck und Vorgehen</a>
+  <ul class="collapse">
+  <li><a href="#grundsatz-der-festlegung" id="toc-grundsatz-der-festlegung" class="nav-link" data-scroll-target="#grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</a></li>
+  <li><a href="#prüfmethode" id="toc-prüfmethode" class="nav-link" data-scroll-target="#prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</a></li>
+  <li><a href="#testumgebung" id="toc-testumgebung" class="nav-link" data-scroll-target="#testumgebung"><span class="header-section-number">1.3</span> Testumgebung</a></li>
+  </ul></li>
+  <li><a href="#übersicht-der-festlegungen" id="toc-übersicht-der-festlegungen" class="nav-link" data-scroll-target="#übersicht-der-festlegungen"><span class="header-section-number">2</span> Übersicht der Festlegungen</a></li>
+  <li><a href="#sec-opengrep" id="toc-sec-opengrep" class="nav-link" data-scroll-target="#sec-opengrep"><span class="header-section-number">3</span> OpenGrep</a>
+  <ul class="collapse">
+  <li><a href="#festlegung" id="toc-festlegung" class="nav-link" data-scroll-target="#festlegung"><span class="header-section-number">3.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege" id="toc-begründung-und-belege" class="nav-link" data-scroll-target="#begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-opengrep-scope" id="toc-sec-opengrep-scope" class="nav-link" data-scroll-target="#sec-opengrep-scope"><span class="header-section-number">3.3</span> Was gescannt wird</a></li>
+  <li><a href="#sec-regelsammlungen" id="toc-sec-regelsammlungen" class="nav-link" data-scroll-target="#sec-regelsammlungen"><span class="header-section-number">3.4</span> Regelsammlungen</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-1" id="toc-festlegung-1" class="nav-link" data-scroll-target="#festlegung-1"><span class="header-section-number">3.4.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-1" id="toc-begründung-und-belege-1" class="nav-link" data-scroll-target="#begründung-und-belege-1"><span class="header-section-number">3.4.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-lizenzen" id="toc-sec-lizenzen" class="nav-link" data-scroll-target="#sec-lizenzen"><span class="header-section-number">3.4.3</span> Lizenzen</a></li>
+  </ul></li>
+  <li><a href="#testergebnisse" id="toc-testergebnisse" class="nav-link" data-scroll-target="#testergebnisse"><span class="header-section-number">3.5</span> Testergebnisse</a></li>
+  <li><a href="#grenzen" id="toc-grenzen" class="nav-link" data-scroll-target="#grenzen"><span class="header-section-number">3.6</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-sonarqube" id="toc-sec-sonarqube" class="nav-link" data-scroll-target="#sec-sonarqube"><span class="header-section-number">4</span> SonarQube</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-2" id="toc-festlegung-2" class="nav-link" data-scroll-target="#festlegung-2"><span class="header-section-number">4.1</span> Festlegung</a></li>
+  <li><a href="#sec-sq-version" id="toc-sec-sq-version" class="nav-link" data-scroll-target="#sec-sq-version"><span class="header-section-number">4.2</span> Sprachabdeckung und Versionswahl</a></li>
+  <li><a href="#server-und-datenbank" id="toc-server-und-datenbank" class="nav-link" data-scroll-target="#server-und-datenbank"><span class="header-section-number">4.3</span> Server und Datenbank</a></li>
+  <li><a href="#sec-sq-ablauf" id="toc-sec-sq-ablauf" class="nav-link" data-scroll-target="#sec-sq-ablauf"><span class="header-section-number">4.4</span> Analyseablauf</a>
+  <ul class="collapse">
+  <li><a href="#arbeitskopie" id="toc-arbeitskopie" class="nav-link" data-scroll-target="#arbeitskopie"><span class="header-section-number">4.4.1</span> Arbeitskopie</a></li>
+  <li><a href="#java-build" id="toc-java-build" class="nav-link" data-scroll-target="#java-build"><span class="header-section-number">4.4.2</span> Java-Build</a></li>
+  <li><a href="#wahl-des-scanners" id="toc-wahl-des-scanners" class="nav-link" data-scroll-target="#wahl-des-scanners"><span class="header-section-number">4.4.3</span> Wahl des Scanners</a></li>
+  </ul></li>
+  <li><a href="#sec-sq-parameter" id="toc-sec-sq-parameter" class="nav-link" data-scroll-target="#sec-sq-parameter"><span class="header-section-number">4.5</span> Parameter</a></li>
+  <li><a href="#qualitätsprofile" id="toc-qualitätsprofile" class="nav-link" data-scroll-target="#qualitätsprofile"><span class="header-section-number">4.6</span> Qualitätsprofile</a></li>
+  <li><a href="#sec-cxx" id="toc-sec-cxx" class="nav-link" data-scroll-target="#sec-cxx"><span class="header-section-number">4.7</span> C und C++ (sonar-cxx)</a>
+  <ul class="collapse">
+  <li><a href="#was-das-plugin-tut" id="toc-was-das-plugin-tut" class="nav-link" data-scroll-target="#was-das-plugin-tut"><span class="header-section-number">4.7.1</span> Was das Plugin tut</a></li>
+  <li><a href="#warum-das-standardprofil-leer-ist" id="toc-warum-das-standardprofil-leer-ist" class="nav-link" data-scroll-target="#warum-das-standardprofil-leer-ist"><span class="header-section-number">4.7.2</span> Warum das Standardprofil leer ist</a></li>
+  <li><a href="#festlegung-profil-sonar-way-sonar-cxx-rules" id="toc-festlegung-profil-sonar-way-sonar-cxx-rules" class="nav-link" data-scroll-target="#festlegung-profil-sonar-way-sonar-cxx-rules"><span class="header-section-number">4.7.3</span> Festlegung: Profil „Sonar way + sonar-cxx rules“</a></li>
+  <li><a href="#duplikate" id="toc-duplikate" class="nav-link" data-scroll-target="#duplikate"><span class="header-section-number">4.7.4</span> Duplikate</a></li>
+  </ul></li>
+  <li><a href="#befunde" id="toc-befunde" class="nav-link" data-scroll-target="#befunde"><span class="header-section-number">4.8</span> Befunde</a></li>
+  <li><a href="#testergebnisse-1" id="toc-testergebnisse-1" class="nav-link" data-scroll-target="#testergebnisse-1"><span class="header-section-number">4.9</span> Testergebnisse</a></li>
+  <li><a href="#grenzen-1" id="toc-grenzen-1" class="nav-link" data-scroll-target="#grenzen-1"><span class="header-section-number">4.10</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#ergebnisse-im-ausgabeordner" id="toc-ergebnisse-im-ausgabeordner" class="nav-link" data-scroll-target="#ergebnisse-im-ausgabeordner"><span class="header-section-number">5</span> Ergebnisse im Ausgabeordner</a></li>
+  <li><a href="#sec-offen" id="toc-sec-offen" class="nav-link" data-scroll-target="#sec-offen"><span class="header-section-number">6</span> Offene Punkte und Grenzen der Prüfung</a></li>
+  <li><a href="#sec-quellen" id="toc-sec-quellen" class="nav-link" data-scroll-target="#sec-quellen"><span class="header-section-number">7</span> Quellen (noch nicht in <code>references.bib</code>)</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="staticAnalysis.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Statische Codeanalyse</h1>
+<p class="subtitle lead">Dokumentation der Werkzeugauswahl für Schritt 3 des Code-Analysis-Tools</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Autor:in</div>
+    <div class="quarto-title-meta-contents">
+             <p>Felix Krauß </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Veröffentlichungsdatum</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">11. November 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="zweck-und-vorgehen" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Zweck und Vorgehen</h1>
+<p>Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 3 („Static code analysis (parallel)“) den Code statisch analysiert. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter <code>Code-Analysis-Tool/docs/staticAnalysis/README.md</code>.</p>
+<p>In Schritt 3 laufen zwei Werkzeuge gleichzeitig: OpenGrep (<a href="#sec-opengrep" class="quarto-xref">Kapitel&nbsp;3</a>) und SonarQube Community Build (<a href="#sec-sonarqube" class="quarto-xref">Kapitel&nbsp;4</a>). Fällt eines aus, läuft das andere trotzdem weiter.</p>
+<section id="grundsatz-der-festlegung" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</h2>
+<ul>
+<li><strong>Standard der Werkzeuge:</strong> Wo ein Werkzeug einen Standard mitbringt, wird er verwendet: bei SonarQube die Qualitätsprofile „Sonar way“. Eigene Festlegungen gibt es nur, wo das Werkzeug keinen brauchbaren Standard hat:
+<ul>
+<li>OpenGrep bringt keine Regeln mit (<a href="#sec-regelsammlungen" class="quarto-xref">Kapitel&nbsp;3.4</a>).</li>
+<li>Das Standardprofil von sonar-cxx für C/C++ ist leer (<a href="#sec-cxx" class="quarto-xref">Kapitel&nbsp;4.7</a>).</li>
+</ul></li>
+<li><strong>Projektkonfiguration wird ignoriert:</strong> Wie in Schritt 2 werden die Konfigurationsdateien des analysierten Projekts nicht gelesen, damit die Ergebnisse verschiedener Projekte vergleichbar sind. Bei OpenGrep betrifft das die <code>.semgrepignore</code>, bei SonarQube die <code>sonar-project.properties</code>.</li>
+<li><strong>Sprachversion wird übernommen:</strong> Die Python- und Java-Version werden aus dem Projekt übernommen, wie in Schritt 2 für Ruff und PMD.</li>
+<li><strong>Keine Doppelungen zu Schritt 2:</strong> SonarQube führt Clippy nicht erneut aus, importiert keinen clang-tidy-Bericht und übernimmt keine .NET-Analyzer-Warnungen, die <code>dotnet format</code> schon behandelt.</li>
+<li><strong>Das Projekt bleibt unverändert:</strong>
+<ul>
+<li>OpenGrep liest das Projekt nur (schreibgeschützt eingebunden).</li>
+<li>SonarQube arbeitet auf einer Kopie, weil Java und C# dafür gebaut werden müssen.</li>
+</ul></li>
+<li><strong>Stand nach Schritt 2:</strong> Beide Werkzeuge analysieren den Arbeitsstand, den Schritt 2 hinterlassen hat (formatiert, nicht committet). Die Zeilennummern passen damit zu <code>git diff</code> und zu den Befunden aus Schritt 2.</li>
+</ul>
+</section>
+<section id="prüfmethode" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</h2>
+<ol type="1">
+<li><strong>Dokumentation im Original:</strong> Jede Aussage über ein Werkzeug wurde in dessen offizieller Dokumentation oder im Quellcode der verwendeten Version nachgelesen.
+<ul>
+<li>SonarQubes Dokumentation wurde als Markdown-Rohtext gelesen, nicht über eine Zusammenfassung. Eine automatische Zusammenfassung hatte die Sprachtabelle falsch wiedergegeben (C und C++ als enthalten).</li>
+<li>Zitate sind wörtlich und stehen in der Originalsprache (Englisch).</li>
+</ul></li>
+<li><strong>Eigene Tests:</strong> Das Verhalten wurde am 11.11.2026 in Docker-Containern mit festen Werkzeugversionen getestet (<a href="#tbl-versionen" class="quarto-xref">Tabelle&nbsp;1</a>), auf einem Mac mit Apple Silicon (arm64). Die Tests sind als Integrationstests im Tool-Repository hinterlegt (<code>scheduler/tests/test_opengrep_docker.py</code>, <code>scheduler/tests/test_sonarqube_docker.py</code>).</li>
+<li><strong>Art der Testprojekte:</strong> Die Tests liefen auf kleinen, eigens angelegten Beispielprojekten, die gezielt einzelne Fälle enthalten. Sie zeigen, <em>wie</em> sich ein Werkzeug verhält. Sie sagen aber nichts darüber, wie viele Befunde auf echten Projekten entstehen oder wie viele davon Fehlalarme sind (siehe <a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;6</a>).</li>
+</ol>
+</section>
+<section id="testumgebung" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="testumgebung"><span class="header-section-number">1.3</span> Testumgebung</h2>
+<div id="tbl-versionen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-versionen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;1: Werkzeugversionen der Tests und des Tools
+</figcaption>
+<div aria-describedby="tbl-versionen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Werkzeug</th>
+<th>Version</th>
+<th>Container-Image</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>OpenGrep</td>
+<td>1.33.1 (Release-Binary <code>opengrep_manylinux_aarch64</code>)</td>
+<td><code>code-analysis/opengrep</code>, Basis <code>python:3.13.18-slim</code></td>
+</tr>
+<tr class="even">
+<td>SonarQube Community Build</td>
+<td>26.9.0.129388</td>
+<td><code>code-analysis/sonarqube</code>, Basis <code>sonarqube:26.9.0.129388-community</code></td>
+</tr>
+<tr class="odd">
+<td>sonar-cxx (C/C++)</td>
+<td>2.4.0-beta.1 (<code>sonar-cxx-plugin-2.4.0.1689.jar</code>)</td>
+<td>im Image <code>code-analysis/sonarqube</code></td>
+</tr>
+<tr class="even">
+<td>PostgreSQL (Datenbank von SonarQube)</td>
+<td>18.6</td>
+<td><code>postgres:18.6</code></td>
+</tr>
+<tr class="odd">
+<td>SonarScanner CLI</td>
+<td>8.3.1.16491 mit JDK 21.0.13, Maven 3.9.16, Gradle 9.9.1, Node.js 24.22.3</td>
+<td><code>code-analysis/sonar-scanner</code>, Basis <code>eclipse-temurin:21-jdk-noble</code></td>
+</tr>
+<tr class="even">
+<td>SonarScanner for .NET</td>
+<td>12.1.0 mit .NET SDK 10.0.403, Node.js 24.22.3</td>
+<td><code>code-analysis/sonar-dotnet</code>, Basis <code>mcr.microsoft.com/dotnet/sdk:10.0.403</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Die in SonarQube 26.9 enthaltenen Analyzer haben folgende Versionen (laut <code>api/plugins/installed</code>): Java 8.41, C# 10.33, JavaScript/TypeScript 13.8, Python 5.31, Rust 1.8.1.</p>
+</section>
+</section>
+<section id="übersicht-der-festlegungen" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Übersicht der Festlegungen</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Werkzeug</th>
+<th>Festlegung</th>
+<th>Eigene Abweichung vom Standard</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>OpenGrep</td>
+<td><code>opengrep scan</code> mit den Regelordnern der aktiven Regelsammlungen, <code>--taint-intrafile</code>, OpenGreps Standard-Ignore-Liste</td>
+<td>Auswahl der Regelsammlungen; <code>--taint-intrafile</code></td>
+</tr>
+<tr class="even">
+<td>SonarQube</td>
+<td>Community Build 26.9, Qualitätsprofile „Sonar way“, CLI-Scanner bzw. Scanner für .NET, Java und C# gebaut</td>
+<td>C/C++: Profil „Sonar way + sonar-cxx rules“ (22 Regeln); Clippy aus; .NET-Analyzer-Warnungen nicht übernommen</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sec-opengrep" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> OpenGrep</h1>
+<section id="festlegung" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="festlegung"><span class="header-section-number">3.1</span> Festlegung</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">opengrep</span> scan <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span> <span class="op">&lt;</span>Regelordner<span class="op">&gt;</span> [--config <span class="op">&lt;</span>Regelordner<span class="op">&gt;</span> …] <span class="dt">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--taint-intrafile</span> <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--disable-version-check</span> <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--json-output</span><span class="op">=&lt;</span>output<span class="op">&gt;</span>/opengrep.json <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">--sarif-output</span><span class="op">=&lt;</span>output<span class="op">&gt;</span>/opengrep.sarif <span class="dt">\</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  .</span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+<ul>
+<li><strong>Ausführung:</strong> im Projektordner, mit der Umgebungsvariablen <code>SEMGREP_R2C_INTERNAL_EXPLICIT_SEMGREPIGNORE=/opt/code-analysis/opengrep/default.semgrepignore</code>.</li>
+<li><strong>Container:</strong> ohne Netzwerk, das Projekt schreibgeschützt eingebunden.</li>
+<li><strong>Regelordner:</strong> einer je Regelordner der aktiven Regelsammlungen, der eine Sprache des Projekts abdeckt (Hauptsprache und alle weiteren unterstützten Sprachen aus Schritt 1).</li>
+</ul>
+</section>
+<section id="begründung-und-belege" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</h2>
+<ul>
+<li><strong>Was das Werkzeug ist.</strong> OpenGrep ist „a fork of Semgrep, under the LGPL 2.1 license“ [OG-README], genauer „a fork of Semgrep version 1.100.0“ [OG-CHANGES]. Es ist „Compatible with Semgrep rules - your existing rules and rulesets work unchanged“ [OG-README].</li>
+<li><strong>Sprachunterstützung ist eingebaut.</strong> Für die einzelnen Sprachen muss nichts installiert werden. Die Parser stecken im Programm („Opengrep supports 30+ languages, including: … C · C++ · C# · … Java · JavaScript · … Python · … Rust · … TypeScript …“ [OG-README]). Was jede Sprache braucht, sind Regeln (<a href="#sec-regelsammlungen" class="quarto-xref">Kapitel&nbsp;3.4</a>).</li>
+<li><strong>Eigenes Image aus dem Release-Binary.</strong>
+<ul>
+<li>Das Repository enthält nur ein von Semgrep übernommenes Dockerfile, das mit OCaml 4.14 aus den Quellen baut. OpenGrep selbst ist laut [OG-CHANGES] auf OCaml 5.3.0 umgestiegen.</li>
+<li>Das Tool installiert deshalb das signierte Release-Binary („Self-contained binaries via Nuitka (no Python required)“ [OG-README]) und prüft es gegen die SHA-256-Prüfsumme des Release [OG-release].</li>
+</ul></li>
+<li><strong><code>--taint-intrafile</code>.</strong> Die Option verfolgt Daten über Funktionsgrenzen innerhalb einer Datei: „Added support for intrafile cross-function tainting, with the flag <code>--taint-intrafile</code>, supporting higher-order functions. This works similarly to Semgrep’s <code>--pro-intrafile</code>.“ [OG-CHANGES]. Die Hilfe des Programms nennt alle Sprachen des Tools als unterstützt: „Supported languages: Apex, C, Clojure, C#, C++, Dart, Elixir, Go, Java, JavaScript, Julia, Kotlin, Lua, Python, Ruby, Rust, Scala, Swift, TypeScript, Visual Basic. Other languages will fall back to intraprocedural analysis only.“ [OG-help]</li>
+<li><strong>Nicht dateiübergreifend.</strong> Datenflüsse über Dateigrenzen verfolgt nur OpenGrep 2.0, und das ist eine Alpha-Version: „FOR TESTING ONLY. Alpha release of Opengrep 2.0.0 with python removed and interfile support.“ [OG-alpha]. Das Flowchart wurde deshalb von „cross-file“ auf „taint across functions within a file“ geändert.</li>
+<li><strong><code>--validate</code> wird nicht verwendet.</strong>
+<ul>
+<li>Die Option „will check YAML files for errors and run ‘p/semgrep-rule-lints’ on the YAML files“ [OG-help]. Im Test ohne Netzwerk versuchte sie, <code>https://semgrep.dev/p/semgrep-rule-lints</code> zu laden, und brach ab.</li>
+<li>Stattdessen lädt der Image-Build alle Regeln einmal offline mit <code>opengrep scan --strict</code> und bricht ab, wenn OpenGrep eine Regel ablehnt.</li>
+</ul></li>
+<li><strong><code>--disable-version-check</code>.</strong> Unterbindet die Anfrage nach neuen Versionen. Der Container hat ohnehin kein Netzwerk.</li>
+</ul>
+</section>
+<section id="sec-opengrep-scope" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="sec-opengrep-scope"><span class="header-section-number">3.3</span> Was gescannt wird</h2>
+<ul>
+<li><strong>Dateien, die git kennt.</strong> OpenGrep liest die Dateiliste über <code>git ls-files</code>, <code>.gitignore</code> gilt also.</li>
+<li><strong>Standard-Ignore-Liste von OpenGrep.</strong> Ausgelassen werden <code>build/</code>, <code>vendor/</code>, <code>dist/</code>, <code>*.min.js</code>, <code>.env/</code>, <code>.tox/</code>, <code>node_modules/</code>, <code>.npm/</code>, <code>.yarn/</code>, <code>.venv/</code>, <code>_opam/</code>, <code>_build/</code>, <code>_cargo/</code> sowie die Testordner <code>test/</code>, <code>tests/</code>, <code>testsuite/</code> und <code>*_test.go</code> [OG-ignore].</li>
+<li><strong>Die <code>.semgrepignore</code> des Projekts wird ignoriert.</strong>
+<ul>
+<li>OpenGrep 1.33.1 liest die <code>.semgrepignore</code> aus dem Arbeitsverzeichnis und nimmt seine Standardliste nur, wenn dort keine liegt („No .semgrepignore found. Using default .semgrepignore rules.“ [OG-runscan]). Eine Datei im Projekt <em>ersetzt</em> also die Standardliste.</li>
+<li>Ist die Umgebungsvariable <code>SEMGREP_R2C_INTERNAL_EXPLICIT_SEMGREPIGNORE</code> gesetzt, wird stattdessen die dort angegebene Datei gelesen [OG-runscan]. Das Tool übergibt so OpenGreps eigene Standardliste der verwendeten Version.</li>
+</ul></li>
+<li><strong>Regeldateien des Projekts werden nicht gelesen.</strong> Mit <code>--config</code> lädt OpenGrep nur die angegebenen Regeln (<code>get_config</code> in [OG-config]). Alle angegebenen Ordner liegen im Image.</li>
+<li><strong>Generierte Dateien.</strong> Befunde in generierten Dateien werden wie in Schritt 2 verworfen; auch Syntaxfehler in ihnen zählen nicht.</li>
+<li><strong>Unterdrückungen im Code</strong> (<code>// nosemgrep</code>, <code># nosem</code>) gehören zum Code und werden beachtet. Das ist OpenGreps Standard (<code>--enable-nosem/--disable-nosem</code>, <code>default=True</code> [OG-scan]).</li>
+</ul>
+</section>
+<section id="sec-regelsammlungen" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="sec-regelsammlungen"><span class="header-section-number">3.4</span> Regelsammlungen</h2>
+<section id="festlegung-1" class="level3" data-number="3.4.1">
+<h3 data-number="3.4.1" class="anchored" data-anchor-id="festlegung-1"><span class="header-section-number">3.4.1</span> Festlegung</h3>
+<p>OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen in <code>config/opengrep.toml</code> des Tool-Repositorys: je ein Git-Repository mit festem Commit und den Regelordnern pro Sprache. Welche aktiv sind, legt <code>rulesets</code> dort fest. Im aktuellen Stand sind <code>semgrep-rules</code> und <code>0xdea-semgrep-rules</code> aktiv.</p>
+<div id="tbl-regelsammlungen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-regelsammlungen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;2: Definierte Regelsammlungen
+</figcaption>
+<div aria-describedby="tbl-regelsammlungen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Regelsammlung</th>
+<th>Repository, Commit</th>
+<th>Lizenz</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>opengrep-rules</code></td>
+<td><code>opengrep/opengrep-rules</code>, <code>f1d2b562b414783763fd02a6ed2736eaed622efa</code>, Fork von semgrep-rules vom 13.12.2024, archiviert</td>
+<td>LGPL 2.1 mit Commons Clause</td>
+</tr>
+<tr class="even">
+<td><code>semgrep-rules</code></td>
+<td><code>semgrep/semgrep-rules</code>, <code>a5ad1714f00c9f7fde980cab0ea1d6dc6d414fd2</code> (10.11.2026)</td>
+<td>Semgrep Rules License v1.0</td>
+</tr>
+<tr class="odd">
+<td><code>0xdea-semgrep-rules</code></td>
+<td><code>0xdea/semgrep-rules</code>, <code>b9942606d3543e3145a95332e6543fb79a01af00</code> (06.11.2026), ohne Ordner <code>noisy/</code></td>
+<td>MIT</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<div id="tbl-regelanzahl" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-regelanzahl-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;3: Regeln pro Sprache, gezählt vom Image-Build am 11.11.2026
+</figcaption>
+<div aria-describedby="tbl-regelanzahl-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Ordner</th>
+<th>opengrep-rules</th>
+<th>semgrep-rules</th>
+<th>0xdea-semgrep-rules</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C</td>
+<td><code>c</code> bzw. <code>rules/c</code></td>
+<td>16</td>
+<td>16</td>
+<td>49</td>
+</tr>
+<tr class="even">
+<td>C++</td>
+<td>– bzw. <code>rules/c</code></td>
+<td>0</td>
+<td>0</td>
+<td>49</td>
+</tr>
+<tr class="odd">
+<td>C#</td>
+<td><code>csharp</code></td>
+<td>52</td>
+<td>52</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>Java</td>
+<td><code>java</code></td>
+<td>127</td>
+<td>130</td>
+<td>–</td>
+</tr>
+<tr class="odd">
+<td>JavaScript, TypeScript</td>
+<td><code>javascript</code>, <code>typescript</code></td>
+<td>182 + 30</td>
+<td>182 + 32</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>Python</td>
+<td><code>python</code></td>
+<td>375</td>
+<td>378</td>
+<td>–</td>
+</tr>
+<tr class="odd">
+<td>Rust</td>
+<td><code>rust</code></td>
+<td>10</td>
+<td>10</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="begründung-und-belege-1" class="level3" data-number="3.4.2">
+<h3 data-number="3.4.2" class="anchored" data-anchor-id="begründung-und-belege-1"><span class="header-section-number">3.4.2</span> Begründung und Belege</h3>
+<ul>
+<li><strong>opengrep-rules.</strong> Die Regelsammlung des OpenGrep-Projekts ist ein archivierter Fork der Semgrep-Regeln. Ihr README sagt: „These rules are intended for research, testing &amp; benchmarking.“ [OG-rules]</li>
+<li><strong>semgrep-rules.</strong> Die aktuellen Regeln von Semgrep Inc.&nbsp;unterscheiden sich nur wenig, zum Beispiel Java 130 statt 127 und Python 378 statt 375 Regeln (<a href="#tbl-regelanzahl" class="quarto-xref">Tabelle&nbsp;3</a>). Sie stehen unter einer eigenen Lizenz (<a href="#sec-lizenzen" class="quarto-xref">Kapitel&nbsp;3.4.3</a>).</li>
+<li><strong>Lücke bei C++.</strong>
+<ul>
+<li>Die C-Regeln von opengrep-rules und semgrep-rules sind für <code>languages: [c]</code> geschrieben.</li>
+<li>OpenGrep ordnet der Sprache <code>c</code> nur die Endungen <code>.c</code> und <code>.h</code> zu, <code>.cpp</code>, <code>.hpp</code> usw. gehören zu <code>cpp</code> [OG-lang]. Für C++-Dateien hätte es also keine einzige Regel gegeben.</li>
+<li>Die Sammlung von 0xdea („Battle-tested C (and sometimes C++) ruleset.“ [0xdea]) ist für <code>c</code> und <code>cpp</code> geschrieben, alle 49 Regeln.</li>
+</ul></li>
+<li><strong>JavaScript und TypeScript.</strong> Die meisten Regeln in <code>javascript/</code> gelten für beide Sprachen, <code>typescript/</code> ergänzt reine TypeScript-Regeln. Beide Ordner laufen für beide Sprachen.</li>
+<li><strong>Kein Kategorie-Filter.</strong>
+<ul>
+<li>Es laufen alle Regeln der Ordner, neben <code>security</code> auch <code>correctness</code>, <code>best-practice</code>, <code>performance</code> und <code>maintainability</code>.</li>
+<li>Jeder Befund behält Kategorie und Unterkategorie (<code>vuln</code>: wahrscheinlich ausnutzbar, <code>audit</code>: zu prüfen), CWE, OWASP, <code>confidence</code>, <code>likelihood</code> und <code>impact</code>. So kann Schritt 6 filtern.</li>
+</ul></li>
+<li><strong>Umschaltbar und erweiterbar.</strong> Eine neue Sammlung braucht nur einen Eintrag in der Konfigurationsdatei (Repository, Commit, Ordner pro Sprache) und einen Neubau des Images. Der Code ändert sich nicht.</li>
+<li><strong>Prüfung beim Build.</strong> Der Build lädt jede aktive Sammlung zum festen Commit, behält nur die Regeldateien der angegebenen Ordner (<code>*.yaml</code>, <code>*.yml</code>, ohne <code>*.test.yaml</code>) sowie Lizenz- und README-Dateien. Dann lädt er alle Regeln einmal mit OpenGrep. Lehnt OpenGrep eine Regel ab, bricht der Build ab.</li>
+<li><strong>Abgleich bei jedem Lauf.</strong> Fehlt eine aktive Sammlung im Image oder liegt sie dort in einem anderen Commit, stoppt das Tool OpenGrep mit dem Hinweis, das Image neu zu bauen.</li>
+</ul>
+</section>
+<section id="sec-lizenzen" class="level3" data-number="3.4.3">
+<h3 data-number="3.4.3" class="anchored" data-anchor-id="sec-lizenzen"><span class="header-section-number">3.4.3</span> Lizenzen</h3>
+<ul>
+<li><strong>Semgrep Rules License v1.0</strong> [SG-license]:
+<ul>
+<li>„By using the rules, you agree to all of the terms and conditions below.“</li>
+<li>„You may use the rules only for your own internal business purposes.“</li>
+<li>„This license does not allow you to distribute the rules, or to make them available to others as a service.“</li>
+<li>„If you copy any of the rules, you must also include the notices of the licensor in that copy.“</li>
+<li>Die Definition der Regeln schließt Teile ein: „The rules are the rules for the Semgrep analysis tool that the licensor makes available under these terms, including any portion of those rules.“</li>
+<li>Was „internal business purposes“ bedeutet, definiert die Lizenz nicht. Ob etwa eine Abschlussarbeit an einer Hochschule darunter fällt, geht aus dem Text nicht hervor.</li>
+<li>Die Lizenz schränkt nicht ein, mit welchem Werkzeug die Regeln ausgeführt werden.</li>
+</ul></li>
+<li><strong>opengrep-rules</strong> behält die Lizenz von semgrep-rules zum Zeitpunkt des Forks: „“Commons Clause” License Condition v1.0 … Software: semgrep-rules … License: LGPL 2.1 … Licensor: Semgrep, Inc.“ [OG-rules]. Die Commons Clause verbietet den Verkauf.</li>
+<li><strong>Folgen für das Tool:</strong>
+<ul>
+<li>Nur aktive Sammlungen werden heruntergeladen. Schon das Laden der Regeln ist eine Nutzung, mit der die Lizenz angenommen wird. Wer semgrep-rules aktiviert und das Image neu baut, entscheidet sich also bewusst dafür.</li>
+<li>Im Repository stehen keine Regeln, nur Repository-Adresse und Commit. Die Regeln liegen nur im lokalen Docker-Image; <code>.gitignore</code> schließt zusätzlich lokale <code>semgrep-rules/</code>-Ordner aus.</li>
+<li>Jede Sammlung behält im Image ihre LICENSE-Datei.</li>
+<li><strong>Ergebnisse enthalten Teile der Regeln.</strong> Jeder Befund trägt die Meldung seiner Regel, und <code>opengrep.sarif</code> enthält Beschreibung und Hilfetext <em>aller</em> geladenen Regeln. Im Test waren das 375 Regeln für den Python-Ordner. Mit semgrep-rules erzeugte Ergebnisse dürfen deshalb nicht veröffentlicht oder weitergegeben werden, zum Beispiel im Anhang der Arbeit.</li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="testergebnisse" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="testergebnisse"><span class="header-section-number">3.5</span> Testergebnisse</h2>
+<ul>
+<li><p><strong><code>.semgrepignore</code> des Projekts.</strong></p>
+<ul>
+<li>Eine Projektdatei mit dem Eintrag <code>src/</code> ließ OpenGrep ohne Gegenmaßnahme <code>src/</code> auslassen und <code>tests/</code> scannen.</li>
+<li>Mit der explizit übergebenen Standardliste wurde <code>src/</code> gescannt und <code>tests/</code> ausgelassen („Scan skipped: 1 directories matching .semgrepignore patterns“).</li>
+</ul></li>
+<li><p><strong>Datenfluss über Funktionsgrenzen.</strong></p>
+<ul>
+<li>Testfall: In einer Flask-Anwendung liest <code>ping()</code> einen Request-Parameter und übergibt ihn an <code>run()</code>, das <code>subprocess.check_output(cmd, shell=True)</code> aufruft.</li>
+<li>Mit <code>--taint-intrafile</code> meldete die Regel <code>python.flask.security.injection.subprocess-injection</code> die Stelle in <code>run()</code>. Ohne die Option fehlte dieser Befund; nur die Variante innerhalb einer Funktion wurde gefunden.</li>
+</ul></li>
+<li><p><strong>Jede Sprache erhält Regeln.</strong> Mit opengrep-rules und 0xdea gab es für jede unterstützte Sprache mindestens einen Befund:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Regel</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Java</td>
+<td><code>java.lang.security.audit.crypto.use-of-md5</code></td>
+</tr>
+<tr class="even">
+<td>C#</td>
+<td><code>csharp.lang.security.insecure-deserialization.insecure-binaryformatter-deserialization</code></td>
+</tr>
+<tr class="odd">
+<td>TypeScript</td>
+<td><code>javascript.browser.security.eval-detected</code></td>
+</tr>
+<tr class="even">
+<td>JavaScript</td>
+<td><code>javascript.browser.security.insecure-innerhtml</code></td>
+</tr>
+<tr class="odd">
+<td>Python</td>
+<td><code>python.lang.security.deserialization.avoid-pickle</code></td>
+</tr>
+<tr class="even">
+<td>Rust</td>
+<td><code>rust.lang.security.args</code></td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td><code>c.lang.security.insecure-use-gets-fn</code> sowie <code>rules.c.raptor-insecure-api-gets</code> (0xdea)</td>
+</tr>
+<tr class="even">
+<td>C++</td>
+<td><code>rules.c.raptor-insecure-api-strcpy-strcat</code> (0xdea)</td>
+</tr>
+</tbody>
+</table>
+<p>Beim Wechsel auf semgrep-rules wurde dieselbe Python-Regel gefunden, nun aus <code>semgrep-rules</code>.</p></li>
+<li><p><strong>Syntaxfehler.</strong> Eine C-Datei mit Syntaxfehler ließ den Exit-Code bei 0. Der Bericht nannte die Datei mit „Syntax error“, und der Status wurde <code>partial</code>.</p></li>
+<li><p><strong>Ungültige Regel.</strong> Eine Regel mit ungültigem Muster führte zu Exit-Code 2 und einem Eintrag „Rule parse error“.</p></li>
+<li><p><strong>Projekt unverändert.</strong> Nach dem Lauf meldete <code>git status</code> keine Änderung.</p></li>
+<li><p><strong>Image-Größe.</strong> Das Binary entpackt sich beim ersten Start nach <code>$HOME</code>, rund 250 MB. Im ersten Build blieben diese Daten in den Image-Schichten (784 MB). Seit der Build sie im selben Schritt wieder löscht, sind es 455 MB.</p></li>
+</ul>
+</section>
+<section id="grenzen" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="grenzen"><span class="header-section-number">3.6</span> Grenzen</h2>
+<ul>
+<li><strong>Nicht dateiübergreifend:</strong> Datenflüsse zwischen Dateien werden nicht verfolgt (siehe oben).</li>
+<li><strong>Reifegrad der Sprachen:</strong> OpenGreps Sprachliste stuft C#, Java, JavaScript, Python und TypeScript als <code>ga</code> ein, C, C++ und Rust als <code>alpha</code> [OG-lang].</li>
+<li><strong>Abdeckung hängt an den Regeln:</strong> Für Rust gibt es nur 10 Regeln, für C 16 (dazu 49 von 0xdea), für C++ nur die 49 von 0xdea (<a href="#tbl-regelanzahl" class="quarto-xref">Tabelle&nbsp;3</a>).</li>
+<li><strong>Tests ausgelassen:</strong> Die Standardliste lässt Testordner aus. Schwachstellen in Testcode werden nicht gemeldet.</li>
+</ul>
+</section>
+</section>
+<section id="sec-sonarqube" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> SonarQube</h1>
+<section id="festlegung-2" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="festlegung-2"><span class="header-section-number">4.1</span> Festlegung</h2>
+<ul>
+<li><strong>Server:</strong> SonarQube Community Build 26.9 mit PostgreSQL 18.6. Er läuft dauerhaft als Teil der Docker-Compose-Umgebung, die Weboberfläche nur lokal unter <code>http://localhost:9000</code>.</li>
+<li><strong>C und C++:</strong> über das Community-Plugin sonar-cxx 2.4.0-beta.1.</li>
+<li><strong>Scanner:</strong> eigene Images für den SonarScanner CLI und den SonarScanner for .NET.</li>
+<li><strong>Analyse:</strong> auf einer Kopie des Projekts; Java wird vorher gebaut, C# während <code>dotnet build</code> analysiert.</li>
+<li><strong>Regeln:</strong> „Sonar way“ je Sprache, für C/C++ das Profil „Sonar way + sonar-cxx rules“ (<a href="#sec-cxx" class="quarto-xref">Kapitel&nbsp;4.7</a>).</li>
+</ul>
+</section>
+<section id="sec-sq-version" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="sec-sq-version"><span class="header-section-number">4.2</span> Sprachabdeckung und Versionswahl</h2>
+<ul>
+<li><strong>Was die Community Build abdeckt.</strong>
+<ul>
+<li>In der Sprachtabelle der Dokumentation hat die Spalte „SonarQube Community Build“ ein Häkchen bei C#, Java, JavaScript, Python und TypeScript. Bei C, C++, Objective-C und Rust ist sie leer [SQ-lang].</li>
+<li>Zu Rust heißt es dort: „Starting with version 26.11, SonarQube Community Build does not include Ruby, Rust, and Scala. To analyze these languages, install the community-maintained plugins from GitHub.“ [SQ-lang]</li>
+</ul></li>
+<li><strong>Gewählt: Version 26.9 mit sonar-cxx 2.4.0-beta.1.</strong>
+<ul>
+<li>Die Release Notes von sonar-cxx nennen genau diese Kombination als getestet: „Tested and released with Sonar Plugin API 14.0.0.4498, SonarQube Community Build 26.9.0.129388, and Java 21.“ [CXX-release]</li>
+<li>In 26.9 ist Rust noch offiziell enthalten.</li>
+<li>Im Test lud das Plugin als externes Plugin („cxx 2.4 (build 1689) EXTERNAL“).</li>
+</ul></li>
+<li><strong>Verworfen:</strong>
+<ul>
+<li><strong>26.11, die neueste Version:</strong> Rust wäre dort nur über das Community-Plugin sonar-rust verfügbar gewesen, und die Kombination mit sonar-cxx ist für 26.11 nicht getestet.</li>
+<li><strong>26.1 mit der stabilen sonar-cxx 2.3.1:</strong> Diese SonarQube-Version war bereits zehn Monate alt.</li>
+</ul></li>
+<li><strong>Eigene Scanner-Images.</strong> Das offizielle Image <code>sonarsource/sonar-scanner-cli</code> gibt es nur für amd64 [DH-scanner]. Der Scanner selbst ist offiziell auch für Linux AArch64 verfügbar [SQ-scanner]. Die Images installieren diese Distribution, damit die Analyse auf Apple Silicon nicht emuliert läuft.</li>
+</ul>
+</section>
+<section id="server-und-datenbank" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="server-und-datenbank"><span class="header-section-number">4.3</span> Server und Datenbank</h2>
+<ul>
+<li><strong>PostgreSQL statt H2.</strong> Die eingebettete Datenbank ist laut Dokumentation „recommended for tests but not for production use“ [SQ-db]. Unterstützt wird PostgreSQL „Version: 15 to 18 (starting in SonarQube Community Build 26.8)“ [SQ-db].</li>
+<li><strong>Speicher.</strong>
+<ul>
+<li>Gefordert sind „For a small-scale installation: 4GB of RAM“ [SQ-hw]. Gemessen belegte der Server rund 2 GB, die Datenbank 135 MB.</li>
+<li>Unter Linux braucht Elasticsearch <code>vm.max_map_count=524288</code> und <code>fs.file-max=131072</code> [SQ-linux].</li>
+</ul></li>
+<li><strong>Plugin im Image, nicht im Volume.</strong> Die Plugin-Datei liegt im Image unter <code>extensions/plugins/</code>. Ein Volume würde nach einem Update des Images ein altes Plugin behalten.</li>
+<li><strong>Zugang.</strong>
+<ul>
+<li>Beim ersten Lauf ersetzt das Tool SonarQubes Standardpasswort <code>admin/admin</code> durch <code>SONARQUBE_ADMIN_PASSWORD</code> aus <code>docker/.env</code>.</li>
+<li>Für jede Analyse wird ein eigenes Analyse-Token erzeugt und am Ende widerrufen, auch nach Fehlern. Das Token erscheint in keinem Ergebnis.</li>
+</ul></li>
+<li><strong>Historie.</strong> Jedes Projekt erhält in SonarQube den Schlüssel <code>code-analysis_&lt;Projektordner&gt;</code> und behält seine Analysen über die Läufe hinweg.</li>
+</ul>
+</section>
+<section id="sec-sq-ablauf" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="sec-sq-ablauf"><span class="header-section-number">4.4</span> Analyseablauf</h2>
+<section id="arbeitskopie" class="level3" data-number="4.4.1">
+<h3 data-number="4.4.1" class="anchored" data-anchor-id="arbeitskopie"><span class="header-section-number">4.4.1</span> Arbeitskopie</h3>
+<ul>
+<li><strong>Was kopiert wird:</strong> Die Dateien, die git kennt, werden im Stand nach Schritt 2 nach <code>step3-static-analysis/sonarqube/workspace/</code> kopiert. Dazu gehören versionierte und nicht ignorierte unversionierte Dateien, auch vendorte und generierte, weil der Build sie brauchen kann. Aus der Analyse werden diese Dateien über <code>sonar.exclusions</code> wieder ausgenommen.</li>
+<li><strong>Warum eine Kopie:</strong> Java und C# müssen gebaut werden, und Builds legen Dateien an. In der Kopie bleibt das Projekt unverändert. Die Kopie wird nach dem Lauf gelöscht.</li>
+<li><strong>Kopie als git-Repository:</strong> Die Kopie wird zu einem git-Repository ohne Commit. Ohne Repository warnte SonarQube „Retrieving only language associated files, make sure to run the analysis inside a git repository to make use of inclusions specified via “sonar.text.inclusions”“, und der Text- und Secrets-Sensor hätte nur Dateien bekannter Sprachen gelesen.</li>
+</ul>
+</section>
+<section id="java-build" class="level3" data-number="4.4.2">
+<h3 data-number="4.4.2" class="anchored" data-anchor-id="java-build"><span class="header-section-number">4.4.2</span> Java-Build</h3>
+<ul>
+<li><strong>Warum gebaut wird:</strong> Ohne Bytecode verweigert SonarQube die Java-Analyse: „Your project contains .java files, please provide compiled classes with sonar.java.binaries property, or exclude them from the analysis with sonar.exclusions property.“ <code>sonar.java.binaries</code> ist als „(required)“ markiert [SQ-java].</li>
+<li><strong>Wie gebaut wird:</strong>
+<ul>
+<li>Der Build läuft im Image <code>code-analysis/sonar-scanner</code>, mit dem Wrapper des Projekts (<code>mvnw</code>, <code>gradlew</code>), wenn vorhanden, sonst mit Maven bzw. Gradle.</li>
+<li>Maven: <code>mvn -B -q -DskipTests compile dependency:build-classpath</code>.</li>
+<li>Gradle: <code>gradle --no-daemon -q classes</code> mit einem Init-Skript, das den Kompilier-Klassenpfad in eine Datei schreibt.</li>
+<li>Die Bytecode-Ordner (<code>target/classes</code>, <code>build/classes/java/main</code>) und die Jar-Dateien des Klassenpfads werden zu <code>sonar.java.binaries</code> und <code>sonar.java.libraries</code>.</li>
+</ul></li>
+<li><strong>JDK 21:</strong> Gradle läuft auf Java 21 ab Version 8.5, auf Java 25 erst ab 9.1.0 („Support for running Gradle“ [Gradle-compat]). Mit JDK 21 laufen also auch die Gradle-8-Wrapper vieler Projekte.</li>
+<li><strong>Scheitert der Build,</strong> wird Java mit einem leeren Bytecode-Ordner analysiert, und der Status ist <code>partial</code> (Folgen siehe Testergebnisse).</li>
+</ul>
+</section>
+<section id="wahl-des-scanners" class="level3" data-number="4.4.3">
+<h3 data-number="4.4.3" class="anchored" data-anchor-id="wahl-des-scanners"><span class="header-section-number">4.4.3</span> Wahl des Scanners</h3>
+<ul>
+<li><strong>Projekte mit C#:</strong>
+<ul>
+<li>Die C#-Analyse braucht den SonarScanner for .NET: „C# analysis requires the SonarScanner for .NET. The SonarScanner CLI doesn’t support C# or VB.NET analysis.“ [SQ-csharp]</li>
+<li>Er läuft mit <code>begin</code>, dann <code>dotnet build</code> auf dieselben Ziele wie <code>dotnet format</code> in Schritt 2 (jede Solution, sonst jede <code>.csproj</code>), dann <code>end</code>, alles in einem Container.</li>
+<li>Mit <code>sonar.scanner.scanAll=true</code> analysiert er auch die übrigen Sprachen.</li>
+<li>Scheitert der Build, analysiert der CLI-Scanner die übrigen Sprachen, und C# bleibt mit Status <code>partial</code> unanalysiert.</li>
+</ul></li>
+<li><strong>Alle anderen Projekte:</strong> SonarScanner CLI.</li>
+<li><strong>Auswertung:</strong> Das Tool wartet, bis der Server den Bericht verarbeitet hat (<code>api/ce/task</code>), und holt dann die Ergebnisse über die Web-API.</li>
+</ul>
+</section>
+</section>
+<section id="sec-sq-parameter" class="level2" data-number="4.5">
+<h2 data-number="4.5" class="anchored" data-anchor-id="sec-sq-parameter"><span class="header-section-number">4.5</span> Parameter</h2>
+<p>Der CLI-Scanner erhält alle Parameter in einer eigenen Datei <code>sonar-project.properties</code> des Laufs, übergeben mit <code>project.settings</code>. Laut Dokumentation wird dann „any <code>sonar-project.properties</code> located at the root of the project base directory … ignored“ [SQ-scanner]. Der Scanner für .NET erhält dieselben Werte als <code>/k:</code>, <code>/n:</code>, <code>/v:</code> und <code>/d:</code>.</p>
+<div id="tbl-sq-parameter" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-sq-parameter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;4: Feste Analyseparameter von SonarQube
+</figcaption>
+<div aria-describedby="tbl-sq-parameter-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Wert</th>
+<th>Begründung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>project.settings</code></td>
+<td>Datei des Laufs</td>
+<td>Die Datei des Projekts wird ignoriert</td>
+</tr>
+<tr class="even">
+<td><code>sonar.projectKey</code>, <code>sonar.projectName</code>, <code>sonar.projectVersion</code></td>
+<td><code>code-analysis_&lt;Ordner&gt;</code>, Ordnername, Commit</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td><code>sonar.scm.disabled</code></td>
+<td><code>true</code></td>
+<td>Die Kopie hat keine Historie</td>
+</tr>
+<tr class="even">
+<td><code>sonar.exclusions</code></td>
+<td>Ordner, die Schritt 1 auslässt (<code>vendor</code>, <code>third_party</code>, <code>build</code>, <code>node_modules</code>, …), versteckte Ordner, generierte Dateien</td>
+<td>Gleicher Umfang wie in Schritt 1 und 2</td>
+</tr>
+<tr class="odd">
+<td><code>sonar.cxx.file.suffixes</code></td>
+<td><code>.c,.h,.cc,.cpp,.cxx,.c++,.hh,.hpp,.hxx,.h++,.ipp</code></td>
+<td>Der Sensor von sonar-cxx ist sonst aus („the CXX programming language sensor is disabled by default“); Endungen nach der Empfehlung von sonar-cxx [CXX-suffixes]</td>
+</tr>
+<tr class="even">
+<td><code>sonar.rust.clippy.enabled</code></td>
+<td><code>false</code></td>
+<td>Standardmäßig ruft SonarQube Clippy auf („By default, the Sonar Rust analyzer automatically triggers a Clippy analysis.“ [SQ-rust]); Clippy läuft schon in Schritt 2</td>
+</tr>
+<tr class="odd">
+<td><code>sonar.cs.roslyn.ignoreIssues</code></td>
+<td><code>true</code> (bei C#)</td>
+<td>Siehe unten</td>
+</tr>
+<tr class="even">
+<td><code>sonar.python.version</code></td>
+<td>untere Grenze von <code>requires-python</code></td>
+<td>Wie <code>--target-version</code> für Ruff in Schritt 2; sonst warnt SonarQube, dass es alle Python-3-Versionen annimmt</td>
+</tr>
+<tr class="odd">
+<td><code>sonar.java.source</code></td>
+<td>Java-Version der Build-Datei</td>
+<td>Wie <code>--use-version</code> für PMD in Schritt 2</td>
+</tr>
+<tr class="even">
+<td><code>sonar.java.binaries</code>, <code>sonar.java.libraries</code></td>
+<td>Bytecode und Klassenpfad des Builds</td>
+<td>Pflicht für Java</td>
+</tr>
+<tr class="odd">
+<td><code>sonar.working.directory</code></td>
+<td><code>/tmp/scannerwork</code> im Container</td>
+<td>Siehe Testergebnisse (Rust)</td>
+</tr>
+<tr class="even">
+<td><code>sonar.projectBaseDir</code>, <code>sonar.scanner.scanAll</code></td>
+<td>die Kopie, <code>true</code> (nur .NET)</td>
+<td>Basis der Pfade in <code>sonar.exclusions</code>; auch die übrigen Sprachen analysieren</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>.NET-Analyzer-Warnungen.</strong> Der Scanner für .NET übernimmt standardmäßig Compiler- und Analyzer-Warnungen aus dem Build: „Issues from third-party Roslyn analyzers (including Roslyn analyzers provided by Microsoft) are included in the MSBuild output and imported by default into SonarQube“ [SQ-roslyn]. Darunter war im Test <code>CA2200</code>, das <code>dotnet format</code> in Schritt 2 bereits behebt. Abgeschaltet wird das mit <code>sonar.cs.roslyn.ignoreIssues=true</code> [SQ-roslyn].</p>
+</section>
+<section id="qualitätsprofile" class="level2" data-number="4.6">
+<h2 data-number="4.6" class="anchored" data-anchor-id="qualitätsprofile"><span class="header-section-number">4.6</span> Qualitätsprofile</h2>
+<p>Verwendet wird das eingebaute Profil „Sonar way“ jeder Sprache, unverändert. Ausnahme ist C/C++ (<a href="#sec-cxx" class="quarto-xref">Kapitel&nbsp;4.7</a>).</p>
+<div id="tbl-profile" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-profile-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;5: Aktive Regeln auf dem Server, abgefragt am 11.11.2026
+</figcaption>
+<div aria-describedby="tbl-profile-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Aktive Regeln</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>398 von 444</td>
+</tr>
+<tr class="even">
+<td>Java</td>
+<td>599 von 768</td>
+</tr>
+<tr class="odd">
+<td>JavaScript</td>
+<td>420 von 528</td>
+</tr>
+<tr class="even">
+<td>TypeScript</td>
+<td>435 von 546</td>
+</tr>
+<tr class="odd">
+<td>C#</td>
+<td>326 von 456</td>
+</tr>
+<tr class="even">
+<td>Rust</td>
+<td>78 von 85</td>
+</tr>
+<tr class="odd">
+<td>C/C++ (sonar-cxx)</td>
+<td>22 von 6299 im Profil „Sonar way + sonar-cxx rules“ (im eigenen „Sonar way“ des Plugins: 0)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-cxx" class="level2" data-number="4.7">
+<h2 data-number="4.7" class="anchored" data-anchor-id="sec-cxx"><span class="header-section-number">4.7</span> C und C++ (sonar-cxx)</h2>
+<section id="was-das-plugin-tut" class="level3" data-number="4.7.1">
+<h3 data-number="4.7.1" class="anchored" data-anchor-id="was-das-plugin-tut"><span class="header-section-number">4.7.1</span> Was das Plugin tut</h3>
+<p>Das Plugin beschreibt sich selbst so: „This plugin adds C++ support to SonarQube with the focus on integration of existing C++ tools.“ [CXX-README] Seine Arbeit besteht aus zwei Teilen:</p>
+<ul>
+<li><strong>Einlesen und Messen.</strong> Es liest den C/C++-Code ein und berechnet Codezeilen, Funktionen, Anweisungen, zyklomatische und kognitive Komplexität, Kommentarzeilen und Duplikate.</li>
+<li><strong>Berichte anderer Werkzeuge importieren</strong>, etwa von clang-tidy, cppcheck, Compilern oder Infer. Die meisten eigenen Prüfungen hat das Plugin mit Version 1.3.0 entfernt („static code analysis checks are removed: BooleanEqualityComparisonCheck, …, HardcodedAccountCheck, HardcodedIpCheck, MagicNumberCheck, …“ [CXX-upgrade]).</li>
+</ul>
+<p>Die 6299 Regeln des Plugins teilen sich so auf:</p>
+<div id="tbl-cxx-regeln" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-cxx-regeln-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;6: Regeln von sonar-cxx nach Herkunft
+</figcaption>
+<div aria-describedby="tbl-cxx-regeln-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Gruppe</th>
+<th>Regeln</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Eigene Prüfungen (Repository <code>cxx</code>)</td>
+<td>27, davon 4 Regelvorlagen</td>
+</tr>
+<tr class="even">
+<td>PC-lint</td>
+<td>1921</td>
+</tr>
+<tr class="odd">
+<td>clang-tidy</td>
+<td>1588</td>
+</tr>
+<tr class="even">
+<td>MSVC-Compiler</td>
+<td>1008</td>
+</tr>
+<tr class="odd">
+<td>cppcheck</td>
+<td>716</td>
+</tr>
+<tr class="even">
+<td>GCC</td>
+<td>397</td>
+</tr>
+<tr class="odd">
+<td>RATS, Infer, Clang Static Analyzer, Vera++, Valgrind, Dr.&nbsp;Memory, sonstige</td>
+<td>642</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Die Regeln anderer Werkzeuge erzeugen nur Befunde, wenn deren Bericht importiert wird.</p>
+</section>
+<section id="warum-das-standardprofil-leer-ist" class="level3" data-number="4.7.2">
+<h3 data-number="4.7.2" class="anchored" data-anchor-id="warum-das-standardprofil-leer-ist"><span class="header-section-number">4.7.2</span> Warum das Standardprofil leer ist</h3>
+<p>Das Wiki von sonar-cxx begründet das so: „Since the cxx plugin contains a large number of sensors with over 4000 rules, all rules are initially deactivated in the default profile <code>Sonar way</code> for the programming language <code>CXX</code>. Enabling all rules would have a negative impact on the analysis performance and mostly only a subset is needed.“ Und weiter: „Therefore, after installation, no sensor issues are displayed. To display issues, the corresponding rules must first be enabled in the Quality Profile being used by the project.“ [CXX-profiles] Es empfiehlt, eine Kopie von „Sonar way“ anzulegen und darin die gewünschten Regeln zu aktivieren [CXX-profiles].</p>
+</section>
+<section id="festlegung-profil-sonar-way-sonar-cxx-rules" class="level3" data-number="4.7.3">
+<h3 data-number="4.7.3" class="anchored" data-anchor-id="festlegung-profil-sonar-way-sonar-cxx-rules"><span class="header-section-number">4.7.3</span> Festlegung: Profil „Sonar way + sonar-cxx rules“</h3>
+<ul>
+<li><strong>Was das Tool bei jedem Lauf tut:</strong>
+<ul>
+<li>Es legt das Profil als Kopie des „Sonar way“ von sonar-cxx an, falls es fehlt.</li>
+<li>Es aktiviert darin alle eigenen Regeln des Repositorys <code>cxx</code> außer den Regelvorlagen, mit den Standardparametern des Plugins.</li>
+<li>Es deaktiviert <code>cxx:FileHeader</code> und ordnet das Profil dem Projekt zu.</li>
+<li>Weil das jeden Lauf geschieht, kommen Regeln einer neueren Plugin-Version automatisch hinzu, und der Ausschluss bleibt bestehen.</li>
+</ul></li>
+<li><strong>Regeln anderer Werkzeuge bleiben aus.</strong> Clang-tidy läuft bereits in Schritt 2, ein Import würde dessen Befunde verdoppeln.</li>
+<li><strong>Was die 22 Regeln prüfen:</strong> Alle betreffen die Wartbarkeit, keine sucht nach Fehlern oder Schwachstellen.
+<ul>
+<li><strong>Komplexität:</strong> Funktion zyklomatisch &gt; 10, kognitiv &gt; 15, Klasse &gt; 60, Datei &gt; 200.</li>
+<li><strong>Größe:</strong> Funktion &gt; 200 Zeilen, Datei &gt; 2000 Zeilen, mehr als 7 Parameter.</li>
+<li><strong>Namen:</strong> Klassen <code>^[A-Z_][a-zA-Z0-9]+$</code>, Funktionen <code>^[a-z_][a-z0-9_]{2,30}$</code> (snake_case), Methoden <code>^[A-Z][A-Za-z0-9]{2,30}$</code>, Dateinamen. In Projekten mit anderen Konventionen, etwa camelCase-Funktionen, wird jede Funktion gemeldet.</li>
+<li><strong>Layout:</strong> Tabulatoren, Zeilen &gt; 160 Zeichen, mehrere Anweisungen pro Zeile, Zeilenumbruch am Dateiende, Zeichenkodierung. Das meiste davon hat clang-format in Schritt 2 bereits angepasst.</li>
+<li><strong>Sonstiges:</strong> TODO- und FIXME-Markierungen, <code>NOSONAR</code>, undokumentierte öffentliche API, Parserfehler.</li>
+</ul></li>
+<li><strong>Ausgeschlossen: <code>cxx:FileHeader</code></strong> („Copyright and license headers should be defined in all source files“, Schwere BLOCKER).
+<ul>
+<li>Der Parameter <code>headerFormat</code> ist standardmäßig leer.</li>
+<li>Im Test meldete die Regel jede Datei mit „Add or update the header of this file“, auch eine Datei, die mit einer Copyright- und einer SPDX-Zeile beginnt.</li>
+<li>Ohne konfiguriertes Header-Muster prüft sie nichts Sinnvolles und hätte jede C/C++-Datei als Fehler gezählt.</li>
+</ul></li>
+</ul>
+</section>
+<section id="duplikate" class="level3" data-number="4.7.4">
+<h3 data-number="4.7.4" class="anchored" data-anchor-id="duplikate"><span class="header-section-number">4.7.4</span> Duplikate</h3>
+<ul>
+<li><strong>Nur zeichengleicher Code:</strong> Die Duplikaterkennung von sonar-cxx zählt nur zeichengleichen Code. Mit <code>sonar.cxx.metric.cpd.ignoreIdentifiers=True</code> würden unterschiedliche Bezeichner ignoriert („ignores identifier value differences when evaluating a duplicate block e.g.&nbsp;variable names, methods names, and so forth“ [CXX-cpd]).</li>
+<li><strong>Standardwert:</strong> Das Wiki nennt keinen Standardwert. Die Einstellungsdefinitionen des Servers (<code>api/settings/list_definitions</code>) geben für <code>ignoreIdentifiers</code> und <code>ignoreLiterals</code> jeweils <code>false</code> an.</li>
+<li><strong>Im Test:</strong>
+<ul>
+<li>Zwei gleiche Dateien mit je 69 Zeilen ergaben 2 Duplikat-Blöcke und 93,7 % duplizierte Zeilen.</li>
+<li>Funktionen, die sich nur im Namen unterschieden, ergaben 0.</li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="befunde" class="level2" data-number="4.8">
+<h2 data-number="4.8" class="anchored" data-anchor-id="befunde"><span class="header-section-number">4.8</span> Befunde</h2>
+<ul>
+<li><strong>Herkunft:</strong> Issues kommen aus <code>api/issues/search</code> (nur ungelöste), Security Hotspots aus <code>api/hotspots/search</code> (Status <code>TO_REVIEW</code>).</li>
+<li><strong>Schwere:</strong> aus der höchsten Impact-Schwere: <code>BLOCKER</code>/<code>HIGH</code> → <code>error</code>, <code>MEDIUM</code> → <code>warning</code>, <code>LOW</code>/<code>INFO</code> → <code>note</code>. Bei Hotspots zählt die Prüfpriorität (<code>vulnerabilityProbability</code>).</li>
+<li><strong>Kategorie:</strong> die Softwarequalität dieses Impacts (<code>security</code>, <code>reliability</code>, <code>maintainability</code>). Die Unterkategorie ist der Issue-Typ (<code>bug</code>, <code>vulnerability</code>, <code>code_smell</code>) bzw. <code>hotspot</code>.</li>
+<li><strong>CWE und OWASP Top 10 2021:</strong>
+<ul>
+<li>Die Web-API liefert sie nicht direkt pro Regel. Das Tool sucht deshalb jede gefundene Regel einzeln mit den Facetten <code>cwe</code> und <code>owaspTop10-2021</code> (<code>api/rules/search</code>).</li>
+<li>Beispiel: <code>python:S4790</code> ergab <code>CWE-1240</code> und <code>A02:2021</code>.</li>
+</ul></li>
+<li><strong>Spalten:</strong> SonarQubes Positionen beginnen bei 0 und werden um 1 verschoben.</li>
+</ul>
+</section>
+<section id="testergebnisse-1" class="level2" data-number="4.9">
+<h2 data-number="4.9" class="anchored" data-anchor-id="testergebnisse-1"><span class="header-section-number">4.9</span> Testergebnisse</h2>
+<ul>
+<li><p><strong>Node.js.</strong></p>
+<ul>
+<li>Laut Dokumentation braucht die JavaScript/TypeScript-Analyse auf linux-arm64 kein installiertes Node.js („No Node.js installation is required for the following architectures: darwin-arm64, darwin-x64, linux-arm64, linux-x64, …“ [SQ-js]).</li>
+<li>Im Scanner-Container brach sie trotzdem ab: „Error when running: ‘node -v’. Is Node.js available during analysis?“.</li>
+<li>Beide Scanner-Images enthalten deshalb Node.js 24 (gefordert: „for Node v24, the Active LTS, it must be at least 24.0.0.“ [SQ-js]).</li>
+</ul></li>
+<li><p><strong>Rust-Analyzer.</strong></p>
+<ul>
+<li>Lag das Arbeitsverzeichnis des Scanners auf dem eingebundenen Ordner des Macs, scheiterte er: „Failed to create Rust analyzer: Failed to start the analyzer process“.</li>
+<li>Mit <code>/tmp/scannerwork</code> im Container lief er. Den Beleg des Laufs (<code>report-task.txt</code>) kopiert das Tool danach in den Ausgabeordner.</li>
+</ul></li>
+<li><p><strong>Java mit und ohne Bytecode.</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Befunde</th>
+<th>Warnung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Mit Maven-Build</td>
+<td><code>java:S2095</code> (Ressourcenleck), <code>java:S4973</code>, <code>java:S2119</code></td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>Ohne Bytecode</td>
+<td>nur <code>java:S4973</code> und <code>java:S2119</code></td>
+<td>„Missing ‘sonar.java.libraries’ property. You might end up with less precise analysis results.“</td>
+</tr>
+</tbody>
+</table>
+<p>Der Build dauerte rund 14 s.</p></li>
+<li><p><strong>C#.</strong></p>
+<ul>
+<li>Der Scanner für .NET fand <code>csharpsquid:S4790</code> und, mit <code>scanAll</code>, auch die JavaScript-Datei des Projekts.</li>
+<li>Ohne <code>sonar.cs.roslyn.ignoreIssues</code> kamen drei <code>external_roslyn</code>-Befunde hinzu (<code>CS0219</code>, <code>CA1850</code>, <code>CA2200</code>): 12 statt 9 Befunde.</li>
+<li>Der Scanner lud seine Java-Laufzeit beim Lauf selbst herunter (im Protokoll: <code>OpenJDK21U-jre_aarch64_linux_hotspot_21.0.11_10</code>). Das Image braucht deshalb kein eigenes Java.</li>
+</ul></li>
+<li><p><strong>Python.</strong></p>
+<ul>
+<li><code>python:S4790</code> und <code>python:S4830</code> wurden als Schwachstellen mit CWE und OWASP gemeldet.</li>
+<li>Hotspots gab es keine: SonarQube 26.9 meldet mehrere frühere Hotspot-Regeln als Schwachstellen (Systemtag <code>former-hotspot</code>).</li>
+</ul></li>
+<li><p><strong>TypeScript.</strong> Eine ungenutzte <code>const</code> meldete SonarQube nicht, <code>var</code> dagegen schon (<code>typescript:S3504</code>).</p></li>
+<li><p><strong>Duplikate in Python.</strong> Zwei Dateien mit gleichem 13-zeiligem Funktionsrumpf ergaben 2 Blöcke, 26 Zeilen und 27,1 % Duplikate.</p></li>
+<li><p><strong>C/C++.</strong></p>
+<ul>
+<li>Eine C++-Funktion mit 8 Parametern, verschachtelten Bedingungen und camelCase-Namen ergab <code>cxx:TooManyParameters</code>, <code>cxx:FunctionComplexity</code>, <code>cxx:FunctionCognitiveComplexity</code> und <code>cxx:FunctionName</code>.</li>
+<li><code>cxx:FileHeader</code> traf jede Datei, bis die Regel ausgeschlossen wurde.</li>
+</ul></li>
+<li><p><strong>Projektkonfiguration und Umfang.</strong></p>
+<ul>
+<li>Eine <code>sonar-project.properties</code> des Projekts mit <code>sonar.exclusions=**/*.py</code> wurde ignoriert, Python wurde analysiert.</li>
+<li>Generierte Dateien fehlten in den Ergebnissen.</li>
+<li>Das Projekt blieb unverändert, und das Analyse-Token war nach dem Lauf widerrufen.</li>
+</ul></li>
+<li><p><strong>Parallel.</strong> Auf einem kleinen Projekt brauchten OpenGrep und SonarQube jeweils rund 15 s, der ganze Schritt ebenfalls rund 15 s.</p></li>
+</ul>
+</section>
+<section id="grenzen-1" class="level2" data-number="4.10">
+<h2 data-number="4.10" class="anchored" data-anchor-id="grenzen-1"><span class="header-section-number">4.10</span> Grenzen</h2>
+<ul>
+<li><strong>C/C++ nur Wartbarkeit:</strong> Die 22 Regeln von sonar-cxx finden Komplexitäts-, Größen-, Namens- und Layoutprobleme, keine Fehler oder Schwachstellen. Diese kommen bei C/C++ von clang-tidy (Schritt 2) und OpenGrep.</li>
+<li><strong>Namenskonventionen von sonar-cxx:</strong> Die festen Standardmuster (snake_case-Funktionen, PascalCase-Methoden) erzeugen in Projekten mit anderen Konventionen viele Befunde.</li>
+<li><strong>Rust ohne Clippy:</strong> nur SonarQubes eigene Rust-Regeln und Metriken.</li>
+<li><strong>Java ohne Bytecode:</strong> Scheitert der Build, fehlen Befunde, die Typinformation brauchen (siehe Testergebnisse).</li>
+<li><strong>C# ohne Build:</strong> Scheitert <code>dotnet build</code>, wird C# nicht analysiert.</li>
+<li><strong>Höchstens 10.000 Issues:</strong> So viele liefert die Web-API pro Suche. Darüber hinaus nennt eine Notiz die Gesamtzahl.</li>
+<li><strong>sonar-cxx ist eine Beta-Version</strong> (2.4.0-beta.1), getestet mit genau der verwendeten Server-Version.</li>
+</ul>
+</section>
+</section>
+<section id="ergebnisse-im-ausgabeordner" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Ergebnisse im Ausgabeordner</h1>
+<p>Schritt 3 schreibt in den Ausgabeordner von Schritt 2: <code>OUTPUT_DIR/&lt;Projekt&gt;/&lt;Datum_Zeit&gt;Z/step3-static-analysis/</code>.</p>
+<div id="tbl-ergebnisse" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ergebnisse-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;7: Ergebnisse von Schritt 3
+</figcaption>
+<div aria-describedby="tbl-ergebnisse-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Pfad</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>summary.json</code></td>
+<td>Pro Werkzeug: Version, Befehle, Exit-Codes, Status, Dauer, Regelsammlungen bzw. Qualitätsprofile, Befunde nach Schwere und Kategorie, bei SonarQube Metriken und Details (Plugin- und Scanner-Versionen, Dateien mit Duplikaten, Link zur Weboberfläche), Notizen</td>
+</tr>
+<tr class="even">
+<td><code>findings.json</code></td>
+<td>Befunde beider Werkzeuge in einem Format: Werkzeug, Regelsammlung, Regel, Schwere, Meldung, Sprache, Datei, Position, Kategorie, Unterkategorie, CWE, OWASP, <code>confidence</code>, <code>likelihood</code>, <code>impact</code>, Fingerabdruck</td>
+</tr>
+<tr class="odd">
+<td><code>opengrep/</code></td>
+<td>JSON- und SARIF-Bericht von OpenGrep, Ausgaben des Programms</td>
+</tr>
+<tr class="even">
+<td><code>sonarqube/</code></td>
+<td>Parameter und Protokolle des Scanners und des Java-Builds; Antworten der Web-API (<code>api/</code>: Issues, Hotspots, Metriken, Duplikate pro Datei, Regel-Metadaten, Qualitätsprofile, Plugins)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Der JSON-Bericht von OpenGrep enthält zu jedem Taint-Befund den Datenfluss von der Quelle zur Senke (<code>dataflow_trace</code>).</p>
+</section>
+<section id="sec-offen" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Offene Punkte und Grenzen der Prüfung</h1>
+<ul>
+<li><strong>Kleine Testprojekte:</strong> Alle Tests liefen auf kleinen Beispielen. Wie viele Befunde auf echten Projekten entstehen und wie viele davon Fehlalarme sind, ist nicht untersucht.</li>
+<li><strong>Standardregeln der Hersteller:</strong> Die Profile „Sonar way“ und die Regelsammlungen sind von den Herstellern gewählt und nicht an den analysierten Projekten geprüft.</li>
+<li><strong>Lizenz von semgrep-rules:</strong> Ob die Nutzung in einer Abschlussarbeit unter „internal business purposes“ fällt, ist nicht geklärt (<a href="#sec-lizenzen" class="quarto-xref">Kapitel&nbsp;3.4.3</a>). Mit semgrep-rules erzeugte Ergebnisse dürfen nicht veröffentlicht werden.</li>
+<li><strong>Kein dateiübergreifender Datenfluss:</strong> Weder OpenGrep 1.33.1 noch die Community Build verfolgen Daten über Dateigrenzen.</li>
+<li><strong>Reifegrad:</strong> OpenGrep stuft C, C++ und Rust als <code>alpha</code> ein; sonar-cxx ist eine Beta-Version.</li>
+</ul>
+</section>
+<section id="sec-quellen" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Quellen (noch nicht in <code>references.bib</code>)</h1>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Wichtig
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in <code>references.bib</code>. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 11.11.2026.</p>
+</div>
+</div>
+<p><strong>OpenGrep</strong></p>
+<ul>
+<li><strong>[OG-README]</strong> OpenGrep: <em>README</em>, Version 1.33.1. <a href="https://github.com/opengrep/opengrep/blob/v1.33.1/README.md" class="uri">https://github.com/opengrep/opengrep/blob/v1.33.1/README.md</a></li>
+<li><strong>[OG-CHANGES]</strong> OpenGrep: <em>OPENGREP.md</em> (Änderungen seit dem Fork), Version 1.33.1. <a href="https://github.com/opengrep/opengrep/blob/v1.33.1/OPENGREP.md" class="uri">https://github.com/opengrep/opengrep/blob/v1.33.1/OPENGREP.md</a></li>
+<li><strong>[OG-help]</strong> Ausgabe von <code>opengrep scan --help</code>, Version 1.33.1 (Programm, keine Webseite).</li>
+<li><strong>[OG-alpha]</strong> OpenGrep: <em>Release v2.0.0-nopython-interfile.alpha.4</em>. <a href="https://github.com/opengrep/opengrep/releases/tag/v2.0.0-nopython-interfile.alpha.4" class="uri">https://github.com/opengrep/opengrep/releases/tag/v2.0.0-nopython-interfile.alpha.4</a></li>
+<li><strong>[OG-release]</strong> OpenGrep: <em>Release v1.33.1</em> (SHA-256 der Release-Dateien). <a href="https://github.com/opengrep/opengrep/releases/tag/v1.33.1" class="uri">https://github.com/opengrep/opengrep/releases/tag/v1.33.1</a></li>
+<li><strong>[OG-runscan]</strong> OpenGrep: <code>cli/src/semgrep/run_scan.py</code>, Zeilen 118–131, Version 1.33.1. <a href="https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/run_scan.py#L118-L131" class="uri">https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/run_scan.py#L118-L131</a></li>
+<li><strong>[OG-ignore]</strong> OpenGrep: Standard-Ignore-Liste <code>cli/src/semgrep/templates/.semgrepignore</code>, Version 1.33.1. <a href="https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/templates/.semgrepignore" class="uri">https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/templates/.semgrepignore</a></li>
+<li><strong>[OG-config]</strong> OpenGrep: <code>cli/src/semgrep/config_resolver.py</code> (<code>get_config</code>), Version 1.33.1. <a href="https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/config_resolver.py" class="uri">https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/config_resolver.py</a></li>
+<li><strong>[OG-scan]</strong> OpenGrep: <code>cli/src/semgrep/commands/scan.py</code> (Option <code>--enable-nosem/--disable-nosem</code>), Version 1.33.1. <a href="https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/commands/scan.py" class="uri">https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/commands/scan.py</a></li>
+<li><strong>[OG-lang]</strong> OpenGrep: <code>lang.json</code> in <code>opengrep/semgrep-interfaces</code>, Commit <code>5e705660dc7381d4c4c247fa83c4c5860e61d555</code> (Submodul von Version 1.33.1). <a href="https://github.com/opengrep/semgrep-interfaces/blob/5e705660dc7381d4c4c247fa83c4c5860e61d555/lang.json" class="uri">https://github.com/opengrep/semgrep-interfaces/blob/5e705660dc7381d4c4c247fa83c4c5860e61d555/lang.json</a></li>
+</ul>
+<p><strong>Regelsammlungen</strong></p>
+<ul>
+<li><strong>[OG-rules]</strong> OpenGrep: <em>opengrep-rules</em>, README und LICENSE, Commit <code>f1d2b562</code>. <a href="https://github.com/opengrep/opengrep-rules" class="uri">https://github.com/opengrep/opengrep-rules</a></li>
+<li><strong>[SG-license]</strong> Semgrep, Inc.: <em>Semgrep Rules License v. 1.0</em>, zuletzt aktualisiert am 13.12.2024. <a href="https://semgrep.dev/legal/rules-license" class="uri">https://semgrep.dev/legal/rules-license</a></li>
+<li><strong>[0xdea]</strong> Ivaldi, M.: <em>0xdea/semgrep-rules</em>, README. <a href="https://github.com/0xdea/semgrep-rules" class="uri">https://github.com/0xdea/semgrep-rules</a></li>
+</ul>
+<p><strong>SonarQube</strong></p>
+<ul>
+<li><strong>[SQ-lang]</strong> SonarSource: <em>Supported languages</em> (SonarQube Community Build). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/overview" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/overview</a></li>
+<li><strong>[SQ-rust]</strong> SonarSource: <em>Rust</em> (SonarQube Community Build). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/rust" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/rust</a></li>
+<li><strong>[SQ-java]</strong> SonarSource: <em>Java</em> (SonarQube Community Build). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/java" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/java</a></li>
+<li><strong>[SQ-csharp]</strong> SonarSource: <em>C#</em> (SonarQube Community Build). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/csharp" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/csharp</a></li>
+<li><strong>[SQ-roslyn]</strong> SonarSource: <em>External analyzer reports</em> (Abschnitt C#). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/importing-external-issues/external-analyzer-reports" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/importing-external-issues/external-analyzer-reports</a></li>
+<li><strong>[SQ-js]</strong> SonarSource: <em>JavaScript/TypeScript/CSS</em> (Abschnitt Node.js). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/javascript-typescript-css" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/javascript-typescript-css</a></li>
+<li><strong>[SQ-scanner]</strong> SonarSource: <em>SonarScanner CLI</em> (Downloads, <code>project.settings</code>). <a href="https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/scanners/sonarscanner" class="uri">https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/scanners/sonarscanner</a></li>
+<li><strong>[SQ-db]</strong> SonarSource: <em>Installing the database</em>. <a href="https://docs.sonarsource.com/sonarqube-community-build/server-installation/installing-the-database" class="uri">https://docs.sonarsource.com/sonarqube-community-build/server-installation/installing-the-database</a></li>
+<li><strong>[SQ-hw]</strong> SonarSource: <em>Server host requirements</em>. <a href="https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements" class="uri">https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements</a></li>
+<li><strong>[SQ-linux]</strong> SonarSource: <em>Linux</em> (Pre-installation). <a href="https://docs.sonarsource.com/sonarqube-community-build/server-installation/pre-installation/linux" class="uri">https://docs.sonarsource.com/sonarqube-community-build/server-installation/pre-installation/linux</a></li>
+<li><strong>[DH-scanner]</strong> Docker Hub: <em>sonarsource/sonar-scanner-cli</em>, Tags (November 2026 nur <code>amd64</code>). <a href="https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags" class="uri">https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags</a></li>
+</ul>
+<p><strong>sonar-cxx</strong></p>
+<ul>
+<li><strong>[CXX-README]</strong> SonarOpenCommunity: <em>sonar-cxx</em>, README. <a href="https://github.com/SonarOpenCommunity/sonar-cxx" class="uri">https://github.com/SonarOpenCommunity/sonar-cxx</a></li>
+<li><strong>[CXX-release]</strong> SonarOpenCommunity: <em>sonar-cxx 2.4.0-beta.1</em>, Release Notes. <a href="https://github.com/SonarOpenCommunity/sonar-cxx/releases/tag/cxx-2.4.0-beta.1" class="uri">https://github.com/SonarOpenCommunity/sonar-cxx/releases/tag/cxx-2.4.0-beta.1</a></li>
+<li><strong>[CXX-profiles]</strong> SonarOpenCommunity: Wiki <em>Manage Quality Profiles</em>, Wiki-Commit <code>04e63184</code> (21.10.2026). <a href="https://github.com/SonarOpenCommunity/sonar-cxx/wiki/Manage-Quality-Profiles" class="uri">https://github.com/SonarOpenCommunity/sonar-cxx/wiki/Manage-Quality-Profiles</a></li>
+<li><strong>[CXX-upgrade]</strong> SonarOpenCommunity: Wiki <em>Upgrade the Plugin</em>, Abschnitt „Upgrade to 1.3.0“. <a href="https://github.com/SonarOpenCommunity/sonar-cxx/wiki/Upgrade-the-Plugin" class="uri">https://github.com/SonarOpenCommunity/sonar-cxx/wiki/Upgrade-the-Plugin</a></li>
+<li><strong>[CXX-suffixes]</strong> SonarOpenCommunity: Wiki <em>sonar.cxx.file.suffixes</em>. <a href="https://github.com/SonarOpenCommunity/sonar-cxx/wiki/sonar.cxx.file.suffixes" class="uri">https://github.com/SonarOpenCommunity/sonar-cxx/wiki/sonar.cxx.file.suffixes</a></li>
+<li><strong>[CXX-cpd]</strong> SonarOpenCommunity: Wiki <em>sonar.cxx.metric.cpd.ignoreIdentifiers</em>. <a href="https://github.com/SonarOpenCommunity/sonar-cxx/wiki/sonar.cxx.metric.cpd.ignoreIdentifiers" class="uri">https://github.com/SonarOpenCommunity/sonar-cxx/wiki/sonar.cxx.metric.cpd.ignoreIdentifiers</a></li>
+</ul>
+<p><strong>Sonstige</strong></p>
+<ul>
+<li><strong>[Gradle-compat]</strong> Gradle: <em>Compatibility Matrix</em> (Gradle User Manual). <a href="https://docs.gradle.org/current/userguide/compatibility.html" class="uri">https://docs.gradle.org/current/userguide/compatibility.html</a></li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Kopiert");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Kopiert");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollbarer Code","output":"Scrollbare Ausgabe"};
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

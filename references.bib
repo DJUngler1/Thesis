@@ -9,6 +9,42 @@
   file = {/Users/felixkrauss/Zotero/storage/X9CWXQ4G/Ding et al. - 2025 - Vulnerability detection with code language models How far are we.pdf}
 }
 
+@misc{caoCODECLEANERElevatingStandards2024,
+  title = {{{CODECLEANER}}: {{Elevating Standards}} with {{A Robust Data Contamination Mitigation Toolkit}}},
+  shorttitle = {{{CODECLEANER}}},
+  author = {Cao, Jialun and Chen, Songqiang and Zhang, Wuqi and Lo, Hau Ching and Cheung, Shing-Chi},
+  year = 2024,
+  month = nov,
+  number = {arXiv:2411.10842},
+  eprint = {2411.10842},
+  primaryclass = {cs.SE},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2411.10842},
+  urldate = {2026-11-11},
+  abstract = {Data contamination presents a critical barrier preventing widespread industrial adoption of advanced software engineering techniques that leverage code language models (CLMs). This phenomenon occurs when evaluation data inadvertently overlaps with the public code repositories used to train CLMs, severely undermining the credibility of performance evaluations. For software companies considering the integration of CLM-based techniques into their development pipeline, this uncertainty about true performance metrics poses an unacceptable business risk. Code refactoring, which comprises code restructuring and variable renaming, has emerged as a promising measure to mitigate data contamination. It provides a practical alternative to the resource-intensive process of building contamination-free evaluation datasets, which would require companies to collect, clean, and label code created after the CLMs' training cutoff dates. However, the lack of automated code refactoring tools and scientifically validated refactoring techniques has hampered widespread industrial implementation. To bridge the gap, this paper presents the first systematic study to examine the efficacy of code refactoring operators at multiple scales (method-level, class-level, and cross-class level) and in different programming languages. In particular, we develop an open-sourced toolkit, CODECLEANER, which includes 11 operators for Python, with nine method-level, one class-level, and one cross-class-level operator. A drop of 65\% overlap ratio is found when applying all operators in CODECLEANER, demonstrating their effectiveness in addressing data contamination. Additionally, we migrate four operators to Java, showing their generalizability to another language. We make CODECLEANER online available to facilitate further studies on mitigating CLM data contamination.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Artificial Intelligence,Computer Science - Software Engineering},
+  file = {/Users/felixkrauss/Zotero/storage/C5JPXRED/Cao et al. - 2024 - CODECLEANER Elevating Standards with A Robust Data Contamination Mitigation Toolkit.pdf;/Users/felixkrauss/Zotero/storage/UDZRYJI4/2411.html}
+}
+
+@misc{caoConcernedDataContamination2024,
+  title = {Concerned with {{Data Contamination}}? {{Assessing Countermeasures}} in {{Code Language Model}}},
+  shorttitle = {Concerned with {{Data Contamination}}?},
+  author = {Cao, Jialun and Zhang, Wuqi and Cheung, Shing-Chi},
+  year = 2024,
+  month = mar,
+  number = {arXiv:2403.16898},
+  eprint = {2403.16898},
+  primaryclass = {cs.SE},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2403.16898},
+  urldate = {2026-11-11},
+  abstract = {Various techniques have been proposed to leverage the capabilities of code language models (CLMs) for SE tasks. While these techniques typically evaluate their effectiveness using publicly available datasets, the evaluation can be subject to data contamination threats where the evaluation datasets have already been used to train the concerned CLMs. This can significantly affect the reliability of the evaluation. Different countermeasures have been suggested to mitigate the data contamination threat. Countermeasures include using more recent data, curating new data, and refactoring existing data are introduced, yet it is unclear whether these countermeasures could really mitigate data contamination threats to model evaluation. To fill the gap, we systematically study to quantify the impacts of these countermeasures on CLMs' performance. To facilitate the study, we collected over 2 million Python functions with timestamps ranging from January 1st, 2018, to December 31st, 2023. The data created before the models' cut-off date are considered "contaminated data", while the data where the countermeasures are taken are regarded as "cleansed data". We study the impact of these countermeasures by investigating the difference in CLMs' performance on contaminated and cleansed data derived from different countermeasures. Our experiments yield several interesting observations. For instance, CLMs do not necessarily perform worse on data after the models' cut-off date; on the contrary, they sometimes perform better. In addition, refactoring did not always result in decreased performance; it could lead to improvements instead. Furthermore, existing metrics such as perplexity cannot distinguish contaminated/cleansed data. We hope that the results and observations could help deepen the understanding of CLMs' capabilities and inform the community about data contamination.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Cryptography and Security,Computer Science - Software Engineering},
+  file = {/Users/felixkrauss/Zotero/storage/MBLFF5W8/Cao et al. - 2024 - Concerned with Data Contamination Assessing Countermeasures in Code Language Model.pdf;/Users/felixkrauss/Zotero/storage/NUMFKK6N/2403.html}
+}
+
 @misc{cihanEvaluatingLargeLanguage2025,
   title = {Evaluating {{Large Language Models}} for {{Code Review}}},
   author = {Cihan, Umut and {\.I}{\c c}{\"o}z, Arda and Haratian, Vahid and T{\"u}z{\"u}n, Eray},
@@ -72,7 +108,17 @@
   file = {/Users/felixkrauss/Zotero/storage/87S9BNVN/Li et al. - 2025 - IRIS LLM-assisted static analysis for detecting security vulnerabilities.pdf}
 }
 
-@misc{ISO25010_2023,
+@inproceedings{ICLR2025_94074dd5,
+  title = {{{LiveCodeBench}}: {{Holistic}} and Contamination Free Evaluation of Large Language Models for Code},
+  booktitle = {International Conference on Learning Representations},
+  author = {Jain, Naman and {Han} and Gu, Alex and Li, Wen-Ding and Yan, Fanjia and Zhang, Tianjun and Wang, Sida and {Solar-Lezama}, Armando and Sen, Koushik and Stoica, Ion},
+  editor = {Yue, Y. and Garg, A. and Peng, N. and Sha, F. and Yu, R.},
+  year = 2025,
+  volume = {2025},
+  pages = {58791--58831}
+}
+
+@standard{ISO25010_2023,
   title = {Systems and Software Engineering --- {{Systems}} and Software {{Quality Requirements}} and {{Evaluation}} ({{SQuaRE}}) --- {{Product}} Quality Model},
   author = {ISO/IEC},
   year = 2023,
@@ -230,6 +276,30 @@
   archiveprefix = {arXiv},
   keywords = {Computer Science - Artificial Intelligence,Computer Science - Computation and Language,Computer Science - Software Engineering},
   file = {/Users/felixkrauss/Zotero/storage/36JPPT86/Pereira et al. - 2026 - CR-Bench Evaluating the Real-World Utility of AI Code Review Agents.pdf;/Users/felixkrauss/Zotero/storage/8IVLPANQ/2603.html}
+}
+
+@inproceedings{ramosAreLargeLanguage2025,
+  title = {Are {{Large Language Models Memorizing Bug Benchmarks}}?},
+  booktitle = {2025 {{IEEE}}/{{ACM International Workshop}} on {{Large Language Models}} for {{Code}} ({{LLM4Code}})},
+  author = {Ramos, Daniel and Mamede, Claudia and Jain, Kush and Canelas, Paulo and Gamboa, Catarina and Le Goues, Claire},
+  year = 2025,
+  month = may,
+  pages = {1--8},
+  publisher = {IEEE},
+  address = {Ottawa, ON, Canada},
+  doi = {10.1109/LLM4Code66737.2025.00005},
+  urldate = {2026-11-11},
+  copyright = {https://doi.org/10.15223/policy-029},
+  isbn = {979-8-3315-2615-3},
+  file = {/Users/felixkrauss/Zotero/storage/V2ZXPU6P/Ramos et al. - 2025 - Are Large Language Models Memorizing Bug Benchmarks.pdf}
+}
+
+@inproceedings{riddell2024quantifying,
+  title = {Quantifying Contamination in Evaluating Code Generation Capabilities of Language Models},
+  booktitle = {Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: {{Long}} Papers)},
+  author = {Riddell, Martin and Ni, Ansong and Cohan, Arman},
+  year = 2024,
+  pages = {14116--14137}
 }
 
 @article{taghavifarLargeLanguageModels2025,

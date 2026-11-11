@@ -26,6 +26,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -376,14 +411,33 @@ ul.task-list li input[type="checkbox"] {
 <li>Wenn getestet und sich endgültig für das am besten performende Modell entschieden wurde, erfolgt eventuell ein Fine-Tuning des Modells.</li>
 </ul>
 </section>
-<section id="besprechung" class="level2">
-<h2 class="anchored" data-anchor-id="besprechung">Besprechung</h2>
+<section id="besprechung-061126" class="level2">
+<h2 class="anchored" data-anchor-id="besprechung-061126">Besprechung 061126</h2>
 <ul>
 <li>Wenn kein Paketmanager nciht akzeptieren</li>
 <li>Bei Tests keine Mindestabdeckung, nur Auswertung ob die richtigen Stellen auch getestet werdnen</li>
 <li>Linter Formatter, fixe Vorgaben definieren diese müssen eingehalten werden evlt. auch direkt als export für Studenten.</li>
 <li>Modell lokal laufen lassen gar nicht unbedingt zentral -&gt; bestcase wäre es wenn das Tool auf einem normalen Entwoickler Laptop läuft.</li>
 <li>Eigene Regeln erstmal weglassen, Fokus auf das Standard Tool ohne eigene Regeln.</li>
+</ul>
+</section>
+<section id="linter-definitionen" class="level2">
+<h2 class="anchored" data-anchor-id="linter-definitionen">Linter-Definitionen</h2>
+<ul>
+<li><p><strong>C#:</strong> Es wird <code>dotnet format</code> verwendet. Es prüft alles, was ein Linter prüft, und wendet die Korrekturen auch direkt an. Die Standardkonfiguration passt: Als Default wird der Microsoft-Standard für die Formatierung angewendet.</p></li>
+<li><p><strong>Java:</strong> Es wird <code>google-java-format</code> verwendet. Es wendet die Style-Regeln von Google an, eine Konfiguration ist nicht notwendig.</p></li>
+<li><p><strong>TypeScript und JavaScript:</strong> Es wird Biome (<code>biome</code>) verwendet, ein moderner Formatter, der auch komplett ohne Konfiguration funktioniert.</p></li>
+<li><p><strong>Python:</strong> Es wird <code>ruff format</code> mit dem Standardstil verwendet, das passt. <code>ruff check --fix</code> behebt sogar automatisch reparierbare Fehler und löscht ungenutzte Variablen.</p></li>
+<li><p><strong>C und C++:</strong> Standard ist <code>clang-format -style=LLVM</code> mit folgenden Anpassungen:</p>
+<ul>
+<li>Zeilenlänge etwas länger als normal: 100 oder 120</li>
+<li><code>SortIncludes</code> aus</li>
+<li><code>IndentWidth</code> auf 4</li>
+</ul>
+<p>Danach folgt <code>clang-tidy</code>. Bei C++ &lt; 11:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">clang-tidy</span> datei.c <span class="at">-p</span> build/ <span class="at">--quiet</span> <span class="dt">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span><span class="op">=</span><span class="st">"{Checks: '-*,bugprone-*,cert-*,clang-analyzer-*,performance-*'}"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Bei C++ &gt;= 11 wird zusätzlich noch <code>modernize-*</code> hinzugefügt.</p></li>
 </ul>
 </section>
 <section id="toolablauf-als-flowchart" class="level2">

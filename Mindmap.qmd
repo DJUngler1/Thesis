@@ -269,13 +269,36 @@ Daraus folgt:
 - Auch die Qualität des Endberichts kann nur subjektiv bewertet werden. Hier wenn möglich ein Experteninterview bzw. Tester, die Feedback geben. Eventuell Rapha und Johannes, die gehen auf das Tool bestimmt ab.
 - Wenn getestet und sich endgültig für das am besten performende Modell entschieden wurde, erfolgt eventuell ein Fine-Tuning des Modells.
 
-## Besprechung
+## Besprechung 061126
 
 - Wenn kein Paketmanager nciht akzeptieren
 - Bei Tests keine Mindestabdeckung, nur Auswertung ob die richtigen Stellen auch getestet werdnen
 - Linter Formatter, fixe Vorgaben definieren diese müssen eingehalten werden evlt. auch direkt als export für Studenten.
 - Modell lokal laufen lassen gar nicht unbedingt zentral -> bestcase wäre es wenn das Tool auf einem normalen Entwoickler Laptop läuft.
 - Eigene Regeln erstmal weglassen, Fokus auf das Standard Tool ohne eigene Regeln.
+
+## Linter-Definitionen
+
+- **C#:** Es wird `dotnet format` verwendet. Es prüft auf Formatierung und auch automatisch fixbare Bugs, und wendet die Korrekturen auch direkt an. Die Standardkonfiguration passt: Als Default wird der Microsoft-Standard für die Formatierung angewendet.
+- **Java:** Es wird `google-java-format` verwendet. Es wendet die Style-Regeln von Google an, eine Konfiguration ist nicht notwendig.
+- **TypeScript und JavaScript:** Es wird Biome `npx @biomejs/biome check --write` verwendet, ein moderner Formatter, der auch komplett ohne Konfiguration funktioniert und sogar schon bekannte Bugs fixed.
+- **Python:** Es wird `ruff format` mit dem Standardstil verwendet, das passt. `ruff check --fix` behebt sogar automatisch reparierbare Fehler und löscht ungenutzte Variablen.
+- **C und C++:** Standard ist `clang-format -style=LLVM` mit folgenden Anpassungen:
+  + Zeilenlänge etwas länger als normal: 100 oder 120
+  + `SortIncludes` aus
+  + `IndentWidth` auf 4
+
+  Danach folgt `clang-tidy`. Bei C++ < 11:
+
+  ```bash
+  clang-tidy datei.c -p build/ --quiet \
+    --config="{Checks: '-*,bugprone-*,cert-*,clang-analyzer-*,performance-*'}"
+  ```
+
+  Bei C++ >= 11 wird zusätzlich noch `modernize-*` hinzugefügt.
+- **Rust** Es wird `cargo fmt && cargo clippy --fix` ausgeführt, das formatiert den Code automatisch und entfernt direkt automatsisch erkennbare Fehler.
+
+Warum diese Tools? Alle der Tools haben sehr wenig konfiguartion es muss keine Config erstellt werden über die Diskutiert wird es werden etablierte Standards angewendet die den Code in eine einheitliche Form bringen. Für die Verarbeitung durch das Tool ist das leichter da das Tool so Code pro Sprache immer im selben Format bekommt.
 
 ## Toolablauf als Flowchart
 
@@ -404,3 +427,19 @@ Daraus folgt:
 ```
 
 <small>Das Diagramm wurde von Claude generiert.</small>
+
+## Auswertung mit Benchmark projekten
+
+Ein Problem das auftreten könnte wenn ich mit Benchmark Projekten arbeite ist: die Wahrscheinlichkeit das zum Trainieren des LLMs das Benchmark Projekt verwendet wurde, sicher widerlegen kann ich das nicht.
+
+Lösung evlt. Verschleiern das es sich um Benchmarkprojekte handelt, tests mit eigenen nicht öffentlich verfügbaren Projekten testen.
+
+QUllen zur Kontaminierung und zu Gegenmaßnahmen (also z.B: Verschleiern) kann später für das schreiben der Thesis verwendet werden. Bzw. wenns ans testen geht aus den Quellen extrahieren welche Gegenmasnahmen getroffen werden können: 
+
+[@ramosAreLargeLanguage2025]
+
+[@riddell2024quantifying]
+
+[@caoCODECLEANERElevatingStandards2024] und [@caoConcernedDataContamination2024]
+
+[@ICLR2025_94074dd5]

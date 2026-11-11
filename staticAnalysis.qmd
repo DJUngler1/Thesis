@@ -1,0 +1,492 @@
+---
+title: "Statische Codeanalyse"
+subtitle: "Dokumentation der Werkzeugauswahl für Schritt 3 des Code-Analysis-Tools"
+lang: de
+author: "Felix Krauß"
+date: 2026-11-11
+date-format: "D. MMMM YYYY"
+toc: true
+number-sections: true
+format:
+  html:
+    theme: darkly
+  pdf:
+    geometry:
+      - top=30mm
+      - left=20mm
+---
+
+# Zweck und Vorgehen
+
+Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 3 („Static code analysis (parallel)“) den Code statisch analysiert. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter `Code-Analysis-Tool/docs/staticAnalysis/README.md`.
+
+In Schritt 3 laufen zwei Werkzeuge gleichzeitig: OpenGrep (@sec-opengrep) und SonarQube Community Build (@sec-sonarqube). Fällt eines aus, läuft das andere trotzdem weiter.
+
+## Grundsatz der Festlegung
+
+- **Standard der Werkzeuge:** Wo ein Werkzeug einen Standard mitbringt, wird er verwendet: bei SonarQube die Qualitätsprofile „Sonar way“. Eigene Festlegungen gibt es nur, wo das Werkzeug keinen brauchbaren Standard hat:
+  - OpenGrep bringt keine Regeln mit (@sec-regelsammlungen).
+  - Das Standardprofil von sonar-cxx für C/C++ ist leer (@sec-cxx).
+- **Projektkonfiguration wird ignoriert:** Wie in Schritt 2 werden die Konfigurationsdateien des analysierten Projekts nicht gelesen, damit die Ergebnisse verschiedener Projekte vergleichbar sind. Bei OpenGrep betrifft das die `.semgrepignore`, bei SonarQube die `sonar-project.properties`.
+- **Sprachversion wird übernommen:** Die Python- und Java-Version werden aus dem Projekt übernommen, wie in Schritt 2 für Ruff und PMD.
+- **Keine Doppelungen zu Schritt 2:** SonarQube führt Clippy nicht erneut aus, importiert keinen clang-tidy-Bericht und übernimmt keine .NET-Analyzer-Warnungen, die `dotnet format` schon behandelt.
+- **Das Projekt bleibt unverändert:**
+  - OpenGrep liest das Projekt nur (schreibgeschützt eingebunden).
+  - SonarQube arbeitet auf einer Kopie, weil Java und C# dafür gebaut werden müssen.
+- **Stand nach Schritt 2:** Beide Werkzeuge analysieren den Arbeitsstand, den Schritt 2 hinterlassen hat (formatiert, nicht committet). Die Zeilennummern passen damit zu `git diff` und zu den Befunden aus Schritt 2.
+
+## Prüfmethode
+
+1. **Dokumentation im Original:** Jede Aussage über ein Werkzeug wurde in dessen offizieller Dokumentation oder im Quellcode der verwendeten Version nachgelesen.
+   - SonarQubes Dokumentation wurde als Markdown-Rohtext gelesen, nicht über eine Zusammenfassung. Eine automatische Zusammenfassung hatte die Sprachtabelle falsch wiedergegeben (C und C++ als enthalten).
+   - Zitate sind wörtlich und stehen in der Originalsprache (Englisch).
+2. **Eigene Tests:** Das Verhalten wurde am 11.11.2026 in Docker-Containern mit festen Werkzeugversionen getestet (@tbl-versionen), auf einem Mac mit Apple Silicon (arm64). Die Tests sind als Integrationstests im Tool-Repository hinterlegt (`scheduler/tests/test_opengrep_docker.py`, `scheduler/tests/test_sonarqube_docker.py`).
+3. **Art der Testprojekte:** Die Tests liefen auf kleinen, eigens angelegten Beispielprojekten, die gezielt einzelne Fälle enthalten. Sie zeigen, *wie* sich ein Werkzeug verhält. Sie sagen aber nichts darüber, wie viele Befunde auf echten Projekten entstehen oder wie viele davon Fehlalarme sind (siehe @sec-offen).
+
+## Testumgebung
+
+| Werkzeug | Version | Container-Image |
+|---|---|---|
+| OpenGrep | 1.33.1 (Release-Binary `opengrep_manylinux_aarch64`) | `code-analysis/opengrep`, Basis `python:3.13.18-slim` |
+| SonarQube Community Build | 26.9.0.129388 | `code-analysis/sonarqube`, Basis `sonarqube:26.9.0.129388-community` |
+| sonar-cxx (C/C++) | 2.4.0-beta.1 (`sonar-cxx-plugin-2.4.0.1689.jar`) | im Image `code-analysis/sonarqube` |
+| PostgreSQL (Datenbank von SonarQube) | 18.6 | `postgres:18.6` |
+| SonarScanner CLI | 8.3.1.16491 mit JDK 21.0.13, Maven 3.9.16, Gradle 9.9.1, Node.js 24.22.3 | `code-analysis/sonar-scanner`, Basis `eclipse-temurin:21-jdk-noble` |
+| SonarScanner for .NET | 12.1.0 mit .NET SDK 10.0.403, Node.js 24.22.3 | `code-analysis/sonar-dotnet`, Basis `mcr.microsoft.com/dotnet/sdk:10.0.403` |
+
+: Werkzeugversionen der Tests und des Tools {#tbl-versionen}
+
+Die in SonarQube 26.9 enthaltenen Analyzer haben folgende Versionen (laut `api/plugins/installed`): Java 8.41, C# 10.33, JavaScript/TypeScript 13.8, Python 5.31, Rust 1.8.1.
+
+# Übersicht der Festlegungen
+
+| Werkzeug | Festlegung | Eigene Abweichung vom Standard |
+|---|---|---|
+| OpenGrep | `opengrep scan` mit den Regelordnern der aktiven Regelsammlungen, `--taint-intrafile`, OpenGreps Standard-Ignore-Liste | Auswahl der Regelsammlungen; `--taint-intrafile` |
+| SonarQube | Community Build 26.9, Qualitätsprofile „Sonar way“, CLI-Scanner bzw. Scanner für .NET, Java und C# gebaut | C/C++: Profil „Sonar way + sonar-cxx rules“ (22 Regeln); Clippy aus; .NET-Analyzer-Warnungen nicht übernommen |
+
+# OpenGrep {#sec-opengrep}
+
+## Festlegung
+
+```bash
+opengrep scan \
+  --config <Regelordner> [--config <Regelordner> …] \
+  --taint-intrafile \
+  --disable-version-check \
+  --json-output=<output>/opengrep.json \
+  --sarif-output=<output>/opengrep.sarif \
+  .
+```
+
+- **Ausführung:** im Projektordner, mit der Umgebungsvariablen `SEMGREP_R2C_INTERNAL_EXPLICIT_SEMGREPIGNORE=/opt/code-analysis/opengrep/default.semgrepignore`.
+- **Container:** ohne Netzwerk, das Projekt schreibgeschützt eingebunden.
+- **Regelordner:** einer je Regelordner der aktiven Regelsammlungen, der eine Sprache des Projekts abdeckt (Hauptsprache und alle weiteren unterstützten Sprachen aus Schritt 1).
+
+## Begründung und Belege
+
+- **Was das Werkzeug ist.** OpenGrep ist „a fork of Semgrep, under the LGPL 2.1 license“ [OG-README], genauer „a fork of Semgrep version 1.100.0“ [OG-CHANGES]. Es ist „Compatible with Semgrep rules - your existing rules and rulesets work unchanged“ [OG-README].
+- **Sprachunterstützung ist eingebaut.** Für die einzelnen Sprachen muss nichts installiert werden. Die Parser stecken im Programm („Opengrep supports 30+ languages, including: … C · C++ · C# · … Java · JavaScript · … Python · … Rust · … TypeScript …“ [OG-README]). Was jede Sprache braucht, sind Regeln (@sec-regelsammlungen).
+- **Eigenes Image aus dem Release-Binary.**
+  - Das Repository enthält nur ein von Semgrep übernommenes Dockerfile, das mit OCaml 4.14 aus den Quellen baut. OpenGrep selbst ist laut [OG-CHANGES] auf OCaml 5.3.0 umgestiegen.
+  - Das Tool installiert deshalb das signierte Release-Binary („Self-contained binaries via Nuitka (no Python required)“ [OG-README]) und prüft es gegen die SHA-256-Prüfsumme des Release [OG-release].
+- **`--taint-intrafile`.** Die Option verfolgt Daten über Funktionsgrenzen innerhalb einer Datei: „Added support for intrafile cross-function tainting, with the flag `--taint-intrafile`, supporting higher-order functions. This works similarly to Semgrep's `--pro-intrafile`.“ [OG-CHANGES]. Die Hilfe des Programms nennt alle Sprachen des Tools als unterstützt: „Supported languages: Apex, C, Clojure, C#, C++, Dart, Elixir, Go, Java, JavaScript, Julia, Kotlin, Lua, Python, Ruby, Rust, Scala, Swift, TypeScript, Visual Basic. Other languages will fall back to intraprocedural analysis only.“ [OG-help]
+- **Nicht dateiübergreifend.** Datenflüsse über Dateigrenzen verfolgt nur OpenGrep 2.0, und das ist eine Alpha-Version: „FOR TESTING ONLY. Alpha release of Opengrep 2.0.0 with python removed and interfile support.“ [OG-alpha]. Das Flowchart wurde deshalb von „cross-file“ auf „taint across functions within a file“ geändert.
+- **`--validate` wird nicht verwendet.**
+  - Die Option „will check YAML files for errors and run 'p/semgrep-rule-lints' on the YAML files“ [OG-help]. Im Test ohne Netzwerk versuchte sie, `https://semgrep.dev/p/semgrep-rule-lints` zu laden, und brach ab.
+  - Stattdessen lädt der Image-Build alle Regeln einmal offline mit `opengrep scan --strict` und bricht ab, wenn OpenGrep eine Regel ablehnt.
+- **`--disable-version-check`.** Unterbindet die Anfrage nach neuen Versionen. Der Container hat ohnehin kein Netzwerk.
+
+## Was gescannt wird {#sec-opengrep-scope}
+
+- **Dateien, die git kennt.** OpenGrep liest die Dateiliste über `git ls-files`, `.gitignore` gilt also.
+- **Standard-Ignore-Liste von OpenGrep.** Ausgelassen werden `build/`, `vendor/`, `dist/`, `*.min.js`, `.env/`, `.tox/`, `node_modules/`, `.npm/`, `.yarn/`, `.venv/`, `_opam/`, `_build/`, `_cargo/` sowie die Testordner `test/`, `tests/`, `testsuite/` und `*_test.go` [OG-ignore].
+- **Die `.semgrepignore` des Projekts wird ignoriert.**
+  - OpenGrep 1.33.1 liest die `.semgrepignore` aus dem Arbeitsverzeichnis und nimmt seine Standardliste nur, wenn dort keine liegt („No .semgrepignore found. Using default .semgrepignore rules.“ [OG-runscan]). Eine Datei im Projekt *ersetzt* also die Standardliste.
+  - Ist die Umgebungsvariable `SEMGREP_R2C_INTERNAL_EXPLICIT_SEMGREPIGNORE` gesetzt, wird stattdessen die dort angegebene Datei gelesen [OG-runscan]. Das Tool übergibt so OpenGreps eigene Standardliste der verwendeten Version.
+- **Regeldateien des Projekts werden nicht gelesen.** Mit `--config` lädt OpenGrep nur die angegebenen Regeln (`get_config` in [OG-config]). Alle angegebenen Ordner liegen im Image.
+- **Generierte Dateien.** Befunde in generierten Dateien werden wie in Schritt 2 verworfen; auch Syntaxfehler in ihnen zählen nicht.
+- **Unterdrückungen im Code** (`// nosemgrep`, `# nosem`) gehören zum Code und werden beachtet. Das ist OpenGreps Standard (`--enable-nosem/--disable-nosem`, `default=True` [OG-scan]).
+
+## Regelsammlungen {#sec-regelsammlungen}
+
+### Festlegung
+
+OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen in `config/opengrep.toml` des Tool-Repositorys: je ein Git-Repository mit festem Commit und den Regelordnern pro Sprache. Welche aktiv sind, legt `rulesets` dort fest. Im aktuellen Stand sind `semgrep-rules` und `0xdea-semgrep-rules` aktiv.
+
+| Regelsammlung | Repository, Commit | Lizenz |
+|---|---|---|
+| `opengrep-rules` | `opengrep/opengrep-rules`, `f1d2b562b414783763fd02a6ed2736eaed622efa`, Fork von semgrep-rules vom 13.12.2024, archiviert | LGPL 2.1 mit Commons Clause |
+| `semgrep-rules` | `semgrep/semgrep-rules`, `a5ad1714f00c9f7fde980cab0ea1d6dc6d414fd2` (10.11.2026) | Semgrep Rules License v1.0 |
+| `0xdea-semgrep-rules` | `0xdea/semgrep-rules`, `b9942606d3543e3145a95332e6543fb79a01af00` (06.11.2026), ohne Ordner `noisy/` | MIT |
+
+: Definierte Regelsammlungen {#tbl-regelsammlungen}
+
+| Sprache | Ordner | opengrep-rules | semgrep-rules | 0xdea-semgrep-rules |
+|---|---|---|---|---|
+| C | `c` bzw. `rules/c` | 16 | 16 | 49 |
+| C++ | – bzw. `rules/c` | 0 | 0 | 49 |
+| C# | `csharp` | 52 | 52 | – |
+| Java | `java` | 127 | 130 | – |
+| JavaScript, TypeScript | `javascript`, `typescript` | 182 + 30 | 182 + 32 | – |
+| Python | `python` | 375 | 378 | – |
+| Rust | `rust` | 10 | 10 | – |
+
+: Regeln pro Sprache, gezählt vom Image-Build am 11.11.2026 {#tbl-regelanzahl}
+
+### Begründung und Belege
+
+- **opengrep-rules.** Die Regelsammlung des OpenGrep-Projekts ist ein archivierter Fork der Semgrep-Regeln. Ihr README sagt: „These rules are intended for research, testing & benchmarking.“ [OG-rules]
+- **semgrep-rules.** Die aktuellen Regeln von Semgrep Inc. unterscheiden sich nur wenig, zum Beispiel Java 130 statt 127 und Python 378 statt 375 Regeln (@tbl-regelanzahl). Sie stehen unter einer eigenen Lizenz (@sec-lizenzen).
+- **Lücke bei C++.**
+  - Die C-Regeln von opengrep-rules und semgrep-rules sind für `languages: [c]` geschrieben.
+  - OpenGrep ordnet der Sprache `c` nur die Endungen `.c` und `.h` zu, `.cpp`, `.hpp` usw. gehören zu `cpp` [OG-lang]. Für C++-Dateien hätte es also keine einzige Regel gegeben.
+  - Die Sammlung von 0xdea („Battle-tested C (and sometimes C++) ruleset.“ [0xdea]) ist für `c` und `cpp` geschrieben, alle 49 Regeln.
+- **JavaScript und TypeScript.** Die meisten Regeln in `javascript/` gelten für beide Sprachen, `typescript/` ergänzt reine TypeScript-Regeln. Beide Ordner laufen für beide Sprachen.
+- **Kein Kategorie-Filter.**
+  - Es laufen alle Regeln der Ordner, neben `security` auch `correctness`, `best-practice`, `performance` und `maintainability`.
+  - Jeder Befund behält Kategorie und Unterkategorie (`vuln`: wahrscheinlich ausnutzbar, `audit`: zu prüfen), CWE, OWASP, `confidence`, `likelihood` und `impact`. So kann Schritt 6 filtern.
+- **Umschaltbar und erweiterbar.** Eine neue Sammlung braucht nur einen Eintrag in der Konfigurationsdatei (Repository, Commit, Ordner pro Sprache) und einen Neubau des Images. Der Code ändert sich nicht.
+- **Prüfung beim Build.** Der Build lädt jede aktive Sammlung zum festen Commit, behält nur die Regeldateien der angegebenen Ordner (`*.yaml`, `*.yml`, ohne `*.test.yaml`) sowie Lizenz- und README-Dateien. Dann lädt er alle Regeln einmal mit OpenGrep. Lehnt OpenGrep eine Regel ab, bricht der Build ab.
+- **Abgleich bei jedem Lauf.** Fehlt eine aktive Sammlung im Image oder liegt sie dort in einem anderen Commit, stoppt das Tool OpenGrep mit dem Hinweis, das Image neu zu bauen.
+
+### Lizenzen {#sec-lizenzen}
+
+- **Semgrep Rules License v1.0** [SG-license]:
+  - „By using the rules, you agree to all of the terms and conditions below.“
+  - „You may use the rules only for your own internal business purposes.“
+  - „This license does not allow you to distribute the rules, or to make them available to others as a service.“
+  - „If you copy any of the rules, you must also include the notices of the licensor in that copy.“
+  - Die Definition der Regeln schließt Teile ein: „The rules are the rules for the Semgrep analysis tool that the licensor makes available under these terms, including any portion of those rules.“
+  - Was „internal business purposes“ bedeutet, definiert die Lizenz nicht. Ob etwa eine Abschlussarbeit an einer Hochschule darunter fällt, geht aus dem Text nicht hervor.
+  - Die Lizenz schränkt nicht ein, mit welchem Werkzeug die Regeln ausgeführt werden.
+- **opengrep-rules** behält die Lizenz von semgrep-rules zum Zeitpunkt des Forks: „“Commons Clause” License Condition v1.0 … Software: semgrep-rules … License: LGPL 2.1 … Licensor: Semgrep, Inc.“ [OG-rules]. Die Commons Clause verbietet den Verkauf.
+- **Folgen für das Tool:**
+  - Nur aktive Sammlungen werden heruntergeladen. Schon das Laden der Regeln ist eine Nutzung, mit der die Lizenz angenommen wird. Wer semgrep-rules aktiviert und das Image neu baut, entscheidet sich also bewusst dafür.
+  - Im Repository stehen keine Regeln, nur Repository-Adresse und Commit. Die Regeln liegen nur im lokalen Docker-Image; `.gitignore` schließt zusätzlich lokale `semgrep-rules/`-Ordner aus.
+  - Jede Sammlung behält im Image ihre LICENSE-Datei.
+  - **Ergebnisse enthalten Teile der Regeln.** Jeder Befund trägt die Meldung seiner Regel, und `opengrep.sarif` enthält Beschreibung und Hilfetext *aller* geladenen Regeln. Im Test waren das 375 Regeln für den Python-Ordner. Mit semgrep-rules erzeugte Ergebnisse dürfen deshalb nicht veröffentlicht oder weitergegeben werden, zum Beispiel im Anhang der Arbeit.
+
+## Testergebnisse
+
+- **`.semgrepignore` des Projekts.**
+  - Eine Projektdatei mit dem Eintrag `src/` ließ OpenGrep ohne Gegenmaßnahme `src/` auslassen und `tests/` scannen.
+  - Mit der explizit übergebenen Standardliste wurde `src/` gescannt und `tests/` ausgelassen („Scan skipped: 1 directories matching .semgrepignore patterns“).
+- **Datenfluss über Funktionsgrenzen.**
+  - Testfall: In einer Flask-Anwendung liest `ping()` einen Request-Parameter und übergibt ihn an `run()`, das `subprocess.check_output(cmd, shell=True)` aufruft.
+  - Mit `--taint-intrafile` meldete die Regel `python.flask.security.injection.subprocess-injection` die Stelle in `run()`. Ohne die Option fehlte dieser Befund; nur die Variante innerhalb einer Funktion wurde gefunden.
+- **Jede Sprache erhält Regeln.** Mit opengrep-rules und 0xdea gab es für jede unterstützte Sprache mindestens einen Befund:
+
+  | Sprache | Regel |
+  |---|---|
+  | Java | `java.lang.security.audit.crypto.use-of-md5` |
+  | C# | `csharp.lang.security.insecure-deserialization.insecure-binaryformatter-deserialization` |
+  | TypeScript | `javascript.browser.security.eval-detected` |
+  | JavaScript | `javascript.browser.security.insecure-innerhtml` |
+  | Python | `python.lang.security.deserialization.avoid-pickle` |
+  | Rust | `rust.lang.security.args` |
+  | C | `c.lang.security.insecure-use-gets-fn` sowie `rules.c.raptor-insecure-api-gets` (0xdea) |
+  | C++ | `rules.c.raptor-insecure-api-strcpy-strcat` (0xdea) |
+
+  Beim Wechsel auf semgrep-rules wurde dieselbe Python-Regel gefunden, nun aus `semgrep-rules`.
+- **Syntaxfehler.** Eine C-Datei mit Syntaxfehler ließ den Exit-Code bei 0. Der Bericht nannte die Datei mit „Syntax error“, und der Status wurde `partial`.
+- **Ungültige Regel.** Eine Regel mit ungültigem Muster führte zu Exit-Code 2 und einem Eintrag „Rule parse error“.
+- **Projekt unverändert.** Nach dem Lauf meldete `git status` keine Änderung.
+- **Image-Größe.** Das Binary entpackt sich beim ersten Start nach `$HOME`, rund 250 MB. Im ersten Build blieben diese Daten in den Image-Schichten (784 MB). Seit der Build sie im selben Schritt wieder löscht, sind es 455 MB.
+
+## Grenzen
+
+- **Nicht dateiübergreifend:** Datenflüsse zwischen Dateien werden nicht verfolgt (siehe oben).
+- **Reifegrad der Sprachen:** OpenGreps Sprachliste stuft C#, Java, JavaScript, Python und TypeScript als `ga` ein, C, C++ und Rust als `alpha` [OG-lang].
+- **Abdeckung hängt an den Regeln:** Für Rust gibt es nur 10 Regeln, für C 16 (dazu 49 von 0xdea), für C++ nur die 49 von 0xdea (@tbl-regelanzahl).
+- **Tests ausgelassen:** Die Standardliste lässt Testordner aus. Schwachstellen in Testcode werden nicht gemeldet.
+
+# SonarQube {#sec-sonarqube}
+
+## Festlegung
+
+- **Server:** SonarQube Community Build 26.9 mit PostgreSQL 18.6. Er läuft dauerhaft als Teil der Docker-Compose-Umgebung, die Weboberfläche nur lokal unter `http://localhost:9000`.
+- **C und C++:** über das Community-Plugin sonar-cxx 2.4.0-beta.1.
+- **Scanner:** eigene Images für den SonarScanner CLI und den SonarScanner for .NET.
+- **Analyse:** auf einer Kopie des Projekts; Java wird vorher gebaut, C# während `dotnet build` analysiert.
+- **Regeln:** „Sonar way“ je Sprache, für C/C++ das Profil „Sonar way + sonar-cxx rules“ (@sec-cxx).
+
+## Sprachabdeckung und Versionswahl {#sec-sq-version}
+
+- **Was die Community Build abdeckt.**
+  - In der Sprachtabelle der Dokumentation hat die Spalte „SonarQube Community Build“ ein Häkchen bei C#, Java, JavaScript, Python und TypeScript. Bei C, C++, Objective-C und Rust ist sie leer [SQ-lang].
+  - Zu Rust heißt es dort: „Starting with version 26.11, SonarQube Community Build does not include Ruby, Rust, and Scala. To analyze these languages, install the community-maintained plugins from GitHub.“ [SQ-lang]
+- **Gewählt: Version 26.9 mit sonar-cxx 2.4.0-beta.1.**
+  - Die Release Notes von sonar-cxx nennen genau diese Kombination als getestet: „Tested and released with Sonar Plugin API 14.0.0.4498, SonarQube Community Build 26.9.0.129388, and Java 21.“ [CXX-release]
+  - In 26.9 ist Rust noch offiziell enthalten.
+  - Im Test lud das Plugin als externes Plugin („cxx 2.4 (build 1689) EXTERNAL“).
+- **Verworfen:**
+  - **26.11, die neueste Version:** Rust wäre dort nur über das Community-Plugin sonar-rust verfügbar gewesen, und die Kombination mit sonar-cxx ist für 26.11 nicht getestet.
+  - **26.1 mit der stabilen sonar-cxx 2.3.1:** Diese SonarQube-Version war bereits zehn Monate alt.
+- **Eigene Scanner-Images.** Das offizielle Image `sonarsource/sonar-scanner-cli` gibt es nur für amd64 [DH-scanner]. Der Scanner selbst ist offiziell auch für Linux AArch64 verfügbar [SQ-scanner]. Die Images installieren diese Distribution, damit die Analyse auf Apple Silicon nicht emuliert läuft.
+
+## Server und Datenbank
+
+- **PostgreSQL statt H2.** Die eingebettete Datenbank ist laut Dokumentation „recommended for tests but not for production use“ [SQ-db]. Unterstützt wird PostgreSQL „Version: 15 to 18 (starting in SonarQube Community Build 26.8)“ [SQ-db].
+- **Speicher.**
+  - Gefordert sind „For a small-scale installation: 4GB of RAM“ [SQ-hw]. Gemessen belegte der Server rund 2 GB, die Datenbank 135 MB.
+  - Unter Linux braucht Elasticsearch `vm.max_map_count=524288` und `fs.file-max=131072` [SQ-linux].
+- **Plugin im Image, nicht im Volume.** Die Plugin-Datei liegt im Image unter `extensions/plugins/`. Ein Volume würde nach einem Update des Images ein altes Plugin behalten.
+- **Zugang.**
+  - Beim ersten Lauf ersetzt das Tool SonarQubes Standardpasswort `admin/admin` durch `SONARQUBE_ADMIN_PASSWORD` aus `docker/.env`.
+  - Für jede Analyse wird ein eigenes Analyse-Token erzeugt und am Ende widerrufen, auch nach Fehlern. Das Token erscheint in keinem Ergebnis.
+- **Historie.** Jedes Projekt erhält in SonarQube den Schlüssel `code-analysis_<Projektordner>` und behält seine Analysen über die Läufe hinweg.
+
+## Analyseablauf {#sec-sq-ablauf}
+
+### Arbeitskopie
+
+- **Was kopiert wird:** Die Dateien, die git kennt, werden im Stand nach Schritt 2 nach `step3-static-analysis/sonarqube/workspace/` kopiert. Dazu gehören versionierte und nicht ignorierte unversionierte Dateien, auch vendorte und generierte, weil der Build sie brauchen kann. Aus der Analyse werden diese Dateien über `sonar.exclusions` wieder ausgenommen.
+- **Warum eine Kopie:** Java und C# müssen gebaut werden, und Builds legen Dateien an. In der Kopie bleibt das Projekt unverändert. Die Kopie wird nach dem Lauf gelöscht.
+- **Kopie als git-Repository:** Die Kopie wird zu einem git-Repository ohne Commit. Ohne Repository warnte SonarQube „Retrieving only language associated files, make sure to run the analysis inside a git repository to make use of inclusions specified via "sonar.text.inclusions"“, und der Text- und Secrets-Sensor hätte nur Dateien bekannter Sprachen gelesen.
+
+### Java-Build
+
+- **Warum gebaut wird:** Ohne Bytecode verweigert SonarQube die Java-Analyse: „Your project contains .java files, please provide compiled classes with sonar.java.binaries property, or exclude them from the analysis with sonar.exclusions property.“ `sonar.java.binaries` ist als „(required)“ markiert [SQ-java].
+- **Wie gebaut wird:**
+  - Der Build läuft im Image `code-analysis/sonar-scanner`, mit dem Wrapper des Projekts (`mvnw`, `gradlew`), wenn vorhanden, sonst mit Maven bzw. Gradle.
+  - Maven: `mvn -B -q -DskipTests compile dependency:build-classpath`.
+  - Gradle: `gradle --no-daemon -q classes` mit einem Init-Skript, das den Kompilier-Klassenpfad in eine Datei schreibt.
+  - Die Bytecode-Ordner (`target/classes`, `build/classes/java/main`) und die Jar-Dateien des Klassenpfads werden zu `sonar.java.binaries` und `sonar.java.libraries`.
+- **JDK 21:** Gradle läuft auf Java 21 ab Version 8.5, auf Java 25 erst ab 9.1.0 („Support for running Gradle“ [Gradle-compat]). Mit JDK 21 laufen also auch die Gradle-8-Wrapper vieler Projekte.
+- **Scheitert der Build,** wird Java mit einem leeren Bytecode-Ordner analysiert, und der Status ist `partial` (Folgen siehe Testergebnisse).
+
+### Wahl des Scanners
+
+- **Projekte mit C#:**
+  - Die C#-Analyse braucht den SonarScanner for .NET: „C# analysis requires the SonarScanner for .NET. The SonarScanner CLI doesn't support C# or VB.NET analysis.“ [SQ-csharp]
+  - Er läuft mit `begin`, dann `dotnet build` auf dieselben Ziele wie `dotnet format` in Schritt 2 (jede Solution, sonst jede `.csproj`), dann `end`, alles in einem Container.
+  - Mit `sonar.scanner.scanAll=true` analysiert er auch die übrigen Sprachen.
+  - Scheitert der Build, analysiert der CLI-Scanner die übrigen Sprachen, und C# bleibt mit Status `partial` unanalysiert.
+- **Alle anderen Projekte:** SonarScanner CLI.
+- **Auswertung:** Das Tool wartet, bis der Server den Bericht verarbeitet hat (`api/ce/task`), und holt dann die Ergebnisse über die Web-API.
+
+## Parameter {#sec-sq-parameter}
+
+Der CLI-Scanner erhält alle Parameter in einer eigenen Datei `sonar-project.properties` des Laufs, übergeben mit `project.settings`. Laut Dokumentation wird dann „any `sonar-project.properties` located at the root of the project base directory … ignored“ [SQ-scanner]. Der Scanner für .NET erhält dieselben Werte als `/k:`, `/n:`, `/v:` und `/d:`.
+
+| Parameter | Wert | Begründung |
+|---|---|---|
+| `project.settings` | Datei des Laufs | Die Datei des Projekts wird ignoriert |
+| `sonar.projectKey`, `sonar.projectName`, `sonar.projectVersion` | `code-analysis_<Ordner>`, Ordnername, Commit | |
+| `sonar.scm.disabled` | `true` | Die Kopie hat keine Historie |
+| `sonar.exclusions` | Ordner, die Schritt 1 auslässt (`vendor`, `third_party`, `build`, `node_modules`, …), versteckte Ordner, generierte Dateien | Gleicher Umfang wie in Schritt 1 und 2 |
+| `sonar.cxx.file.suffixes` | `.c,.h,.cc,.cpp,.cxx,.c++,.hh,.hpp,.hxx,.h++,.ipp` | Der Sensor von sonar-cxx ist sonst aus („the CXX programming language sensor is disabled by default“); Endungen nach der Empfehlung von sonar-cxx [CXX-suffixes] |
+| `sonar.rust.clippy.enabled` | `false` | Standardmäßig ruft SonarQube Clippy auf („By default, the Sonar Rust analyzer automatically triggers a Clippy analysis.“ [SQ-rust]); Clippy läuft schon in Schritt 2 |
+| `sonar.cs.roslyn.ignoreIssues` | `true` (bei C#) | Siehe unten |
+| `sonar.python.version` | untere Grenze von `requires-python` | Wie `--target-version` für Ruff in Schritt 2; sonst warnt SonarQube, dass es alle Python-3-Versionen annimmt |
+| `sonar.java.source` | Java-Version der Build-Datei | Wie `--use-version` für PMD in Schritt 2 |
+| `sonar.java.binaries`, `sonar.java.libraries` | Bytecode und Klassenpfad des Builds | Pflicht für Java |
+| `sonar.working.directory` | `/tmp/scannerwork` im Container | Siehe Testergebnisse (Rust) |
+| `sonar.projectBaseDir`, `sonar.scanner.scanAll` | die Kopie, `true` (nur .NET) | Basis der Pfade in `sonar.exclusions`; auch die übrigen Sprachen analysieren |
+
+: Feste Analyseparameter von SonarQube {#tbl-sq-parameter}
+
+**.NET-Analyzer-Warnungen.** Der Scanner für .NET übernimmt standardmäßig Compiler- und Analyzer-Warnungen aus dem Build: „Issues from third-party Roslyn analyzers (including Roslyn analyzers provided by Microsoft) are included in the MSBuild output and imported by default into SonarQube“ [SQ-roslyn]. Darunter war im Test `CA2200`, das `dotnet format` in Schritt 2 bereits behebt. Abgeschaltet wird das mit `sonar.cs.roslyn.ignoreIssues=true` [SQ-roslyn].
+
+## Qualitätsprofile
+
+Verwendet wird das eingebaute Profil „Sonar way“ jeder Sprache, unverändert. Ausnahme ist C/C++ (@sec-cxx).
+
+| Sprache | Aktive Regeln |
+|---|---|
+| Python | 398 von 444 |
+| Java | 599 von 768 |
+| JavaScript | 420 von 528 |
+| TypeScript | 435 von 546 |
+| C# | 326 von 456 |
+| Rust | 78 von 85 |
+| C/C++ (sonar-cxx) | 22 von 6299 im Profil „Sonar way + sonar-cxx rules“ (im eigenen „Sonar way“ des Plugins: 0) |
+
+: Aktive Regeln auf dem Server, abgefragt am 11.11.2026 {#tbl-profile}
+
+## C und C++ (sonar-cxx) {#sec-cxx}
+
+### Was das Plugin tut
+
+Das Plugin beschreibt sich selbst so: „This plugin adds C++ support to SonarQube with the focus on integration of existing C++ tools.“ [CXX-README] Seine Arbeit besteht aus zwei Teilen:
+
+- **Einlesen und Messen.** Es liest den C/C++-Code ein und berechnet Codezeilen, Funktionen, Anweisungen, zyklomatische und kognitive Komplexität, Kommentarzeilen und Duplikate.
+- **Berichte anderer Werkzeuge importieren**, etwa von clang-tidy, cppcheck, Compilern oder Infer. Die meisten eigenen Prüfungen hat das Plugin mit Version 1.3.0 entfernt („static code analysis checks are removed: BooleanEqualityComparisonCheck, …, HardcodedAccountCheck, HardcodedIpCheck, MagicNumberCheck, …“ [CXX-upgrade]).
+
+Die 6299 Regeln des Plugins teilen sich so auf:
+
+| Gruppe | Regeln |
+|---|---|
+| Eigene Prüfungen (Repository `cxx`) | 27, davon 4 Regelvorlagen |
+| PC-lint | 1921 |
+| clang-tidy | 1588 |
+| MSVC-Compiler | 1008 |
+| cppcheck | 716 |
+| GCC | 397 |
+| RATS, Infer, Clang Static Analyzer, Vera++, Valgrind, Dr. Memory, sonstige | 642 |
+
+: Regeln von sonar-cxx nach Herkunft {#tbl-cxx-regeln}
+
+Die Regeln anderer Werkzeuge erzeugen nur Befunde, wenn deren Bericht importiert wird.
+
+### Warum das Standardprofil leer ist
+
+Das Wiki von sonar-cxx begründet das so: „Since the cxx plugin contains a large number of sensors with over 4000 rules, all rules are initially deactivated in the default profile `Sonar way` for the programming language `CXX`. Enabling all rules would have a negative impact on the analysis performance and mostly only a subset is needed.“ Und weiter: „Therefore, after installation, no sensor issues are displayed. To display issues, the corresponding rules must first be enabled in the Quality Profile being used by the project.“ [CXX-profiles] Es empfiehlt, eine Kopie von „Sonar way“ anzulegen und darin die gewünschten Regeln zu aktivieren [CXX-profiles].
+
+### Festlegung: Profil „Sonar way + sonar-cxx rules“
+
+- **Was das Tool bei jedem Lauf tut:**
+  - Es legt das Profil als Kopie des „Sonar way“ von sonar-cxx an, falls es fehlt.
+  - Es aktiviert darin alle eigenen Regeln des Repositorys `cxx` außer den Regelvorlagen, mit den Standardparametern des Plugins.
+  - Es deaktiviert `cxx:FileHeader` und ordnet das Profil dem Projekt zu.
+  - Weil das jeden Lauf geschieht, kommen Regeln einer neueren Plugin-Version automatisch hinzu, und der Ausschluss bleibt bestehen.
+- **Regeln anderer Werkzeuge bleiben aus.** Clang-tidy läuft bereits in Schritt 2, ein Import würde dessen Befunde verdoppeln.
+- **Was die 22 Regeln prüfen:** Alle betreffen die Wartbarkeit, keine sucht nach Fehlern oder Schwachstellen.
+  - **Komplexität:** Funktion zyklomatisch > 10, kognitiv > 15, Klasse > 60, Datei > 200.
+  - **Größe:** Funktion > 200 Zeilen, Datei > 2000 Zeilen, mehr als 7 Parameter.
+  - **Namen:** Klassen `^[A-Z_][a-zA-Z0-9]+$`, Funktionen `^[a-z_][a-z0-9_]{2,30}$` (snake_case), Methoden `^[A-Z][A-Za-z0-9]{2,30}$`, Dateinamen. In Projekten mit anderen Konventionen, etwa camelCase-Funktionen, wird jede Funktion gemeldet.
+  - **Layout:** Tabulatoren, Zeilen > 160 Zeichen, mehrere Anweisungen pro Zeile, Zeilenumbruch am Dateiende, Zeichenkodierung. Das meiste davon hat clang-format in Schritt 2 bereits angepasst.
+  - **Sonstiges:** TODO- und FIXME-Markierungen, `NOSONAR`, undokumentierte öffentliche API, Parserfehler.
+- **Ausgeschlossen: `cxx:FileHeader`** („Copyright and license headers should be defined in all source files“, Schwere BLOCKER).
+  - Der Parameter `headerFormat` ist standardmäßig leer.
+  - Im Test meldete die Regel jede Datei mit „Add or update the header of this file“, auch eine Datei, die mit einer Copyright- und einer SPDX-Zeile beginnt.
+  - Ohne konfiguriertes Header-Muster prüft sie nichts Sinnvolles und hätte jede C/C++-Datei als Fehler gezählt.
+
+### Duplikate
+
+- **Nur zeichengleicher Code:** Die Duplikaterkennung von sonar-cxx zählt nur zeichengleichen Code. Mit `sonar.cxx.metric.cpd.ignoreIdentifiers=True` würden unterschiedliche Bezeichner ignoriert („ignores identifier value differences when evaluating a duplicate block e.g. variable names, methods names, and so forth“ [CXX-cpd]).
+- **Standardwert:** Das Wiki nennt keinen Standardwert. Die Einstellungsdefinitionen des Servers (`api/settings/list_definitions`) geben für `ignoreIdentifiers` und `ignoreLiterals` jeweils `false` an.
+- **Im Test:**
+  - Zwei gleiche Dateien mit je 69 Zeilen ergaben 2 Duplikat-Blöcke und 93,7 % duplizierte Zeilen.
+  - Funktionen, die sich nur im Namen unterschieden, ergaben 0.
+
+## Befunde
+
+- **Herkunft:** Issues kommen aus `api/issues/search` (nur ungelöste), Security Hotspots aus `api/hotspots/search` (Status `TO_REVIEW`).
+- **Schwere:** aus der höchsten Impact-Schwere: `BLOCKER`/`HIGH` → `error`, `MEDIUM` → `warning`, `LOW`/`INFO` → `note`. Bei Hotspots zählt die Prüfpriorität (`vulnerabilityProbability`).
+- **Kategorie:** die Softwarequalität dieses Impacts (`security`, `reliability`, `maintainability`). Die Unterkategorie ist der Issue-Typ (`bug`, `vulnerability`, `code_smell`) bzw. `hotspot`.
+- **CWE und OWASP Top 10 2021:**
+  - Die Web-API liefert sie nicht direkt pro Regel. Das Tool sucht deshalb jede gefundene Regel einzeln mit den Facetten `cwe` und `owaspTop10-2021` (`api/rules/search`).
+  - Beispiel: `python:S4790` ergab `CWE-1240` und `A02:2021`.
+- **Spalten:** SonarQubes Positionen beginnen bei 0 und werden um 1 verschoben.
+
+## Testergebnisse
+
+- **Node.js.**
+  - Laut Dokumentation braucht die JavaScript/TypeScript-Analyse auf linux-arm64 kein installiertes Node.js („No Node.js installation is required for the following architectures: darwin-arm64, darwin-x64, linux-arm64, linux-x64, …“ [SQ-js]).
+  - Im Scanner-Container brach sie trotzdem ab: „Error when running: 'node -v'. Is Node.js available during analysis?“.
+  - Beide Scanner-Images enthalten deshalb Node.js 24 (gefordert: „for Node v24, the Active LTS, it must be at least 24.0.0.“ [SQ-js]).
+- **Rust-Analyzer.**
+  - Lag das Arbeitsverzeichnis des Scanners auf dem eingebundenen Ordner des Macs, scheiterte er: „Failed to create Rust analyzer: Failed to start the analyzer process“.
+  - Mit `/tmp/scannerwork` im Container lief er. Den Beleg des Laufs (`report-task.txt`) kopiert das Tool danach in den Ausgabeordner.
+- **Java mit und ohne Bytecode.**
+
+  | | Befunde | Warnung |
+  |---|---|---|
+  | Mit Maven-Build | `java:S2095` (Ressourcenleck), `java:S4973`, `java:S2119` | – |
+  | Ohne Bytecode | nur `java:S4973` und `java:S2119` | „Missing 'sonar.java.libraries' property. You might end up with less precise analysis results.“ |
+
+  Der Build dauerte rund 14 s.
+- **C#.**
+  - Der Scanner für .NET fand `csharpsquid:S4790` und, mit `scanAll`, auch die JavaScript-Datei des Projekts.
+  - Ohne `sonar.cs.roslyn.ignoreIssues` kamen drei `external_roslyn`-Befunde hinzu (`CS0219`, `CA1850`, `CA2200`): 12 statt 9 Befunde.
+  - Der Scanner lud seine Java-Laufzeit beim Lauf selbst herunter (im Protokoll: `OpenJDK21U-jre_aarch64_linux_hotspot_21.0.11_10`). Das Image braucht deshalb kein eigenes Java.
+- **Python.**
+  - `python:S4790` und `python:S4830` wurden als Schwachstellen mit CWE und OWASP gemeldet.
+  - Hotspots gab es keine: SonarQube 26.9 meldet mehrere frühere Hotspot-Regeln als Schwachstellen (Systemtag `former-hotspot`).
+- **TypeScript.** Eine ungenutzte `const` meldete SonarQube nicht, `var` dagegen schon (`typescript:S3504`).
+- **Duplikate in Python.** Zwei Dateien mit gleichem 13-zeiligem Funktionsrumpf ergaben 2 Blöcke, 26 Zeilen und 27,1 % Duplikate.
+- **C/C++.**
+  - Eine C++-Funktion mit 8 Parametern, verschachtelten Bedingungen und camelCase-Namen ergab `cxx:TooManyParameters`, `cxx:FunctionComplexity`, `cxx:FunctionCognitiveComplexity` und `cxx:FunctionName`.
+  - `cxx:FileHeader` traf jede Datei, bis die Regel ausgeschlossen wurde.
+- **Projektkonfiguration und Umfang.**
+  - Eine `sonar-project.properties` des Projekts mit `sonar.exclusions=**/*.py` wurde ignoriert, Python wurde analysiert.
+  - Generierte Dateien fehlten in den Ergebnissen.
+  - Das Projekt blieb unverändert, und das Analyse-Token war nach dem Lauf widerrufen.
+- **Parallel.** Auf einem kleinen Projekt brauchten OpenGrep und SonarQube jeweils rund 15 s, der ganze Schritt ebenfalls rund 15 s.
+
+## Grenzen
+
+- **C/C++ nur Wartbarkeit:** Die 22 Regeln von sonar-cxx finden Komplexitäts-, Größen-, Namens- und Layoutprobleme, keine Fehler oder Schwachstellen. Diese kommen bei C/C++ von clang-tidy (Schritt 2) und OpenGrep.
+- **Namenskonventionen von sonar-cxx:** Die festen Standardmuster (snake_case-Funktionen, PascalCase-Methoden) erzeugen in Projekten mit anderen Konventionen viele Befunde.
+- **Rust ohne Clippy:** nur SonarQubes eigene Rust-Regeln und Metriken.
+- **Java ohne Bytecode:** Scheitert der Build, fehlen Befunde, die Typinformation brauchen (siehe Testergebnisse).
+- **C# ohne Build:** Scheitert `dotnet build`, wird C# nicht analysiert.
+- **Höchstens 10.000 Issues:** So viele liefert die Web-API pro Suche. Darüber hinaus nennt eine Notiz die Gesamtzahl.
+- **sonar-cxx ist eine Beta-Version** (2.4.0-beta.1), getestet mit genau der verwendeten Server-Version.
+
+# Ergebnisse im Ausgabeordner
+
+Schritt 3 schreibt in den Ausgabeordner von Schritt 2: `OUTPUT_DIR/<Projekt>/<Datum_Zeit>Z/step3-static-analysis/`.
+
+| Pfad | Inhalt |
+|---|---|
+| `summary.json` | Pro Werkzeug: Version, Befehle, Exit-Codes, Status, Dauer, Regelsammlungen bzw. Qualitätsprofile, Befunde nach Schwere und Kategorie, bei SonarQube Metriken und Details (Plugin- und Scanner-Versionen, Dateien mit Duplikaten, Link zur Weboberfläche), Notizen |
+| `findings.json` | Befunde beider Werkzeuge in einem Format: Werkzeug, Regelsammlung, Regel, Schwere, Meldung, Sprache, Datei, Position, Kategorie, Unterkategorie, CWE, OWASP, `confidence`, `likelihood`, `impact`, Fingerabdruck |
+| `opengrep/` | JSON- und SARIF-Bericht von OpenGrep, Ausgaben des Programms |
+| `sonarqube/` | Parameter und Protokolle des Scanners und des Java-Builds; Antworten der Web-API (`api/`: Issues, Hotspots, Metriken, Duplikate pro Datei, Regel-Metadaten, Qualitätsprofile, Plugins) |
+
+: Ergebnisse von Schritt 3 {#tbl-ergebnisse}
+
+Der JSON-Bericht von OpenGrep enthält zu jedem Taint-Befund den Datenfluss von der Quelle zur Senke (`dataflow_trace`).
+
+# Offene Punkte und Grenzen der Prüfung {#sec-offen}
+
+- **Kleine Testprojekte:** Alle Tests liefen auf kleinen Beispielen. Wie viele Befunde auf echten Projekten entstehen und wie viele davon Fehlalarme sind, ist nicht untersucht.
+- **Standardregeln der Hersteller:** Die Profile „Sonar way“ und die Regelsammlungen sind von den Herstellern gewählt und nicht an den analysierten Projekten geprüft.
+- **Lizenz von semgrep-rules:** Ob die Nutzung in einer Abschlussarbeit unter „internal business purposes“ fällt, ist nicht geklärt (@sec-lizenzen). Mit semgrep-rules erzeugte Ergebnisse dürfen nicht veröffentlicht werden.
+- **Kein dateiübergreifender Datenfluss:** Weder OpenGrep 1.33.1 noch die Community Build verfolgen Daten über Dateigrenzen.
+- **Reifegrad:** OpenGrep stuft C, C++ und Rust als `alpha` ein; sonar-cxx ist eine Beta-Version.
+
+# Quellen (noch nicht in `references.bib`) {#sec-quellen}
+
+::: {.callout-important}
+Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in `references.bib`. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 11.11.2026.
+:::
+
+**OpenGrep**
+
+- **[OG-README]** OpenGrep: *README*, Version 1.33.1. <https://github.com/opengrep/opengrep/blob/v1.33.1/README.md>
+- **[OG-CHANGES]** OpenGrep: *OPENGREP.md* (Änderungen seit dem Fork), Version 1.33.1. <https://github.com/opengrep/opengrep/blob/v1.33.1/OPENGREP.md>
+- **[OG-help]** Ausgabe von `opengrep scan --help`, Version 1.33.1 (Programm, keine Webseite).
+- **[OG-alpha]** OpenGrep: *Release v2.0.0-nopython-interfile.alpha.4*. <https://github.com/opengrep/opengrep/releases/tag/v2.0.0-nopython-interfile.alpha.4>
+- **[OG-release]** OpenGrep: *Release v1.33.1* (SHA-256 der Release-Dateien). <https://github.com/opengrep/opengrep/releases/tag/v1.33.1>
+- **[OG-runscan]** OpenGrep: `cli/src/semgrep/run_scan.py`, Zeilen 118–131, Version 1.33.1. <https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/run_scan.py#L118-L131>
+- **[OG-ignore]** OpenGrep: Standard-Ignore-Liste `cli/src/semgrep/templates/.semgrepignore`, Version 1.33.1. <https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/templates/.semgrepignore>
+- **[OG-config]** OpenGrep: `cli/src/semgrep/config_resolver.py` (`get_config`), Version 1.33.1. <https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/config_resolver.py>
+- **[OG-scan]** OpenGrep: `cli/src/semgrep/commands/scan.py` (Option `--enable-nosem/--disable-nosem`), Version 1.33.1. <https://github.com/opengrep/opengrep/blob/v1.33.1/cli/src/semgrep/commands/scan.py>
+- **[OG-lang]** OpenGrep: `lang.json` in `opengrep/semgrep-interfaces`, Commit `5e705660dc7381d4c4c247fa83c4c5860e61d555` (Submodul von Version 1.33.1). <https://github.com/opengrep/semgrep-interfaces/blob/5e705660dc7381d4c4c247fa83c4c5860e61d555/lang.json>
+
+**Regelsammlungen**
+
+- **[OG-rules]** OpenGrep: *opengrep-rules*, README und LICENSE, Commit `f1d2b562`. <https://github.com/opengrep/opengrep-rules>
+- **[SG-license]** Semgrep, Inc.: *Semgrep Rules License v. 1.0*, zuletzt aktualisiert am 13.12.2024. <https://semgrep.dev/legal/rules-license>
+- **[0xdea]** Ivaldi, M.: *0xdea/semgrep-rules*, README. <https://github.com/0xdea/semgrep-rules>
+
+**SonarQube**
+
+- **[SQ-lang]** SonarSource: *Supported languages* (SonarQube Community Build). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/overview>
+- **[SQ-rust]** SonarSource: *Rust* (SonarQube Community Build). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/rust>
+- **[SQ-java]** SonarSource: *Java* (SonarQube Community Build). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/java>
+- **[SQ-csharp]** SonarSource: *C#* (SonarQube Community Build). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/csharp>
+- **[SQ-roslyn]** SonarSource: *External analyzer reports* (Abschnitt C#). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/importing-external-issues/external-analyzer-reports>
+- **[SQ-js]** SonarSource: *JavaScript/TypeScript/CSS* (Abschnitt Node.js). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/languages/javascript-typescript-css>
+- **[SQ-scanner]** SonarSource: *SonarScanner CLI* (Downloads, `project.settings`). <https://docs.sonarsource.com/sonarqube-community-build/analyzing-source-code/scanners/sonarscanner>
+- **[SQ-db]** SonarSource: *Installing the database*. <https://docs.sonarsource.com/sonarqube-community-build/server-installation/installing-the-database>
+- **[SQ-hw]** SonarSource: *Server host requirements*. <https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements>
+- **[SQ-linux]** SonarSource: *Linux* (Pre-installation). <https://docs.sonarsource.com/sonarqube-community-build/server-installation/pre-installation/linux>
+- **[DH-scanner]** Docker Hub: *sonarsource/sonar-scanner-cli*, Tags (November 2026 nur `amd64`). <https://hub.docker.com/r/sonarsource/sonar-scanner-cli/tags>
+
+**sonar-cxx**
+
+- **[CXX-README]** SonarOpenCommunity: *sonar-cxx*, README. <https://github.com/SonarOpenCommunity/sonar-cxx>
+- **[CXX-release]** SonarOpenCommunity: *sonar-cxx 2.4.0-beta.1*, Release Notes. <https://github.com/SonarOpenCommunity/sonar-cxx/releases/tag/cxx-2.4.0-beta.1>
+- **[CXX-profiles]** SonarOpenCommunity: Wiki *Manage Quality Profiles*, Wiki-Commit `04e63184` (21.10.2026). <https://github.com/SonarOpenCommunity/sonar-cxx/wiki/Manage-Quality-Profiles>
+- **[CXX-upgrade]** SonarOpenCommunity: Wiki *Upgrade the Plugin*, Abschnitt „Upgrade to 1.3.0“. <https://github.com/SonarOpenCommunity/sonar-cxx/wiki/Upgrade-the-Plugin>
+- **[CXX-suffixes]** SonarOpenCommunity: Wiki *sonar.cxx.file.suffixes*. <https://github.com/SonarOpenCommunity/sonar-cxx/wiki/sonar.cxx.file.suffixes>
+- **[CXX-cpd]** SonarOpenCommunity: Wiki *sonar.cxx.metric.cpd.ignoreIdentifiers*. <https://github.com/SonarOpenCommunity/sonar-cxx/wiki/sonar.cxx.metric.cpd.ignoreIdentifiers>
+
+**Sonstige**
+
+- **[Gradle-compat]** Gradle: *Compatibility Matrix* (Gradle User Manual). <https://docs.gradle.org/current/userguide/compatibility.html>

@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Felix Krauß">
+
+<title>Linter- und Formatter-Konventionen</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="LinterKonventionen_files/libs/clipboard/clipboard.min.js"></script>
+<script src="LinterKonventionen_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="LinterKonventionen_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="LinterKonventionen_files/libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="LinterKonventionen_files/libs/quarto-html/popper.min.js"></script>
+<script src="LinterKonventionen_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="LinterKonventionen_files/libs/quarto-html/anchor.min.js"></script>
+<link href="LinterKonventionen_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="LinterKonventionen_files/libs/quarto-html/quarto-syntax-highlighting-dark-447e42e69aaa9833c0ba1b986f430b20.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="LinterKonventionen_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="LinterKonventionen_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="LinterKonventionen_files/libs/bootstrap/bootstrap-d0a4af45de66b11030a5673244ae2f01.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+
+
+</head>
+
+<body class="quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Zum Hauptinhalt springen</a>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">Inhaltsverzeichnis</h2>
+   
+  <ul>
+  <li><a href="#zweck-und-vorgehen" id="toc-zweck-und-vorgehen" class="nav-link active" data-scroll-target="#zweck-und-vorgehen"><span class="header-section-number">1</span> Zweck und Vorgehen</a>
+  <ul class="collapse">
+  <li><a href="#grundsatz-der-festlegung" id="toc-grundsatz-der-festlegung" class="nav-link" data-scroll-target="#grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</a></li>
+  <li><a href="#prüfmethode" id="toc-prüfmethode" class="nav-link" data-scroll-target="#prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</a></li>
+  <li><a href="#testumgebung" id="toc-testumgebung" class="nav-link" data-scroll-target="#testumgebung"><span class="header-section-number">1.3</span> Testumgebung</a></li>
+  </ul></li>
+  <li><a href="#übersicht-der-festlegungen" id="toc-übersicht-der-festlegungen" class="nav-link" data-scroll-target="#übersicht-der-festlegungen"><span class="header-section-number">2</span> Übersicht der Festlegungen</a></li>
+  <li><a href="#sec-csharp" id="toc-sec-csharp" class="nav-link" data-scroll-target="#sec-csharp"><span class="header-section-number">3</span> C</a>
+  <ul class="collapse">
+  <li><a href="#festlegung" id="toc-festlegung" class="nav-link" data-scroll-target="#festlegung"><span class="header-section-number">3.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege" id="toc-begründung-und-belege" class="nav-link" data-scroll-target="#begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</a></li>
+  <li><a href="#testergebnisse" id="toc-testergebnisse" class="nav-link" data-scroll-target="#testergebnisse"><span class="header-section-number">3.3</span> Testergebnisse</a></li>
+  <li><a href="#grenzen" id="toc-grenzen" class="nav-link" data-scroll-target="#grenzen"><span class="header-section-number">3.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-java" id="toc-sec-java" class="nav-link" data-scroll-target="#sec-java"><span class="header-section-number">4</span> Java</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-1" id="toc-festlegung-1" class="nav-link" data-scroll-target="#festlegung-1"><span class="header-section-number">4.1</span> Festlegung</a></li>
+  <li><a href="#google-java-format-formatter" id="toc-google-java-format-formatter" class="nav-link" data-scroll-target="#google-java-format-formatter"><span class="header-section-number">4.2</span> google-java-format (Formatter)</a></li>
+  <li><a href="#pmd-linter" id="toc-pmd-linter" class="nav-link" data-scroll-target="#pmd-linter"><span class="header-section-number">4.3</span> PMD (Linter)</a>
+  <ul class="collapse">
+  <li><a href="#auswahl-gegenüber-checkstyle" id="toc-auswahl-gegenüber-checkstyle" class="nav-link" data-scroll-target="#auswahl-gegenüber-checkstyle"><span class="header-section-number">4.3.1</span> Auswahl gegenüber Checkstyle</a></li>
+  <li><a href="#regelsatz" id="toc-regelsatz" class="nav-link" data-scroll-target="#regelsatz"><span class="header-section-number">4.3.2</span> Regelsatz</a></li>
+  <li><a href="#sec-pmd-version" id="toc-sec-pmd-version" class="nav-link" data-scroll-target="#sec-pmd-version"><span class="header-section-number">4.3.3</span> Java-Version</a></li>
+  <li><a href="#verhalten-im-test" id="toc-verhalten-im-test" class="nav-link" data-scroll-target="#verhalten-im-test"><span class="header-section-number">4.3.4</span> Verhalten im Test</a></li>
+  <li><a href="#grenze-typinformationen" id="toc-grenze-typinformationen" class="nav-link" data-scroll-target="#grenze-typinformationen"><span class="header-section-number">4.3.5</span> Grenze: Typinformationen</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#sec-biome" id="toc-sec-biome" class="nav-link" data-scroll-target="#sec-biome"><span class="header-section-number">5</span> JavaScript und TypeScript</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-2" id="toc-festlegung-2" class="nav-link" data-scroll-target="#festlegung-2"><span class="header-section-number">5.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-1" id="toc-begründung-und-belege-1" class="nav-link" data-scroll-target="#begründung-und-belege-1"><span class="header-section-number">5.2</span> Begründung und Belege</a></li>
+  <li><a href="#testergebnisse-1" id="toc-testergebnisse-1" class="nav-link" data-scroll-target="#testergebnisse-1"><span class="header-section-number">5.3</span> Testergebnisse</a></li>
+  <li><a href="#sec-biome-gitignore" id="toc-sec-biome-gitignore" class="nav-link" data-scroll-target="#sec-biome-gitignore"><span class="header-section-number">5.4</span> Ordner aus <code>.gitignore</code> ausschließen</a>
+  <ul class="collapse">
+  <li><a href="#problem" id="toc-problem" class="nav-link" data-scroll-target="#problem"><span class="header-section-number">5.4.1</span> Problem</a></li>
+  <li><a href="#optionen" id="toc-optionen" class="nav-link" data-scroll-target="#optionen"><span class="header-section-number">5.4.2</span> Optionen</a></li>
+  <li><a href="#konflikt-mit-einer-konfiguration-außerhalb-des-projekts" id="toc-konflikt-mit-einer-konfiguration-außerhalb-des-projekts" class="nav-link" data-scroll-target="#konflikt-mit-einer-konfiguration-außerhalb-des-projekts"><span class="header-section-number">5.4.3</span> Konflikt mit einer Konfiguration außerhalb des Projekts</a></li>
+  <li><a href="#getestete-lösung" id="toc-getestete-lösung" class="nav-link" data-scroll-target="#getestete-lösung"><span class="header-section-number">5.4.4</span> Getestete Lösung</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#sec-ruff" id="toc-sec-ruff" class="nav-link" data-scroll-target="#sec-ruff"><span class="header-section-number">6</span> Python</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-3" id="toc-festlegung-3" class="nav-link" data-scroll-target="#festlegung-3"><span class="header-section-number">6.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-2" id="toc-begründung-und-belege-2" class="nav-link" data-scroll-target="#begründung-und-belege-2"><span class="header-section-number">6.2</span> Begründung und Belege</a></li>
+  <li><a href="#testergebnisse-2" id="toc-testergebnisse-2" class="nav-link" data-scroll-target="#testergebnisse-2"><span class="header-section-number">6.3</span> Testergebnisse</a></li>
+  <li><a href="#sec-ruff-version" id="toc-sec-ruff-version" class="nav-link" data-scroll-target="#sec-ruff-version"><span class="header-section-number">6.4</span> <code>--isolated</code> braucht <code>--target-version</code></a></li>
+  </ul></li>
+  <li><a href="#sec-cpp" id="toc-sec-cpp" class="nav-link" data-scroll-target="#sec-cpp"><span class="header-section-number">7</span> C und C++</a>
+  <ul class="collapse">
+  <li><a href="#formatter-clang-format" id="toc-formatter-clang-format" class="nav-link" data-scroll-target="#formatter-clang-format"><span class="header-section-number">7.1</span> Formatter: clang-format</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-4" id="toc-festlegung-4" class="nav-link" data-scroll-target="#festlegung-4"><span class="header-section-number">7.1.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-3" id="toc-begründung-und-belege-3" class="nav-link" data-scroll-target="#begründung-und-belege-3"><span class="header-section-number">7.1.2</span> Begründung und Belege</a></li>
+  </ul></li>
+  <li><a href="#linter-clang-tidy" id="toc-linter-clang-tidy" class="nav-link" data-scroll-target="#linter-clang-tidy"><span class="header-section-number">7.2</span> Linter: clang-tidy</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-5" id="toc-festlegung-5" class="nav-link" data-scroll-target="#festlegung-5"><span class="header-section-number">7.2.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-4" id="toc-begründung-und-belege-4" class="nav-link" data-scroll-target="#begründung-und-belege-4"><span class="header-section-number">7.2.2</span> Begründung und Belege</a></li>
+  <li><a href="#warum-ohne---fix" id="toc-warum-ohne---fix" class="nav-link" data-scroll-target="#warum-ohne---fix"><span class="header-section-number">7.2.3</span> Warum ohne <code>--fix</code></a></li>
+  <li><a href="#sec-verworfen" id="toc-sec-verworfen" class="nav-link" data-scroll-target="#sec-verworfen"><span class="header-section-number">7.2.4</span> Verworfene Alternative: umfangreiche Check-Auswahl</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#sec-rust" id="toc-sec-rust" class="nav-link" data-scroll-target="#sec-rust"><span class="header-section-number">8</span> Rust</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-6" id="toc-festlegung-6" class="nav-link" data-scroll-target="#festlegung-6"><span class="header-section-number">8.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-5" id="toc-begründung-und-belege-5" class="nav-link" data-scroll-target="#begründung-und-belege-5"><span class="header-section-number">8.2</span> Begründung und Belege</a></li>
+  <li><a href="#testergebnisse-3" id="toc-testergebnisse-3" class="nav-link" data-scroll-target="#testergebnisse-3"><span class="header-section-number">8.3</span> Testergebnisse</a></li>
+  </ul></li>
+  <li><a href="#sec-projektkonfiguration" id="toc-sec-projektkonfiguration" class="nav-link" data-scroll-target="#sec-projektkonfiguration"><span class="header-section-number">9</span> Projektkonfiguration</a>
+  <ul class="collapse">
+  <li><a href="#entscheidung" id="toc-entscheidung" class="nav-link" data-scroll-target="#entscheidung"><span class="header-section-number">9.1</span> Entscheidung</a></li>
+  <li><a href="#nicht-ignorierbar" id="toc-nicht-ignorierbar" class="nav-link" data-scroll-target="#nicht-ignorierbar"><span class="header-section-number">9.2</span> Nicht ignorierbar</a></li>
+  </ul></li>
+  <li><a href="#sec-offen" id="toc-sec-offen" class="nav-link" data-scroll-target="#sec-offen"><span class="header-section-number">10</span> Grenzen und offene Punkte</a></li>
+  <li><a href="#sec-quellen" id="toc-sec-quellen" class="nav-link" data-scroll-target="#sec-quellen"><span class="header-section-number">11</span> Quellen (noch nicht in <code>references.bib</code>)</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="LinterKonventionen.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Linter- und Formatter-Konventionen</h1>
+<p class="subtitle lead">Dokumentation der Werkzeugauswahl für Schritt 2 des Code-Analysis-Tools</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Autor:in</div>
+    <div class="quarto-title-meta-contents">
+             <p>Felix Krauß </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Veröffentlichungsdatum</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">7. November 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="zweck-und-vorgehen" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Zweck und Vorgehen</h1>
+<p>Dieses Dokument hält fest, welche Formatter und Linter das Code-Analysis-Tool in Schritt 2 („Install linter / formatter: Fixed rules per language“) für jede unterstützte Sprache einsetzt. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Festlegung ohne Begründungen liegt im Tool-Repository unter <code>Code-Analysis-Tool/docs/linterConventions/README.md</code>.</p>
+<section id="grundsatz-der-festlegung" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</h2>
+<ul>
+<li><strong>Default-Stil:</strong> Für jede Sprache wird der Standardstil eines etablierten Werkzeugs verwendet, mit möglichst wenig eigener Konfiguration. Eigene Abweichungen gibt es nur bei C/C++ (vier clang-format-Optionen und eine feste clang-tidy-Check-Liste).</li>
+<li><strong>Projektkonfiguration wird ignoriert:</strong> Die Konfigurationsdateien des analysierten Projekts werden immer ignoriert, damit die Ergebnisse verschiedener Projekte vergleichbar sind (siehe <a href="#sec-projektkonfiguration" class="quarto-xref">Kapitel&nbsp;9</a>).</li>
+<li><strong>Sprachversion wird übernommen:</strong> Die Sprachversion des Projekts (Java-Version, Python-Version, C++-Standard) ist keine Konfiguration im Sinne dieses Grundsatzes. Sie wird aus dem Projekt übernommen, weil die Werkzeuge sonst Code falsch lesen oder fehlerhaften Code erzeugen (siehe <a href="#sec-ruff-version" class="quarto-xref">Kapitel&nbsp;6.4</a> und <a href="#sec-pmd-version" class="quarto-xref">Kapitel&nbsp;4.3.3</a>).</li>
+<li><strong>Geprüfte Arbeitskopie:</strong> Die Formatter verändern Dateien direkt. Schritt 1 nimmt deshalb nur Projekte mit sauberem Git-Arbeitsverzeichnis an, sodass jede Änderung mit <code>git diff</code> nachvollzogen und zurückgenommen werden kann.</li>
+</ul>
+</section>
+<section id="prüfmethode" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</h2>
+<ol type="1">
+<li><strong>Dokumentation im Original:</strong> Jede Aussage über ein Werkzeug wurde in dessen offizieller Dokumentation nachgelesen. Zitate sind wörtlich und stehen in der Originalsprache (Englisch).</li>
+<li><strong>Eigene Tests:</strong> Das Verhalten wurde am 07.11.2026 in Docker-Containern mit festen Werkzeugversionen getestet (<a href="#tbl-versionen" class="quarto-xref">Tabelle&nbsp;1</a>).</li>
+<li><strong>Art der Testprojekte:</strong> Die Tests liefen auf kleinen, eigens angelegten Beispieldateien, die gezielt einzelne Fälle enthalten. Sie zeigen, <em>wie</em> sich ein Werkzeug verhält, sagen aber nichts darüber, wie viele Befunde auf echten Projekten entstehen oder wie viele davon Fehlalarme sind (siehe <a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;10</a>).</li>
+</ol>
+</section>
+<section id="testumgebung" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="testumgebung"><span class="header-section-number">1.3</span> Testumgebung</h2>
+<div id="tbl-versionen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-versionen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;1: Getestete Werkzeugversionen
+</figcaption>
+<div aria-describedby="tbl-versionen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Werkzeug</th>
+<th>Version</th>
+<th>Container-Image</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>clang-format, clang-tidy</td>
+<td>22.1.8</td>
+<td>Debian 13 mit den LLVM-22-Paketen</td>
+</tr>
+<tr class="even">
+<td>.NET SDK (<code>dotnet format</code>)</td>
+<td>10.0.403</td>
+<td><code>mcr.microsoft.com/dotnet/sdk:10.0</code></td>
+</tr>
+<tr class="odd">
+<td>google-java-format</td>
+<td>2.0.0 auf OpenJDK 21.0.13</td>
+<td><code>eclipse-temurin:21-jdk</code></td>
+</tr>
+<tr class="even">
+<td>PMD</td>
+<td>7.29.0 auf OpenJDK 21.0.13</td>
+<td><code>eclipse-temurin:21-jdk</code></td>
+</tr>
+<tr class="odd">
+<td>Checkstyle (nur Vergleich, nicht gewählt)</td>
+<td>14.4.0</td>
+<td><code>eclipse-temurin:21-jdk</code></td>
+</tr>
+<tr class="even">
+<td>Biome</td>
+<td>2.6.6 auf Node 22</td>
+<td><code>node:22-slim</code></td>
+</tr>
+<tr class="odd">
+<td>Ruff</td>
+<td>0.17.4</td>
+<td><code>python:3.13-slim</code></td>
+</tr>
+<tr class="even">
+<td>Python (nur Kompatibilitätsprüfung)</td>
+<td>3.8.20</td>
+<td><code>python:3.8-slim</code></td>
+</tr>
+<tr class="odd">
+<td>Rust-Toolchain (cargo, Clippy, rustfmt)</td>
+<td>1.99.1, Clippy 0.1.99</td>
+<td><code>rust:1-slim</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Die Versionen sind festzuschreiben, weil sich Standardregeln und Standardstile zwischen Versionen ändern. Ruff aktiviert in Version 0.17.4 zum Beispiel 407 Regeln standardmäßig (siehe <a href="#sec-ruff" class="quarto-xref">Kapitel&nbsp;6</a>).</p>
+</section>
+</section>
+<section id="übersicht-der-festlegungen" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Übersicht der Festlegungen</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Werkzeuge</th>
+<th>Befehle (in dieser Reihenfolge)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>C#</td>
+<td>dotnet format</td>
+<td><code>dotnet format</code> (mit ausgeblendeter <code>.editorconfig</code>)</td>
+</tr>
+<tr class="even">
+<td>Java</td>
+<td>google-java-format, PMD</td>
+<td><code>google-java-format --replace</code>, dann <code>pmd check … --use-version java-&lt;Projektversion&gt;</code></td>
+</tr>
+<tr class="odd">
+<td>JavaScript, TypeScript</td>
+<td>Biome</td>
+<td><code>biome check --write --config-path=&lt;projekt&gt;/.code-analysis-biome.json --vcs-use-ignore-file=true …</code></td>
+</tr>
+<tr class="even">
+<td>Python</td>
+<td>Ruff</td>
+<td><code>ruff check --fix --isolated --target-version py3X</code>, dann <code>ruff format --isolated --target-version py3X</code></td>
+</tr>
+<tr class="odd">
+<td>C, C++</td>
+<td>clang-format, clang-tidy</td>
+<td><code>clang-format -i --style=…</code>, dann <code>clang-tidy … --config=…</code> (ohne <code>--fix</code>)</td>
+</tr>
+<tr class="even">
+<td>Rust</td>
+<td>Clippy, rustfmt</td>
+<td><code>cargo clippy --fix --allow-dirty</code>, dann <code>cargo fmt</code> (jeweils mit eigener Konfiguration des Tools)</td>
+</tr>
+</tbody>
+</table>
+<p>Platzhalter in den Befehlen:</p>
+<ul>
+<li><code>&lt;projekt&gt;</code> ist der Ordner des analysierten Projekts.</li>
+<li><code>&lt;output&gt;</code> ist der Ausgabeordner des Tools außerhalb des Projekts.</li>
+<li><code>&lt;tool&gt;</code> ist ein Ordner im Container des Tools mit eigenen, leeren Konfigurationsdateien.</li>
+</ul>
+</section>
+<section id="sec-csharp" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> C</h1>
+<section id="festlegung" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="festlegung"><span class="header-section-number">3.1</span> Festlegung</h2>
+<p><code>dotnet format</code>, ausgeführt im Ordner mit der Solution- oder Projektdatei, ohne eigene Konfiguration. Die <code>.editorconfig</code>-Dateien des Projekts werden während des Laufs ausgeblendet.</p>
+</section>
+<section id="begründung-und-belege" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</h2>
+<ul>
+<li><strong>Was das Werkzeug tut.</strong> <code>dotnet format</code> gehört zum .NET SDK. Die Dokumentation beschreibt es als „a code formatter that applies style preferences and static analysis recommendations to a project or solution. Preferences will be read from an <em>.editorconfig</em> file, if present, otherwise a default set of preferences will be used.“ [MS-format]. Ohne Konfiguration gilt also Microsofts Standard für .NET.</li>
+<li><strong>Nur ab Schweregrad <em>warning</em>.</strong> <code>dotnet format</code> behebt nur Diagnosen ab diesem Schweregrad: „The minimum severity of diagnostics to fix. […] The default value is <code>warn</code>.“ [MS-format]</li>
+<li><strong>Wenige Regeln ohne Konfiguration.</strong>
+<ul>
+<li>Code-Style-Regeln (<code>IDExxxx</code>) sind beim Build über die Kommandozeile standardmäßig abgeschaltet: „Code-style analysis is <em>disabled</em>, by default, for all .NET projects on command-line builds.“ [MS-analysis]</li>
+<li>Bei den Code-Quality-Regeln (<code>CAxxxx</code>) sind im Standardmodus „only a small number of rules […] enabled as build warnings“ [MS-analysis], in .NET 10 sind es 29.</li>
+</ul></li>
+</ul>
+</section>
+<section id="testergebnisse" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="testergebnisse"><span class="header-section-number">3.3</span> Testergebnisse</h2>
+<ul>
+<li><strong>Ohne Konfiguration:</strong>
+<ul>
+<li><strong>Geändert:</strong> Die Formatierung wurde vollständig angepasst: geschweifte Klammern in eigener Zeile, Einrückung mit 4 Leerzeichen, Leerzeichen um Operatoren. Außerdem wurde <code>throw e;</code> zu <code>throw;</code> (Regel CA2200).</li>
+<li><strong>Nicht geändert:</strong> Die ungenutzten <code>using</code>-Direktiven blieben stehen.</li>
+<li><strong>Folgerung:</strong> Ohne Konfiguration ist <code>dotnet format</code> vor allem ein Formatter mit wenigen Analyzer-Korrekturen und kein vollständiger Linter.</li>
+</ul></li>
+<li><strong>Mit Projektkonfiguration:</strong> Eine <code>.editorconfig</code> des Projekts (2 Leerzeichen, Klammern in derselben Zeile) wurde befolgt. Nach dem Ausblenden der Datei galt der Standard.</li>
+</ul>
+</section>
+<section id="grenzen" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="grenzen"><span class="header-section-number">3.4</span> Grenzen</h2>
+<ul>
+<li><strong>Analyzer-Einstellungen in der Projektdatei bleiben wirksam.</strong> Mit <code>&lt;AnalysisMode&gt;All&lt;/AnalysisMode&gt;</code> in der <code>.csproj</code> machte <code>dotnet format</code> aus <code>public class</code> ein <code>internal class</code> und entfernte ein ungenutztes Feld, auch bei ausgeblendeter <code>.editorconfig</code>. Ohne diese Einstellung änderte es nur die Formatierung. Abschalten lässt sich das nur, indem man die Projektdatei verändert.</li>
+<li><strong>Projektcode wird ausgeführt.</strong> „dotnet format may restore, compile, and run analyzers from the specified project or solution. Only invoke the tool against trusted code.“ [MS-format] Das Werkzeug läuft deshalb im Container.</li>
+</ul>
+</section>
+</section>
+<section id="sec-java" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Java</h1>
+<section id="festlegung-1" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="festlegung-1"><span class="header-section-number">4.1</span> Festlegung</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">java</span> <span class="at">-jar</span> google-java-format-<span class="op">&lt;</span>version<span class="op">&gt;</span>-all-deps.jar <span class="at">--replace</span> <span class="op">&lt;</span>alle .java-Dateien<span class="op">&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pmd</span> check <span class="at">-d</span> <span class="op">&lt;</span>projekt<span class="op">&gt;</span> --exclude <span class="op">&lt;</span>projekt<span class="op">&gt;</span>/target <span class="at">--exclude</span> <span class="op">&lt;</span>projekt<span class="op">&gt;</span>/build <span class="dt">\</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">-R</span> rulesets/java/quickstart.xml <span class="at">--use-version</span> java-<span class="op">&lt;</span>Projektversion<span class="op">&gt;</span> <span class="dt">\</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">--no-fail-on-violation</span> <span class="at">--no-cache</span> <span class="at">--no-progress</span> <span class="dt">\</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">-f</span> sarif <span class="at">-r</span> <span class="op">&lt;</span>output<span class="op">&gt;</span>/pmd.sarif</span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="google-java-format-formatter" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="google-java-format-formatter"><span class="header-section-number">4.2</span> google-java-format (Formatter)</h2>
+<ul>
+<li><strong>Stil.</strong> „google-java-format is a program that reformats Java source code to comply with Google Java Style.“ Es ist „an opinionated formatter with very little configuration“ [GJF]. Die einzige Stil-Alternative <code>--aosp</code> (4 Leerzeichen Einrückung) wird nicht verwendet.</li>
+<li><strong>Imports.</strong> Standardmäßig sortiert es Imports und entfernt ungenutzte Imports. Beides lässt sich mit <code>--skip-sorting-imports</code> und <code>--skip-removing-unused-imports</code> abschalten [GJF].</li>
+<li><strong>Test.</strong>
+<ul>
+<li>Das Werkzeug stellte auf 2 Leerzeichen Einrückung um, setzte eine Anweisung pro Zeile und ergänzte geschweifte Klammern.</li>
+<li>Es entfernte den ungenutzten Import <code>java.util.Map</code>.</li>
+<li>Eine ungenutzte lokale Variable blieb stehen: google-java-format meldet keine Regelverstöße, es formatiert nur.</li>
+</ul></li>
+<li><strong>Voraussetzung.</strong> Benötigt wird ein JDK (kein JRE), mindestens „currently Java 21“, und „a version equal to or newer than the Java language version of the files being formatted“ [GJF]. Der Java-Container muss deshalb das neueste JDK enthalten, nicht das in den Tests verwendete JDK 21.</li>
+</ul>
+</section>
+<section id="pmd-linter" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="pmd-linter"><span class="header-section-number">4.3</span> PMD (Linter)</h2>
+<section id="auswahl-gegenüber-checkstyle" class="level3" data-number="4.3.1">
+<h3 data-number="4.3.1" class="anchored" data-anchor-id="auswahl-gegenüber-checkstyle"><span class="header-section-number">4.3.1</span> Auswahl gegenüber Checkstyle</h3>
+<p>PMD wurde gewählt, weil google-java-format selbst keine Befunde liefert. Als Alternative wurde Checkstyle mit der mitgelieferten Konfiguration <code>google_checks.xml</code> getestet. Das ist die „Checkstyle configuration for ‘Google Java Style’“ [CS-google], passt also zum Stil von google-java-format. Beide liefen auf derselben, zuvor von google-java-format formatierten Beispieldatei:</p>
+<div id="tbl-pmd-checkstyle" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-pmd-checkstyle-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;2: Vergleich PMD und Checkstyle auf derselben Beispieldatei
+</figcaption>
+<div aria-describedby="tbl-pmd-checkstyle-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>PMD 7.29.0, <code>quickstart</code></th>
+<th>Checkstyle 14.4.0, <code>google_checks.xml</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Befunde</td>
+<td>7</td>
+<td>6</td>
+</tr>
+<tr class="even">
+<td>Von beiden gefunden</td>
+<td>leerer <code>catch</code>-Block, <code>switch</code> ohne <code>default</code>, Fall-through zwischen <code>case</code>-Zweigen</td>
+<td>dieselben drei</td>
+</tr>
+<tr class="odd">
+<td>Nur hier gefunden</td>
+<td>ungenutztes privates Feld, Stringvergleich mit <code>==</code>, nie geschlossener <code>FileReader</code></td>
+<td><code>import java.util.*</code>, zweimal fehlendes Javadoc</td>
+</tr>
+<tr class="even">
+<td>Exit-Code</td>
+<td>4 („violation“), mit <code>--no-fail-on-violation</code> 0</td>
+<td>0, weil <code>google_checks.xml</code> alles als Warnung meldet</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Die drei nur von PMD gefundenen Befunde sind echte Fehler. Checkstyle meldete zusätzlich nur Stilabweichungen gegenüber dem Google-Styleguide. Checkstyle-Befunde, die google-java-format widersprochen hätten, gab es auf der formatierten Datei nicht.</p>
+</section>
+<section id="regelsatz" class="level3" data-number="4.3.2">
+<h3 data-number="4.3.2" class="anchored" data-anchor-id="regelsatz"><span class="header-section-number">4.3.2</span> Regelsatz</h3>
+<p><code>quickstart</code> ist PMDs mitgelieferter Regelsatz: „Quickstart configuration of PMD. Includes the rules that are most likely to apply everywhere.“ [PMD-rules]</p>
+</section>
+<section id="sec-pmd-version" class="level3" data-number="4.3.3">
+<h3 data-number="4.3.3" class="anchored" data-anchor-id="sec-pmd-version"><span class="header-section-number">4.3.3</span> Java-Version</h3>
+<p>PMD muss den Code mit der Java-Version lesen, für die er geschrieben ist. PMD 7.29.0 kennt die Versionen 1.3 bis 27. „Usually the latest non-preview Java Version is the default version.“ [PMD-java] In 7.29.0 ist das Java 27.</p>
+<ul>
+<li><strong>Test mit altem Code.</strong> Java-1.4-Code, der <code>enum</code> als Variablennamen verwendet, konnte mit der Standardversion nicht gelesen werden („Encountered “++”“). Mit <code>--use-version java-1.4</code> wurde er analysiert.</li>
+<li><strong>Test mit Preview-Feature.</strong> Ein Preview-Feature (primitive Typen in <code>instanceof</code>) wurde ohne passende Preview-Version abgelehnt. PMD unterstützt Preview-Features nur eingeschränkt: „we only support preview language features for the latest two java versions.“ [PMD-java]</li>
+</ul>
+<p>Das Tool liest die Version deshalb aus der Build-Datei:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Build-Datei</th>
+<th>Fundstelle der Version (erster Treffer gilt)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>pom.xml</code> (Maven)</td>
+<td><code>maven.compiler.release</code> bzw. <code>&lt;release&gt;</code>, sonst <code>maven.compiler.source</code> bzw. <code>&lt;source&gt;</code> [Maven-compiler]</td>
+</tr>
+<tr class="even">
+<td><code>build.gradle(.kts)</code> (Gradle)</td>
+<td><code>java { toolchain { languageVersion = JavaLanguageVersion.of(N) } }</code>, <code>options.release = N</code> oder <code>sourceCompatibility</code> [Gradle-toolchains]</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Version <code>N</code> gefunden:</strong> Das Tool übergibt <code>--use-version java-N</code>.</li>
+<li><strong>Preview aktiviert</strong> (<code>--enable-preview</code>): Das Tool übergibt <code>java-N-preview</code>.</li>
+<li><strong>Keine Version gefunden:</strong> Das Tool übergibt keine Version, und PMD nutzt seine Standardversion. Das passiert auch, wenn die Version nur indirekt gesetzt ist, etwa in einem Parent-POM.</li>
+<li><strong>Version, die PMD nicht kennt:</strong> PMD bricht mit einem Bedienfehler ab und schreibt keinen Bericht (getestet mit <code>java-28</code>: „Unknown language version: java-28“). Das Tool startet PMD dann ohne <code>--use-version</code> neu und vermerkt das im Bericht.</li>
+</ul>
+</section>
+<section id="verhalten-im-test" class="level3" data-number="4.3.4">
+<h3 data-number="4.3.4" class="anchored" data-anchor-id="verhalten-im-test"><span class="header-section-number">4.3.4</span> Verhalten im Test</h3>
+<ul>
+<li><strong>Nicht lesbare Dateien.</strong>
+<ul>
+<li>PMD überspringt sie und analysiert den Rest weiter.</li>
+<li>Im SARIF-Bericht erscheinen sie unter <code>invocations[].toolExecutionNotifications</code> mit Dateipfad, und <code>executionSuccessful</code> ist <code>false</code>.</li>
+<li>In der Textausgabe meldete PMD für eine solche Datei „Found no violations. There was 1 processing error.“ Das Tool muss diese Dateien deshalb im Bericht aufführen, sonst sehen sie wie befundfreie Dateien aus.</li>
+</ul></li>
+<li><strong>Exit-Codes</strong> [PMD-CLI]:
+<ul>
+<li><strong>0:</strong> Lauf ohne Fehler; Befunde stehen im Bericht. Ohne <code>--no-fail-on-violation</code> wäre der Code bei Befunden 4. Beides getestet.</li>
+<li><strong>5:</strong> „At least one recoverable error has occurred“, etwa eine nicht lesbare Datei (getestet).</li>
+<li><strong>1 und 2:</strong> Abbruch mit Ausnahme bzw. ungültige Parameter (laut Dokumentation, nicht getestet).</li>
+</ul></li>
+<li><strong>Build-Ausgaben.</strong> Mit <code>--exclude</code> wurde eine Java-Datei unter <code>target/generated-sources</code> nicht analysiert.</li>
+<li><strong>Lombok.</strong> Private Felder einer mit <code>@Getter</code> annotierten Klasse wurden nicht als ungenutzt gemeldet, obwohl die Lombok-Bibliothek fehlte.</li>
+</ul>
+</section>
+<section id="grenze-typinformationen" class="level3" data-number="4.3.5">
+<h3 data-number="4.3.5" class="anchored" data-anchor-id="grenze-typinformationen"><span class="header-section-number">4.3.5</span> Grenze: Typinformationen</h3>
+<p>PMD analysiert den Quelltext, ohne das Projekt zu bauen. Ohne die Abhängigkeiten des Projekts im „auxclasspath“ gilt: „Not providing the correct auxClasspath might result in false positives or negatives for some rules“ [PMD-java]. Das Tool baut Java-Projekte in Schritt 2 bewusst nicht. Ein Build bräuchte das passende JDK und Netzwerkzugriff und würde die Build-Plugins des Projekts ausführen.</p>
+</section>
+</section>
+</section>
+<section id="sec-biome" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> JavaScript und TypeScript</h1>
+<section id="festlegung-2" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="festlegung-2"><span class="header-section-number">5.1</span> Festlegung</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> @biomejs/biome@<span class="op">&lt;</span>version<span class="op">&gt;</span> check <span class="at">--write</span> <span class="dt">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config-path</span><span class="op">=&lt;</span>projekt<span class="op">&gt;</span>/.code-analysis-biome.json <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--vcs-enabled</span><span class="op">=</span>true <span class="at">--vcs-client-kind</span><span class="op">=</span>git <span class="at">--vcs-use-ignore-file</span><span class="op">=</span>true <span class="dt">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">--reporter</span><span class="op">=</span>sarif <span class="at">--reporter-file</span><span class="op">=&lt;</span>output<span class="op">&gt;</span>/biome.sarif .</span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Ablauf eines Laufs:</p>
+<ol type="1">
+<li>Das Tool verschiebt alle <code>biome.json</code>- und <code>biome.jsonc</code>-Dateien des Projekts aus dem Projekt heraus.</li>
+<li>Es legt im Projektordner die Datei <code>.code-analysis-biome.json</code> an. Sie enthält nur <code>{}</code>, sodass Biomes Standardwerte gelten.</li>
+<li>Biome läuft. Dateien und Ordner aus den <code>.gitignore</code>-Dateien des Projekts (auch verschachtelten) werden dabei nicht geprüft.</li>
+<li>Danach löscht das Tool <code>.code-analysis-biome.json</code> und legt die Projektdateien zurück.</li>
+</ol>
+<p>Warum der Ablauf so aussieht, steht in <a href="#sec-biome-gitignore" class="quarto-xref">Kapitel&nbsp;5.4</a>.</p>
+</section>
+<section id="begründung-und-belege-1" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="begründung-und-belege-1"><span class="header-section-number">5.2</span> Begründung und Belege</h2>
+<ul>
+<li><strong>Was <code>check</code> tut.</strong> <code>biome check</code> „Checks the specified files for formatting, linting, and assist actions“. <code>--write</code> „Applies formatting changes, safe lint fixes, and safe assist actions.“ [Biome-CLI]</li>
+<li><strong>Kein Konfigurationszwang.</strong> „If no configuration is found, Biome’s default configuration is used.“ [Biome-configure]</li>
+<li><strong>Standardwerte</strong> [Biome-ref]:
+<ul>
+<li>Einrückung mit Tabs, Zeilenbreite 80, doppelte Anführungszeichen;</li>
+<li>die empfohlenen Lint-Regeln.</li>
+</ul></li>
+</ul>
+</section>
+<section id="testergebnisse-1" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="testergebnisse-1"><span class="header-section-number">5.3</span> Testergebnisse</h2>
+<ul>
+<li><strong>Geändert:</strong> Biome stellte die Einrückung auf Tabs und die Anführungszeichen auf doppelte um, ergänzte Semikolons und sortierte die Imports.</li>
+<li><strong>Nicht geändert:</strong> Unsichere Korrekturen wendet Biome nicht an.
+<ul>
+<li><code>x == 1</code> blieb stehen, weil die Korrektur zu <code>===</code> als unsicher gilt.</li>
+<li>Eine ungenutzte Variable blieb ebenfalls stehen.</li>
+<li>Biome meldete „Skipped 5 suggested fixes“. Erst <code>--unsafe</code> würde diese Korrekturen anwenden [Biome-CLI].</li>
+</ul></li>
+<li><strong>Exit-Code.</strong>
+<ul>
+<li>Biome bearbeitet erst alle Dateien und endet dann mit Code 1, wenn Befunde vom Schweregrad <em>error</em> übrig bleiben.</li>
+<li>Eine Option, trotzdem mit 0 zu enden, gibt es in 2.6.6 nicht. <code>check --help</code> bietet nur <code>--error-on-warnings</code> („Exits with an error status if any warning diagnostics are emitted.“), das strenger macht.</li>
+<li>Code 1 kam auch bei kaputter <code>biome.json</code>, unbekannter Option und leerem Ordner. Der Exit-Code allein unterscheidet also nicht zwischen „Befunde übrig“ und „Biome ist gescheitert“.</li>
+</ul></li>
+<li><strong>Bericht statt Exit-Code.</strong>
+<ul>
+<li>Mit <code>--reporter-file</code> stehen alle nicht behobenen Befunde mit Regel, Schweregrad, Datei und Zeile im Bericht.</li>
+<li>Bei kaputter <code>biome.json</code> wurde kein Bericht geschrieben. Das Tool wertet den Lauf deshalb anhand des Berichts aus.</li>
+</ul></li>
+<li><strong>SARIF statt JSON.</strong> Biome meldet selbst: „The <code>json</code> and <code>json-pretty</code> reporters are experimental and may change in patch releases.“ Verwendet wird deshalb SARIF 2.1.0.</li>
+<li><strong>Bericht außerhalb des Projekts.</strong> Als ein Bericht im Projektordner lag, prüfte Biome ihn im selben Lauf mit und meldete ihn als fehlerhafte Datei.</li>
+<li><strong>Projektkonfiguration.</strong>
+<ul>
+<li><code>--config-path</code> „Sets the path to the configuration file or the directory where Biome should search for <code>biome.json</code> or <code>biome.jsonc</code>. This option disables the default configuration file resolution.“ (<code>biome check --help</code>)</li>
+<li>Testprojekt: eine <code>biome.json</code> im Projekt (4 Leerzeichen, <code>noDoubleEquals</code> aus), eine verschachtelte <code>pkg/biome.json</code> (6 Leerzeichen) und eine <code>.editorconfig</code> (8 Leerzeichen).</li>
+<li><strong>Tool-Konfiguration außerhalb des Projekts:</strong> Zeigte <code>--config-path</code> auf einen Ordner außerhalb des Projekts mit <code>{}</code>, wirkte keine der drei Dateien. Alles wurde mit Tabs formatiert, und <code>noDoubleEquals</code> wurde überall gemeldet.</li>
+<li><strong>Tool-Konfiguration im Projekt:</strong> Lag die Datei mit <code>{}</code> im Projektordner (nötig für <code>.gitignore</code>, siehe <a href="#sec-biome-gitignore" class="quarto-xref">Kapitel&nbsp;5.4</a>), wurde die Projektdatei <code>biome.json</code> weiterhin ignoriert. Die verschachtelte <code>pkg/biome.json</code> wirkte aber wieder: <code>pkg/b.ts</code> wurde mit 6 Leerzeichen eingerückt. Deshalb verschiebt das Tool alle <code>biome.json</code>- und <code>biome.jsonc</code>-Dateien vor dem Lauf aus dem Projekt.</li>
+<li>Die <code>.editorconfig</code> wirkte in keinem Fall.</li>
+</ul></li>
+</ul>
+</section>
+<section id="sec-biome-gitignore" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="sec-biome-gitignore"><span class="header-section-number">5.4</span> Ordner aus <code>.gitignore</code> ausschließen</h2>
+<section id="problem" class="level3" data-number="5.4.1">
+<h3 data-number="5.4.1" class="anchored" data-anchor-id="problem"><span class="header-section-number">5.4.1</span> Problem</h3>
+<p>Biome liest <code>.gitignore</code> standardmäßig nicht (<code>vcs.useIgnoreFile</code> ist standardmäßig <code>false</code> [Biome-ref]). Im Test formatierte Biome ohne Zusatzoptionen <code>dist/out.js</code> um, obwohl <code>dist/</code> in der <code>.gitignore</code> stand. <code>node_modules</code> wurde übersprungen. Build-Ausgaben und andere von Git ignorierte Dateien sollen aber nicht formatiert werden.</p>
+</section>
+<section id="optionen" class="level3" data-number="5.4.2">
+<h3 data-number="5.4.2" class="anchored" data-anchor-id="optionen"><span class="header-section-number">5.4.2</span> Optionen</h3>
+<p><code>--vcs-use-ignore-file</code> „Controls whether Biome applies patterns from <code>.gitignore</code>, Git’s local <code>.git/info/exclude</code>, and supported <code>.ignore</code> files, including nested ignore files. Patterns in the root ignore file are resolved from <code>vcs.root</code>.“ Sie setzt <code>--vcs-enabled=true</code> und <code>--vcs-client-kind=git</code> voraus (<code>biome check --help</code>). Ohne eigene Konfiguration blieb <code>dist/</code> mit diesen Optionen unverändert.</p>
+</section>
+<section id="konflikt-mit-einer-konfiguration-außerhalb-des-projekts" class="level3" data-number="5.4.3">
+<h3 data-number="5.4.3" class="anchored" data-anchor-id="konflikt-mit-einer-konfiguration-außerhalb-des-projekts"><span class="header-section-number">5.4.3</span> Konflikt mit einer Konfiguration außerhalb des Projekts</h3>
+<p><code>vcs.root</code> wird relativ zum Ordner der Konfigurationsdatei aufgelöst: „A relative value is resolved from the directory containing the current configuration file, while an absolute path is used directly.“ (<code>biome check --help</code>). Liegt die Tool-Konfiguration außerhalb des Projekts, sucht Biome die <code>.gitignore</code> deshalb dort:</p>
+<div id="tbl-biome-vcs" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-biome-vcs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;3: Kombination von <code>--config-path</code> und <code>.gitignore</code>-Optionen
+</figcaption>
+<div aria-describedby="tbl-biome-vcs-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variante</th>
+<th>Ergebnis in Biome 2.6.6</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>--config-path</code> außerhalb des Projekts, VCS-Optionen</td>
+<td>Abbruch: „Biome couldn’t find an ignore file in the following folder: /w/tool/biome“</td>
+</tr>
+<tr class="even">
+<td>zusätzlich <code>--vcs-root=&lt;absoluter Projektpfad&gt;</code></td>
+<td>Absturz mit Exit-Code 101: „Biome encountered an unexpected error […] Message: path is expected to be under the root“</td>
+</tr>
+<tr class="odd">
+<td>Konfigurationsdatei im Projektordner, VCS-Optionen</td>
+<td>funktioniert</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>In keinem der beiden Fehlerfälle wurde ein Bericht geschrieben. Die Erfolgsprüfung über den Bericht erkennt sie also.</p>
+</section>
+<section id="getestete-lösung" class="level3" data-number="5.4.4">
+<h3 data-number="5.4.4" class="anchored" data-anchor-id="getestete-lösung"><span class="header-section-number">5.4.4</span> Getestete Lösung</h3>
+<p>Getestet wurde der Ablauf aus der Festlegung: alle <code>biome.json</code>/<code>biome.jsonc</code> aus dem Projekt verschoben, <code>.code-analysis-biome.json</code> mit <code>{}</code> im Projektordner, VCS-Optionen gesetzt.</p>
+<ul>
+<li><strong>Ausgeschlossen:</strong> <code>dist/</code> aus der <code>.gitignore</code> im Projektordner und <code>pkg/gen/</code> aus einer verschachtelten <code>pkg/.gitignore</code> blieben unverändert.</li>
+<li><strong>Formatiert und geprüft:</strong> Die übrigen Dateien wurden mit Biomes Standardwerten formatiert (Tabs), und <code>noDoubleEquals</code> wurde in beiden Quelldateien gemeldet. Der SARIF-Bericht wurde geschrieben.</li>
+<li><strong>Ohne <code>.git</code>-Ordner:</strong> Das funktionierte auch in einem Ordner ohne <code>.git</code>. Biome liest also nur die Ignore-Dateien und braucht kein Git-Repository.</li>
+<li><strong>Aufräumen:</strong> Nach dem Lauf wurden die verschobenen Dateien zurückgelegt und die eigene Datei gelöscht.</li>
+</ul>
+<p>Mit <code>.gitignore</code> liest Biome bewusst eine Datei des Projekts. Sie bestimmt aber nur, <em>welche</em> Dateien zum Quellcode gehören, nicht <em>wie</em> sie geprüft werden. Der Grundsatz aus <a href="#sec-projektkonfiguration" class="quarto-xref">Kapitel&nbsp;9</a> bleibt damit gewahrt.</p>
+</section>
+</section>
+</section>
+<section id="sec-ruff" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Python</h1>
+<section id="festlegung-3" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="festlegung-3"><span class="header-section-number">6.1</span> Festlegung</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">ruff</span> check <span class="at">--fix</span> <span class="at">--isolated</span> <span class="at">--target-version</span> py3X .</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ruff</span> format <span class="at">--isolated</span> <span class="at">--target-version</span> py3X .</span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>py3X</code> ist die Untergrenze von <code>requires-python</code> in der <code>pyproject.toml</code> des Projekts, zum Beispiel wird <code>&gt;=3.8</code> zu <code>py38</code>. Ohne Angabe entfällt <code>--target-version</code>.</p>
+</section>
+<section id="begründung-und-belege-2" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="begründung-und-belege-2"><span class="header-section-number">6.2</span> Begründung und Belege</h2>
+<ul>
+<li><strong>Formatter.</strong> <code>ruff format</code> ist ein Ersatz für Black: „the formatter is intended to emit near-identical output when run over existing Black-formatted code“ [Ruff-formatter]. Die Standardwerte sind Zeilenlänge 88, Einrückung 4, doppelte Anführungszeichen und Einrückung mit Leerzeichen [Ruff-settings].</li>
+<li><strong>Nur sichere Korrekturen.</strong> „Ruff only applies safe fixes by default.“ [Ruff-linter]</li>
+<li><strong>Reihenfolge Linter vor Formatter.</strong> „To sort imports and format, call the Ruff linter and then the formatter“ [Ruff-formatter]. Lint-Korrekturen können Code hinterlassen, der neu formatiert werden muss.</li>
+<li><strong>Standardregeln.</strong> Ruff 0.17.4 aktiviert standardmäßig 407 Regeln (gezählt mit <code>ruff check --show-settings</code>), unter anderem aus Pyflakes (F), pyupgrade (UP), flake8-bugbear (B) und isort (I) [Ruff-defaults]. Die Version muss deshalb festgeschrieben werden.</li>
+<li><strong>Projektkonfiguration.</strong> Ruff liest <code>pyproject.toml</code>, <code>ruff.toml</code> und <code>.ruff.toml</code>: „For each file, Ruff uses the “closest” config file in the directory hierarchy.“ [Ruff-config] Die Option <code>--isolated</code> bedeutet laut Hilfe: „Ignore all configuration files“.</li>
+</ul>
+</section>
+<section id="testergebnisse-2" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="testergebnisse-2"><span class="header-section-number">6.3</span> Testergebnisse</h2>
+<ul>
+<li><strong>Unbenutzter Import:</strong> wurde entfernt (Regel F401, sichere Korrektur).</li>
+<li><strong>Unbenutzte lokale Variable:</strong> wurde gemeldet, aber <em>nicht</em> entfernt (Regel F841). Der Grund laut Dokumentation: „This rule’s fix is marked as unsafe because removing an unused variable assignment may delete comments that are attached to the assignment.“ [Ruff-F841] Erst <code>--unsafe-fixes</code> würde sie entfernen.</li>
+</ul>
+</section>
+<section id="sec-ruff-version" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="sec-ruff-version"><span class="header-section-number">6.4</span> <code>--isolated</code> braucht <code>--target-version</code></h2>
+<p>Testprojekt: <code>requires-python = "&gt;=3.8"</code> und eigene <code>[tool.ruff]</code>-Einstellungen.</p>
+<div id="tbl-ruff-version" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ruff-version-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;4: Ruff mit und ohne Zielversion
+</figcaption>
+<div aria-describedby="tbl-ruff-version-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aufruf</th>
+<th>Zielversion</th>
+<th>Ergebnis</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>mit Projektkonfiguration</td>
+<td>3.8 (aus <code>requires-python</code>)</td>
+<td>Projektregeln, keine Änderung</td>
+</tr>
+<tr class="even">
+<td><code>--isolated</code></td>
+<td><code>none</code></td>
+<td>Typannotationen in neuere Syntax umgeschrieben (siehe unten)</td>
+</tr>
+<tr class="odd">
+<td><code>--isolated --target-version py38</code></td>
+<td>3.8</td>
+<td>nur Imports sortiert und der ungenutzte Import entfernt</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Ohne Zielversion schrieb Ruff <code>Optional[int]</code> zu <code>int | None</code> und <code>List[int]</code> zu <code>list[int]</code> um. Dieser Code scheitert unter Python 3.8.20 schon beim Definieren der Funktion:</p>
+<ul>
+<li><code>TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'</code></li>
+<li><code>TypeError: 'type' object is not subscriptable</code></li>
+</ul>
+<p>Die Projektkonfiguration zu ignorieren, darf deshalb nie dazu führen, dass die Sprachversion des Projekts verloren geht.</p>
+</section>
+</section>
+<section id="sec-cpp" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> C und C++</h1>
+<section id="formatter-clang-format" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="formatter-clang-format"><span class="header-section-number">7.1</span> Formatter: clang-format</h2>
+<section id="festlegung-4" class="level3" data-number="7.1.1">
+<h3 data-number="7.1.1" class="anchored" data-anchor-id="festlegung-4"><span class="header-section-number">7.1.1</span> Festlegung</h3>
+<p>Basis ist der LLVM-Stil mit vier Änderungen:</p>
+<div id="tbl-clang-format" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-clang-format-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;5: Abweichungen vom LLVM-Stil
+</figcaption>
+<div aria-describedby="tbl-clang-format-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Option</th>
+<th>LLVM-Standard</th>
+<th>Verwendet</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ColumnLimit</code> (Zeilenlänge)</td>
+<td>80</td>
+<td>100</td>
+</tr>
+<tr class="even">
+<td><code>IndentWidth</code></td>
+<td>2</td>
+<td>4</td>
+</tr>
+<tr class="odd">
+<td><code>AccessModifierOffset</code></td>
+<td>-2</td>
+<td>-4</td>
+</tr>
+<tr class="even">
+<td><code>SortIncludes</code></td>
+<td>aktiviert</td>
+<td><code>false</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">clang-format</span> <span class="at">-i</span> <span class="at">--style</span><span class="op">=</span><span class="st">"{BasedOnStyle: LLVM, ColumnLimit: 100, IndentWidth: 4, AccessModifierOffset: -4, SortIncludes: false}"</span> <span class="op">&lt;</span>dateien<span class="op">&gt;</span></span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="begründung-und-belege-3" class="level3" data-number="7.1.2">
+<h3 data-number="7.1.2" class="anchored" data-anchor-id="begründung-und-belege-3"><span class="header-section-number">7.1.2</span> Begründung und Belege</h3>
+<ul>
+<li><strong>LLVM-Stil.</strong> Der LLVM-Stil ist „A style complying with the LLVM coding standards“ [ClangFormat], [LLVM-CS]. Die Standardwerte stammen aus <code>--dump-config</code> von clang-format 22.1.8:
+<ul>
+<li><code>ColumnLimit: 80</code>, <code>IndentWidth: 2</code>, <code>AccessModifierOffset: -2</code>;</li>
+<li><code>ContinuationIndentWidth: 4</code>, <code>BreakBeforeBraces: Attach</code>, <code>UseTab: Never</code>.</li>
+</ul></li>
+<li><strong><code>AccessModifierOffset: -4</code>.</strong>
+<ul>
+<li>Im LLVM-Stil stehen <code>public:</code> und <code>private:</code> auf derselben Spalte wie <code>class</code>, denn der Abstand -2 entspricht genau einer Einrückungsstufe (2).</li>
+<li>Mit <code>IndentWidth: 4</code> und dem LLVM-Wert -2 stünden sie im Test um 2 Spalten eingerückt, also eine halbe Stufe.</li>
+<li>Mit -4 standen sie wieder auf der Spalte von <code>class</code> bzw. <code>struct</code>, auch in einer verschachtelten Struktur.</li>
+<li>Das ist eine Entscheidung und keine Regel: Clangs vordefinierter Microsoft-Stil kombiniert <code>IndentWidth: 4</code> mit <code>AccessModifierOffset: -2</code>.</li>
+</ul></li>
+<li><strong>Keine weitere Anpassung nötig.</strong> Die übrigen Einrückungswerte des LLVM-Stils (<code>ContinuationIndentWidth</code>, <code>ConstructorInitializerIndentWidth</code>) sind bereits 4, und <code>PPIndentWidth: -1</code> folgt <code>IndentWidth</code>.</li>
+<li><strong><code>SortIncludes</code>.</strong> Die Dokumentation führt die Option inzwischen als Struktur: „<code>Never</code> is deprecated by <code>Enabled: false</code>“ [ClangFormat]. clang-format 22.1.8 akzeptiert <code>SortIncludes: false</code> weiterhin und macht daraus <code>SortIncludes: {Enabled: false}</code>.</li>
+<li><strong>Projektkonfiguration.</strong>
+<ul>
+<li>Der Stil wird direkt im Befehl übergeben. Eine <code>.clang-format</code> des Projekts (im Test im Google-Stil) hatte dadurch keine Wirkung.</li>
+<li>Eine <code>.clang-format-ignore</code> des Projekts wirkte trotzdem: Die dort genannte Datei blieb unformatiert. Erst nach dem Ausblenden der Ignore-Datei wurde sie formatiert. Das Tool blendet <code>.clang-format-ignore</code> deshalb während des Laufs aus.</li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="linter-clang-tidy" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="linter-clang-tidy"><span class="header-section-number">7.2</span> Linter: clang-tidy</h2>
+<section id="festlegung-5" class="level3" data-number="7.2.1">
+<h3 data-number="7.2.1" class="anchored" data-anchor-id="festlegung-5"><span class="header-section-number">7.2.1</span> Festlegung</h3>
+<p>clang-tidy läuft nach clang-format, ohne <code>--fix</code> und ohne <code>--quiet</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># C und C++ vor C++11</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">clang-tidy</span> datei.c <span class="at">-p</span> build/ <span class="dt">\</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span><span class="op">=</span><span class="st">"{Checks: '-*,bugprone-*,cert-*,clang-analyzer-*,performance-*'}"</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># C++11 und neuer: zusätzlich modernize-*</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="ex">clang-tidy</span> datei.cpp <span class="at">-p</span> build/ <span class="dt">\</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">--config</span><span class="op">=</span><span class="st">"{Checks: '-*,bugprone-*,cert-*,clang-analyzer-*,performance-*,modernize-*'}"</span></span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="begründung-und-belege-4" class="level3" data-number="7.2.2">
+<h3 data-number="7.2.2" class="anchored" data-anchor-id="begründung-und-belege-4"><span class="header-section-number">7.2.2</span> Begründung und Belege</h3>
+<ul>
+<li><p><strong>Kompilierungsdatenbank.</strong> „-p <build-path> is used to read a compile command database.“ [ClangTidy] Ohne <code>compile_commands.json</code> kennt clang-tidy weder die Include-Pfade noch die Makros oder den Sprachstandard. Das <code>-std=</code>-Flag darin entscheidet über die Check-Liste.</build-path></p></li>
+<li><p><strong><code>--config</code> statt Projektdatei.</strong> clang-tidy sucht nur dann nach <code>.clang-tidy</code>-Dateien, wenn <code>--config</code> leer ist [ClangTidy]. Im Test unterdrückte eine <code>.clang-tidy</code> des Projekts mit <code>Checks: '-*'</code> ohne <code>--config</code> alle Befunde; mit <code>--config</code> hatte sie keine Wirkung.</p></li>
+<li><p><strong>Ohne <code>--quiet</code>.</strong> <code>--quiet</code> unterdrückt laut Dokumentation nur Statistiken [ClangTidy]. Im Test waren die Befunde mit und ohne <code>--quiet</code> identisch; es fielen nur diese Zeilen auf stderr weg:</p>
+<pre><code>6 warnings generated.
+Suppressed 4 warnings (3 in non-user code, 1 NOLINT).</code></pre>
+<p>Die Zahl der <code>NOLINT</code>-Unterdrückungen zeigt, wie viele Befunde die Entwickler des Projekts selbst ausgeblendet haben. Das Tool speichert stderr deshalb mit.</p></li>
+<li><p><strong>Aufteilung nach Sprachstandard.</strong> In einer Testdatei meldete <code>modernize-*</code> mit <code>-std=c++98</code> keinen Befund und mit <code>-std=c++17</code> vier. clang-tidy schaltet diese Checks in diesem Test für Code vor C++11 also selbst ab. Die Aufteilung in zwei Check-Listen entspricht damit dem, was clang-tidy ohnehin tut.</p></li>
+<li><p><strong><code>modernize-*</code> enthält reine Stil-Checks.</strong></p>
+<ul>
+<li><code>modernize-use-trailing-return-type</code> meldete beide Funktionen der Testdatei, also 2 der 4 Befunde (die anderen beiden kamen von <code>modernize-use-nullptr</code>).</li>
+<li>Im Pilotlauf mit der früheren, umfangreicheren Konfiguration (<a href="#sec-verworfen" class="quarto-xref">Kapitel&nbsp;7.2.4</a>) entfielen bei tinyxml2 223 von 440 Befunden allein auf <code>modernize-use-nullptr</code>.</li>
+</ul></li>
+</ul>
+</section>
+<section id="warum-ohne---fix" class="level3" data-number="7.2.3">
+<h3 data-number="7.2.3" class="anchored" data-anchor-id="warum-ohne---fix"><span class="header-section-number">7.2.3</span> Warum ohne <code>--fix</code></h3>
+<p>Getestet wurde an einem kleinen C++17-Projekt (eine Header-Datei, zwei Quelldateien) mit der Check-Liste für C++11 und neuer:</p>
+<ul>
+<li><strong>Die Korrekturen waren fast nur Stil.</strong> <code>--fix</code> wandte 19 Korrekturen an („clang-tidy applied 19 of 19 suggested fixes“), alle aus <code>modernize-*</code>:
+<ul>
+<li>5 nachgestellte Rückgabetypen, auch <code>auto main() -&gt; int</code>;</li>
+<li>3 <code>[[nodiscard]]</code>-Attribute;</li>
+<li>2 <code>nullptr</code>;</li>
+<li>je einmal <code>using</code> statt <code>typedef</code>, <code>emplace_back</code>, <code>auto</code> und eine bereichsbasierte <code>for</code>-Schleife.</li>
+</ul>
+Der Code kompilierte danach weiter, aber jede Funktionssignatur des Projekts war umgeschrieben.</li>
+<li><strong>Keine Unterscheidung zwischen sicheren und unsicheren Korrekturen.</strong> Ruff und Biome wenden standardmäßig nur sichere Korrekturen an. clang-tidy kennt nur die Optionen <code>--fix</code>, <code>--fix-errors</code> und <code>--fix-notes</code> [ClangTidy] und damit keine solche Unterscheidung.</li>
+<li><strong>Abhängig von einer vollständigen Build-Umgebung.</strong> Bei einer Datei mit fehlendem Header änderte clang-tidy nichts: „Found compiler errors, but -fix-errors was not specified.“ Ob Code geändert wird, hinge also davon ab, wie vollständig der Container den Build eines Projekts nachbilden kann.</li>
+<li><strong>Korrigierter Code wird nicht formatiert.</strong> <code>--format-style</code> ist standardmäßig <code>none</code> [ClangTidy]. Die Schleifenkorrektur schrieb <code>auto &amp; name</code>, was clang-format anschließend korrigieren müsste.</li>
+</ul>
+<p>Möglich, aber nicht festgelegt: Mit <code>--export-fixes=&lt;datei&gt;</code> schrieb clang-tidy alle 19 Korrekturvorschläge in eine YAML-Datei, ohne Dateien zu ändern. Laut Hilfe können sie später „with clang-apply-replacements“ angewendet werden.</p>
+</section>
+<section id="sec-verworfen" class="level3" data-number="7.2.4">
+<h3 data-number="7.2.4" class="anchored" data-anchor-id="sec-verworfen"><span class="header-section-number">7.2.4</span> Verworfene Alternative: umfangreiche Check-Auswahl</h3>
+<p>Zunächst wurde eine aus Standards (SEI CERT, C++ Core Guidelines) abgeleitete Konfiguration erstellt: 209 Checks für C und 303 für C++.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Pilotprojekt</th>
+<th>Version, Standard</th>
+<th>Befunde</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>cJSON</td>
+<td>v1.7.18, <code>-std=c99</code></td>
+<td>25</td>
+</tr>
+<tr class="even">
+<td>tinyxml2</td>
+<td>11.0.0, <code>-std=c++17</code></td>
+<td>440</td>
+</tr>
+</tbody>
+</table>
+<p>Bei tinyxml2 entfielen 63 % der Befunde auf zwei Checks: <code>modernize-use-nullptr</code> (223) und <code>cppcoreguidelines-explicit-virtual-functions</code> (55).</p>
+<p>Die Konfiguration wurde zugunsten der hier festgelegten kurzen Check-Liste verworfen. <em>Begründung: vom Autor zu ergänzen.</em></p>
+</section>
+</section>
+</section>
+<section id="sec-rust" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Rust</h1>
+<section id="festlegung-6" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="festlegung-6"><span class="header-section-number">8.1</span> Festlegung</h2>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="va">CLIPPY_CONF_DIR</span><span class="op">=&lt;</span>tool<span class="op">&gt;</span>/clippy <span class="ex">cargo</span> clippy <span class="at">--fix</span> <span class="at">--allow-dirty</span> <span class="kw">&amp;&amp;</span> <span class="ex">cargo</span> fmt <span class="at">--</span> <span class="at">--config-path</span> <span class="op">&lt;</span>tool<span class="op">&gt;</span>/rustfmt</span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>&lt;tool&gt;/clippy/clippy.toml</code> und <code>&lt;tool&gt;/rustfmt/rustfmt.toml</code> sind leer.</p>
+</section>
+<section id="begründung-und-belege-5" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="begründung-und-belege-5"><span class="header-section-number">8.2</span> Begründung und Belege</h2>
+<ul>
+<li><strong>rustfmt.</strong> „By default, Rustfmt uses a style which conforms to the Rust style guide“ [rustfmt], [Rust-style].</li>
+<li><strong>Clippy.</strong>
+<ul>
+<li>Standardmäßig laufen die Lints der Gruppe <code>clippy::all</code> [Clippy-usage].</li>
+<li>Zu deren Qualität schreibt die Dokumentation: „We try to keep the warn-by-default groups free from false positives (FP).“ [Clippy-usage]</li>
+<li>„Note that <code>--fix</code> implies <code>--all-targets</code>, so it can fix as much code as it can.“ [Clippy-usage]</li>
+</ul></li>
+</ul>
+</section>
+<section id="testergebnisse-3" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="testergebnisse-3"><span class="header-section-number">8.3</span> Testergebnisse</h2>
+<ul>
+<li><strong>Reihenfolge.</strong> Die ursprünglich festgelegte Reihenfolge <code>cargo fmt &amp;&amp; cargo clippy --fix</code> scheiterte.
+<ul>
+<li>Nachdem <code>cargo fmt</code> eine Datei geändert hatte, verweigerte Clippy die Arbeit: „error: the working directory of this package has uncommitted changes, and <code>cargo fix</code> can potentially perform destructive changes; if you’d like to suppress this error pass <code>--allow-dirty</code>“.</li>
+<li>Clippy läuft deshalb zuerst. <code>--allow-dirty</code> („Fix code even if the working directory has changes“ [Cargo-fix]) stellt sicher, dass es auch nach Änderungen anderer Werkzeuge läuft; der saubere Stand aus Schritt 1 liegt weiter in Git.</li>
+<li>Danach formatiert rustfmt auch den von Clippy geänderten Code.</li>
+</ul></li>
+<li><strong>Korrekturen.</strong> Clippy ersetzte <code>vec![1, 2, 3]</code> durch ein Array, <code>v.len() == 0</code> durch <code>v.is_empty()</code> und entfernte <code>.clone()</code> auf einem <code>Copy</code>-Wert.</li>
+<li><strong>Projektcode wird ausgeführt.</strong> Cargo übersetzt Build-Skripte und führt sie aus: „Placing a file named <code>build.rs</code> in the root of a package will cause Cargo to compile that script and execute it just before building the package.“ [Cargo-build-scripts] Clippy läuft deshalb im Container.</li>
+<li><strong>Projektkonfiguration.</strong> Testprojekt: <code>clippy.toml</code> (<code>too-many-arguments-threshold = 10</code>), <code>rustfmt.toml</code> (<code>hard_tabs = true</code>) und <code>[lints.clippy] len_zero = "allow"</code> in der <code>Cargo.toml</code>.
+<ul>
+<li><strong><code>clippy.toml</code>:</strong> <code>CLIPPY_CONF_DIR</code> ist die erste Stelle, an der Clippy sucht [Clippy-config]. Der Ordner muss eine <code>clippy.toml</code> enthalten, sonst sucht Clippy in den übergeordneten Ordnern weiter. Mit Projektkonfiguration wurde <code>too_many_arguments</code> nicht gemeldet, mit <code>CLIPPY_CONF_DIR</code> schon.</li>
+<li><strong><code>rustfmt.toml</code>:</strong> <code>--config-path</code> „Recursively searches the given path for the rustfmt.toml config file. If not found reverts to the input file path“ (<code>rustfmt --help</code>). Mit der Projektdatei wurde mit Tabs eingerückt, mit <code>--config-path</code> mit 4 Leerzeichen.</li>
+<li><strong><code>[lints]</code> in der <code>Cargo.toml</code> bleibt wirksam:</strong> <code>len_zero</code> blieb auch mit <code>CLIPPY_CONF_DIR</code> unterdrückt. Nur ein ausdrückliches <code>-- -W clippy::len_zero</code> holte den Lint zurück.</li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="sec-projektkonfiguration" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Projektkonfiguration</h1>
+<section id="entscheidung" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="entscheidung"><span class="header-section-number">9.1</span> Entscheidung</h2>
+<p>Die Konfigurationsdateien des analysierten Projekts werden immer ignoriert, damit die Ergebnisse verschiedener Projekte vergleichbar sind. Das entspricht der Vorgabe „Fixed rules per language“ im Ablaufdiagramm.</p>
+<div id="tbl-projektkonfiguration" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-projektkonfiguration-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;6: Umgang mit der Projektkonfiguration
+</figcaption>
+<div aria-describedby="tbl-projektkonfiguration-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Werkzeug</th>
+<th>Konfiguration im Projekt</th>
+<th>So wird sie ignoriert</th>
+<th>Getestet</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>dotnet format</td>
+<td><code>.editorconfig</code></td>
+<td>Datei während des Laufs ausgeblendet</td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>google-java-format</td>
+<td>keine</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr class="odd">
+<td>PMD</td>
+<td>keine (Regelsatz über <code>-R</code>)</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>Biome</td>
+<td><code>biome.json</code>, <code>biome.jsonc</code>, auch verschachtelt</td>
+<td>Dateien während des Laufs ausgeblendet; eigene Datei über <code>--config-path</code></td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>Biome</td>
+<td><code>.editorconfig</code></td>
+<td>wird mit der eigenen Konfiguration nicht gelesen</td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>Ruff</td>
+<td><code>pyproject.toml</code> (<code>[tool.ruff]</code>), <code>ruff.toml</code>, <code>.ruff.toml</code></td>
+<td><code>--isolated</code> (mit <code>--target-version</code>)</td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>clang-format</td>
+<td><code>.clang-format</code></td>
+<td>Stil direkt im Befehl</td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>clang-format</td>
+<td><code>.clang-format-ignore</code></td>
+<td>Datei während des Laufs ausgeblendet</td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>clang-tidy</td>
+<td><code>.clang-tidy</code></td>
+<td><code>--config</code></td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>Clippy</td>
+<td><code>clippy.toml</code>, <code>.clippy.toml</code></td>
+<td><code>CLIPPY_CONF_DIR=&lt;tool&gt;/clippy</code></td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>rustfmt</td>
+<td><code>rustfmt.toml</code></td>
+<td><code>--config-path &lt;tool&gt;/rustfmt</code></td>
+<td>ja</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>„Ausgeblendet“ heißt: Das Tool verschiebt die Dateien vor dem Lauf aus dem Projekt heraus und legt sie danach zurück, auch wenn ein Werkzeug abbricht.</p>
+<p>Eine Ausnahme ist die <code>.gitignore</code>. Biome liest sie bewusst, damit von Git ignorierte Ordner wie Build-Ausgaben nicht formatiert werden (<a href="#sec-biome-gitignore" class="quarto-xref">Kapitel&nbsp;5.4</a>).</p>
+</section>
+<section id="nicht-ignorierbar" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="nicht-ignorierbar"><span class="header-section-number">9.2</span> Nicht ignorierbar</h2>
+<p>Einige Einstellungen lassen sich nur durch Ändern von Projektdateien abschalten. Das Tool vermerkt im Bericht, wenn sie vorhanden sind:</p>
+<ul>
+<li><strong>Analyzer-Einstellungen in .NET-Projektdateien,</strong> etwa <code>&lt;AnalysisMode&gt;</code> (getestet, <a href="#sec-csharp" class="quarto-xref">Kapitel&nbsp;3</a>);</li>
+<li><strong>die <code>[lints]</code>-Tabelle in der <code>Cargo.toml</code></strong> (getestet, <a href="#sec-rust" class="quarto-xref">Kapitel&nbsp;8</a>);</li>
+<li><strong>Unterdrückungen im Code selbst,</strong> etwa <code>// NOLINT</code>, <code>// NOPMD</code>, <code># noqa</code> oder <code>#[allow(...)]</code>. Sie gehören zum Code, nicht zur Konfiguration.</li>
+</ul>
+</section>
+</section>
+<section id="sec-offen" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Grenzen und offene Punkte</h1>
+<ul>
+<li><strong>Kleine Beispieldateien statt echter Projekte:</strong> Wie viele Befunde auf echten Projekten entstehen und wie viele davon Fehlalarme sind, wurde nicht gemessen. Dafür wäre ein Pilotlauf pro Sprache auf echten Open-Source-Projekten nötig.</li>
+<li><strong>Standardwerte der Hersteller:</strong> Die Standardregeln sind von den Herstellern gewählt und nicht an den analysierten Projekten geprüft. Ausnahme ist Clippy, dessen Dokumentation für die standardmäßig warnenden Gruppen ausdrücklich Fehlalarmfreiheit anstrebt.</li>
+<li><strong>Fehlende Typinformationen bei PMD:</strong> Ohne Build-Klassenpfad sind einzelne Fehlalarme oder übersehene Befunde möglich (<a href="#sec-java" class="quarto-xref">Kapitel&nbsp;4</a>).</li>
+<li><strong><code>dotnet format</code> ohne Konfiguration</strong> wendet nur wenige Analyzer-Korrekturen an und ersetzt keinen vollständigen Linter (<a href="#sec-csharp" class="quarto-xref">Kapitel&nbsp;3</a>).</li>
+</ul>
+</section>
+<section id="sec-quellen" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Quellen (noch nicht in <code>references.bib</code>)</h1>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Wichtig
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in <code>references.bib</code>. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 07.11.2026.</p>
+</div>
+</div>
+<ul>
+<li><strong>[MS-format]</strong> Microsoft Learn: <em>dotnet format command</em>. <a href="https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-format" class="uri">https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-format</a></li>
+<li><strong>[MS-analysis]</strong> Microsoft Learn: <em>Code analysis in .NET</em> (Abschnitte „Enabled rules“, „Code-style analysis“). <a href="https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/overview" class="uri">https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/overview</a></li>
+<li><strong>[GJF]</strong> google-java-format, README. <a href="https://github.com/google/google-java-format" class="uri">https://github.com/google/google-java-format</a></li>
+<li><strong>[Google-style]</strong> Google Java Style Guide. <a href="https://google.github.io/styleguide/javaguide.html" class="uri">https://google.github.io/styleguide/javaguide.html</a></li>
+<li><strong>[CS-google]</strong> Checkstyle: <em>Google’s Style</em>. <a href="https://checkstyle.org/google-style.html" class="uri">https://checkstyle.org/google-style.html</a></li>
+<li><strong>[CS-cmdline]</strong> Checkstyle: <em>Command Line</em> (Exit-Code, Ausgabeformate). <a href="https://checkstyle.org/cmdline.html" class="uri">https://checkstyle.org/cmdline.html</a></li>
+<li><strong>[PMD-java]</strong> PMD: <em>Java support</em> (Sprachversionen, Preview-Features, auxclasspath). <a href="https://docs.pmd-code.org/latest/pmd_languages_java.html" class="uri">https://docs.pmd-code.org/latest/pmd_languages_java.html</a></li>
+<li><strong>[PMD-CLI]</strong> PMD: <em>PMD CLI reference</em> (Exit-Codes, <code>--no-fail-on-violation</code>). <a href="https://docs.pmd-code.org/latest/pmd_userdocs_cli_reference.html" class="uri">https://docs.pmd-code.org/latest/pmd_userdocs_cli_reference.html</a></li>
+<li><strong>[PMD-rules]</strong> PMD: <em>Java Rules</em> (Regelsatz quickstart). <a href="https://docs.pmd-code.org/latest/pmd_rules_java.html" class="uri">https://docs.pmd-code.org/latest/pmd_rules_java.html</a></li>
+<li><strong>[Maven-compiler]</strong> Apache Maven Compiler Plugin: <code>compiler:compile</code>, Parameter <code>release</code> und <code>source</code>. <a href="https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html" class="uri">https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html</a></li>
+<li><strong>[Gradle-toolchains]</strong> Gradle User Manual: <em>Toolchains for JVM projects</em>. <a href="https://docs.gradle.org/current/userguide/toolchains.html" class="uri">https://docs.gradle.org/current/userguide/toolchains.html</a></li>
+<li><strong>[Biome-CLI]</strong> Biome: <em>CLI reference</em>. <a href="https://biomejs.dev/reference/cli/" class="uri">https://biomejs.dev/reference/cli/</a></li>
+<li><strong>[Biome-configure]</strong> Biome: <em>Configure Biome</em>. <a href="https://biomejs.dev/guides/configure-biome/" class="uri">https://biomejs.dev/guides/configure-biome/</a></li>
+<li><strong>[Biome-ref]</strong> Biome: <em>Configuration reference</em>. <a href="https://biomejs.dev/reference/configuration/" class="uri">https://biomejs.dev/reference/configuration/</a></li>
+<li><strong>[Ruff-formatter]</strong> Ruff: <em>The Ruff Formatter</em>. <a href="https://docs.astral.sh/ruff/formatter/" class="uri">https://docs.astral.sh/ruff/formatter/</a></li>
+<li><strong>[Ruff-linter]</strong> Ruff: <em>The Ruff Linter</em> (Abschnitt „Fix safety“). <a href="https://docs.astral.sh/ruff/linter/" class="uri">https://docs.astral.sh/ruff/linter/</a></li>
+<li><strong>[Ruff-settings]</strong> Ruff: <em>Settings</em>. <a href="https://docs.astral.sh/ruff/settings/" class="uri">https://docs.astral.sh/ruff/settings/</a></li>
+<li><strong>[Ruff-defaults]</strong> Ruff: <em>Default Rules</em>. <a href="https://docs.astral.sh/ruff/default-rules/" class="uri">https://docs.astral.sh/ruff/default-rules/</a></li>
+<li><strong>[Ruff-F841]</strong> Ruff: Regel <em>unused-variable (F841)</em>. <a href="https://docs.astral.sh/ruff/rules/unused-variable/" class="uri">https://docs.astral.sh/ruff/rules/unused-variable/</a></li>
+<li><strong>[Ruff-config]</strong> Ruff: <em>Configuring Ruff</em>. <a href="https://docs.astral.sh/ruff/configuration/" class="uri">https://docs.astral.sh/ruff/configuration/</a></li>
+<li><strong>[ClangFormat]</strong> Clang: <em>Clang-Format Style Options</em>. <a href="https://clang.llvm.org/docs/ClangFormatStyleOptions.html" class="uri">https://clang.llvm.org/docs/ClangFormatStyleOptions.html</a></li>
+<li><strong>[LLVM-CS]</strong> LLVM Coding Standards. <a href="https://llvm.org/docs/CodingStandards.html" class="uri">https://llvm.org/docs/CodingStandards.html</a></li>
+<li><strong>[ClangTidy]</strong> clang-tidy documentation. <a href="https://clang.llvm.org/extra/clang-tidy/" class="uri">https://clang.llvm.org/extra/clang-tidy/</a></li>
+<li><strong>[rustfmt]</strong> rustfmt, README. <a href="https://github.com/rust-lang/rustfmt" class="uri">https://github.com/rust-lang/rustfmt</a></li>
+<li><strong>[Rust-style]</strong> The Rust Style Guide. <a href="https://doc.rust-lang.org/style-guide/" class="uri">https://doc.rust-lang.org/style-guide/</a></li>
+<li><strong>[Clippy-usage]</strong> Clippy documentation: <em>Usage</em>. <a href="https://doc.rust-lang.org/clippy/usage.html" class="uri">https://doc.rust-lang.org/clippy/usage.html</a></li>
+<li><strong>[Clippy-config]</strong> Clippy documentation: <em>Configuring Clippy</em>. <a href="https://doc.rust-lang.org/clippy/configuration.html" class="uri">https://doc.rust-lang.org/clippy/configuration.html</a></li>
+<li><strong>[Cargo-fix]</strong> The Cargo Book: <em>cargo fix</em>. <a href="https://doc.rust-lang.org/cargo/commands/cargo-fix.html" class="uri">https://doc.rust-lang.org/cargo/commands/cargo-fix.html</a></li>
+<li><strong>[Cargo-build-scripts]</strong> The Cargo Book: <em>Build Scripts</em>. <a href="https://doc.rust-lang.org/cargo/reference/build-scripts.html" class="uri">https://doc.rust-lang.org/cargo/reference/build-scripts.html</a></li>
+</ul>
+<p>Zitate, die nicht aus diesen Seiten stammen, sind im Text mit ihrer Herkunft gekennzeichnet: die Hilfe-Ausgaben der Werkzeuge (<code>--help</code>) und Meldungen aus den eigenen Testläufen.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Kopiert");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Kopiert");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollbarer Code","output":"Scrollbare Ausgabe"};
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
