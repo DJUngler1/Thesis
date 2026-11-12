@@ -1,0 +1,332 @@
+---
+title: "Prüfung der Abhängigkeiten"
+subtitle: "Dokumentation der Werkzeugauswahl für Schritt 4 des Code-Analysis-Tools"
+lang: de
+author: "Felix Krauß"
+date: 2026-11-12
+date-format: "D. MMMM YYYY"
+toc: true
+number-sections: true
+format:
+  html:
+    theme: darkly
+  pdf:
+    geometry:
+      - top=30mm
+      - left=20mm
+---
+
+# Zweck und Vorgehen
+
+Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 4 („Dependencies“) die Abhängigkeiten eines Projekts auf bekannte Schwachstellen prüft. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter `Code-Analysis-Tool/docs/dependencyAudit/README.md`.
+
+Schritt 4 hat zwei Stufen:
+
+- **Stufe 1:** OSV-Scanner (@sec-osv).
+- **Stufe 2:** das Audit jedes Paketmanagers, den Schritt 1 erkannt hat (@sec-audits).
+
+Alle Prüfungen laufen gleichzeitig. Fällt eine aus, laufen die anderen weiter.
+
+## Grundsatz der Festlegung
+
+- **Eingebaute oder offizielle Werkzeuge:** Für jeden Paketmanager wird das eingebaute Audit verwendet (npm, Yarn, pnpm, Bun, .NET) oder das offizielle Werkzeug des Ökosystems: cargo-audit der Rust Secure Code Working Group (RustSec) und pip-audit der Python Packaging Authority (PyPA). Für Maven, Gradle, vcpkg und Conda gibt es kein eigenes Audit, und es wird kein zusätzliches Werkzeug eingeführt.
+- **Lockfiles werden bei Bedarf erzeugt:** Fehlt ein Lockfile, wird es in einer Kopie des Projekts mit dem eigenen Befehl des Paketmanagers erzeugt (@sec-lockfiles).
+- **Das Projekt bleibt unverändert:** Alle Prüfungen arbeiten auf einer Kopie im Ausgabeordner.
+- **Online-Abfrage:** OSV-Scanner fragt die Datenbank OSV.dev online ab statt mit einer heruntergeladenen Kopie. Damit ist die Datenbank aktuell, und Maven-Projekte werden transitiv aufgelöst.
+  - Folge: Paketnamen und -versionen des Projekts verlassen den Rechner. Sie gehen an OSV.dev, deps.dev und die Registries der Paketmanager.
+  - Die Audits der Stufe 2 senden diese Angaben ohnehin: „The audit command submits a description of the dependencies configured in your project to your default registry and asks for a report of known vulnerabilities.“ [npm-audit]
+- **Doppelte Befunde bleiben:** OSV-Scanner und die Audits nutzen weitgehend dieselben Schwachstellen-Datenbanken. Dieselbe Schwachstelle erscheint daher meist mehrfach. Die Befunde tragen alle bekannten Kennungen (CVE, GHSA, …), damit Schritt 6 sie zusammenführen kann.
+
+## Prüfmethode
+
+1. **Dokumentation im Original:** Jede Aussage über ein Werkzeug wurde in dessen offizieller Dokumentation oder in der verwendeten Version nachgelesen. Zitate sind wörtlich und stehen in der Originalsprache (Englisch).
+2. **Eigene Tests:** Das Verhalten wurde am 11. und 12.11.2026 in Docker-Containern mit festen Werkzeugversionen getestet (@tbl-versionen), auf einem Mac mit Apple Silicon (arm64). Die Tests sind als Integrationstests im Tool-Repository hinterlegt (`scheduler/tests/test_dependencies_docker.py`).
+3. **Art der Testprojekte:**
+   - Die Tests liefen auf kleinen Projekten mit Abhängigkeiten, für die bekannte Schwachstellen veröffentlicht sind: lodash 4.17.15, Django 2.0, jinja2 2.10, smallvec 1.6.0, Newtonsoft.Json 12.0.1, log4j-core 2.14.1 und zlib 1.2.11.
+   - Sie zeigen, *wie* sich die Werkzeuge verhalten. Wie vollständig sie auf echten Projekten sind, sagen sie nicht (siehe @sec-offen).
+   - Dazu kam ein echtes Projekt: die Spiele-Engine libgdx, ein Gradle-Projekt mit vielen Modulen (@sec-lockfiles).
+   - Die Ergebnisse hängen vom Stand der Datenbanken am Testtag ab.
+
+## Testumgebung
+
+| Werkzeug | Version | Container-Image |
+|---|---|---|
+| OSV-Scanner | 2.7.1 (OSV-Scalibr 0.5.3) | `code-analysis/osv-scanner`, Basis `ghcr.io/google/osv-scanner:v2.7.1` (per Digest festgelegt) |
+| npm, Yarn, pnpm, Bun | npm 10.9.9; Yarn 1.22.22 und pnpm 11.24.0 über corepack 0.36.0; Bun 1.4.4 | `code-analysis/lint-node` (Schritt 2, erweitert) |
+| cargo, cargo-audit | cargo 1.99.1, cargo-audit 0.23.0 | `code-analysis/lint-rust` (Schritt 2, erweitert) |
+| .NET SDK | 10.0.403 | `code-analysis/lint-dotnet` (Schritt 2) |
+| Conan | 2.34.0 | `code-analysis/lint-cpp` (Schritt 2) |
+| Gradle | 9.9.1 auf JDK 21 | `code-analysis/sonar-scanner` (Schritt 3) |
+| pip-audit, uv, Poetry, PDM, Pipenv | 2.10.1, 0.13.7, 2.5.1 (mit poetry-plugin-export 1.10.1), 2.29.7, 2026.11.0 | `code-analysis/audit-python` (neu), Basis `python:3.13.18-slim` |
+
+: Werkzeugversionen der Tests und des Tools {#tbl-versionen}
+
+Die Werkzeuge von Schritt 2 und 3 werden wiederverwendet. So laufen Auflösung und Audit mit derselben Toolchain wie die Linter, und es entsteht keine zweite Kopie mehrerer Gigabyte.
+
+# Übersicht der Festlegungen
+
+| Paketmanager | Lockfile (für OSV-Scanner) | Audit (Stufe 2) |
+|---|---|---|
+| npm | `package-lock.json`, sonst erzeugt | `npm audit --json` |
+| Yarn, pnpm, Bun | vorhanden (Schritt 1 erkennt sie am Lockfile) | `yarn audit` bzw. `yarn npm audit`, `pnpm audit`, `bun audit` |
+| Cargo | `Cargo.lock`, sonst erzeugt | `cargo audit --json` |
+| NuGet | `packages.lock.json`, sonst erzeugt | `dotnet package list --vulnerable --include-transitive --format json` |
+| Maven | – (`pom.xml` wird transitiv aufgelöst) | – |
+| Gradle | `gradle.lockfile`, sonst erzeugt | – |
+| Conan | `conan.lock`, sonst erzeugt | `conan audit scan`, nur mit Token |
+| pip | `requirements*.txt` direkt | `pip-audit` |
+| Poetry, uv, PDM, Pipenv | Lockfile, sonst erzeugt (Poetry, Pipenv) | Export, dann `pip-audit` |
+| vcpkg, Conda | – | – |
+
+# Arbeitskopie und Lockfiles {#sec-lockfiles}
+
+## Festlegung
+
+- **Arbeitskopie:** Die Dateien, die git kennt, werden im Stand nach Schritt 2 nach `step4-dependencies/workspace/` kopiert. Alle Container erhalten nur den Ausgabeordner, nie das Projekt. Die Kopie wird nach dem Lauf gelöscht.
+- **Lockfiles:** Fehlt ein Lockfile, das OSV-Scanner lesen kann, wird es in der Kopie erzeugt.
+
+| Paketmanager | Befehl | Image |
+|---|---|---|
+| npm | `npm install --package-lock-only --ignore-scripts` | `lint-node` |
+| Cargo | `cargo generate-lockfile` (im obersten Ordner mit `Cargo.toml`) | `lint-rust` |
+| NuGet | `dotnet restore <Ziel> --use-lock-file` (jede Solution, sonst jede `.csproj`) | `lint-dotnet` |
+| Gradle | Init-Skript mit `dependencyLocking { lockAllConfigurations() }`, das den Abhängigkeitsgraphen jeder Konfiguration auflöst, dann `--write-locks` (Wrapper, falls vorhanden) | `sonar-scanner` |
+| Conan | `conan lock create .` | `lint-cpp` |
+| Poetry | `poetry lock` | `audit-python` |
+| Pipenv | `pipenv lock` | `audit-python` |
+
+: Befehle zum Erzeugen fehlender Lockfiles {#tbl-lockbefehle}
+
+Erzeugte Lockfiles werden nach `step4-dependencies/lockfiles/` kopiert. `summary.json` hält pro Manifest fest, ob das Lockfile vorhanden war, erzeugt wurde, nur teilweise erzeugt werden konnte (`partial`), nicht erzeugt werden konnte (`failed`) oder nicht unterstützt wird.
+
+- **Gradle:** Das Init-Skript löst nur den Abhängigkeitsgraphen auf und lädt keine Artefakte. Eine Konfiguration, die sich nicht auflösen lässt, bricht den Build nicht ab. Sie wird in den Notizen genannt, und das Lockfile erhält den Zustand `partial`.
+- **Unvollständige Lockfiles:** `failed` und `partial` machen Schritt 4 unvollständig (Exit-Code 7), weil Abhängigkeiten ungeprüft bleiben.
+
+## Begründung und Belege
+
+- **OSV-Scanner braucht Lockfiles.** Die Dokumentation empfiehlt: „To scan the dependency versions selected for an environment, prefer a resolved lockfile.“ [OSV-files] Aus Manifesten liest das Werkzeug nur „on a best-effort basis“, sodass „a version reported from a manifest may not be the version that is installed“ [OSV-files]. Die Liste der lesbaren Dateien [OSV-files] enthält Lockfiles wie `Cargo.lock`, `package-lock.json`, `packages.lock.json`, `gradle.lockfile`, `conan.lock` und `poetry.lock`, aber kein `Cargo.toml`, kein `package.json` und kein `pyproject.toml`. Viele Projekte versionieren ihre Lockfiles nicht, bei C# fast keines.
+- **npm-Audit braucht ein Lockfile.** „By default npm requires a package-lock or shrinkwrap in order to run the audit.“ [npm-audit]
+- **Ohne Installation auflösen:**
+  - **npm:** „If set to true, the current operation will only use the package-lock.json, ignoring node_modules. For update this means only the package-lock.json will be updated, instead of checking node_modules and downloading dependencies.“ [npm-install]. Zusätzlich verhindert `--ignore-scripts`, dass Skripte des Projekts laufen.
+  - **Cargo:** „This command will create the Cargo.lock lockfile for the current package or workspace.“ [cargo-lock]
+  - **.NET:** `--use-lock-file` „Enables project lock file to be generated and used with restore.“ [dotnet-restore]
+  - **Gradle:** `lockAllConfigurations()` sperrt alle Konfigurationen, und „To generate or update the lock state, add the --write-locks argument while invoking whatever tasks that would trigger the locked configurations to be resolved“ [Gradle-locking]. Das Init-Skript des Tools definiert dafür eine Aufgabe, die alle auflösbaren Konfigurationen auflöst.
+  - **Gradle, ein Fehler stoppt alles:** „Gradle won’t write the lock state to disk if the build fails, preventing the persistence of potentially invalid states.“ [Gradle-locking] Bricht eine einzige Konfiguration den Build ab, entsteht also für kein Modul ein Lockfile (Testergebnis mit libgdx unten). Das Init-Skript fängt Fehler deshalb pro Konfiguration ab.
+  - **Gradle, nur der Graph:** Das Init-Skript nutzt `incoming.resolutionResult`. Laut Gradle „This will resolve the dependency graph but will not resolve or download the artifacts.“ [Gradle-ResolvableDependencies] OSV-Scanner braucht nur Namen und Versionen. Artefakte wie das Android SDK, die nur als Dateien gebraucht werden, verhindern die Auflösung so nicht.
+- **Ausführung von Projektcode:** Gradle und `dotnet restore` werten die Build-Dateien des Projekts aus und führen damit Projektcode aus. Das geschieht wie in Schritt 2 nur in Containern, die keinen Zugriff auf den Docker-Socket haben.
+- **Caches außerhalb der Kopie:** Die Caches der Paketmanager liegen im Container und nicht in der Kopie. In einem frühen Test lag der Gradle-Cache im durchsuchten Ordner. OSV-Scanner wertete dort die `.pom`-Dateien der heruntergeladenen Abhängigkeiten aus und meldete 118 zusätzliche Befunde, die nicht zum Projekt gehörten.
+
+## Testergebnisse
+
+- **Alle Lockfiles erzeugt:** In einem Projekt mit elf Paketmanagern wurden alle sieben fehlenden Lockfiles erzeugt: npm, Pipenv, Poetry, Cargo, NuGet, Gradle und Conan. Erzeugen, Prüfen und Aufräumen dauerten zusammen rund 13 s.
+- **Messwerte einzelner Befehle:** npm 1,5 s, Gradle 3 s, Conan 2 s, NuGet 4 s.
+- **OSV-Scanner las danach jedes Lockfile:** `package-lock.json`, `Pipfile.lock`, `poetry.lock`, `Cargo.lock`, `packages.lock.json`, `gradle.lockfile`. Dazu kamen `pom.xml` und `requirements.txt`.
+- **Das Projekt blieb unverändert** (`git status` leer).
+- **Echtes Projekt libgdx** (Spiele-Engine, Gradle-Multiprojekt, Commit `464116b74`, Gradle 8.14.3 über den Wrapper, getestet am 12.11.2026):
+  - **Erste Fassung:** Das Init-Skript löste die Dateien aller Konfigurationen auf. Das Modul `gdx-backend-android` braucht für die Konfiguration `androidApis` das Android SDK: „SDK location not found“. Der Build brach ab, Gradle schrieb kein einziges Lockfile, und OSV-Scanner fand keine Pakete (Exit-Code 128). Schritt 4 meldete trotzdem „vollständig“ und 0 Befunde.
+  - **Nach der Änderung** (nur Graph, Fehler pro Konfiguration abgefangen): 24 Lockfiles mit 424 verschiedenen Paketversionen, auch für die Android-Module ohne SDK. OSV-Scanner meldete 351 Befunde, 159 verschiedene Paar-Kombinationen aus Paket und Schwachstelle. Schritt 4 dauerte rund 80 s.
+- **Nicht auflösbare Abhängigkeit:** In einem Testprojekt mit einer nicht existierenden Abhängigkeit endete Gradle mit Exit-Code 0. Die betroffenen Konfigurationen fehlten aber im Lockfile, samt der auflösbaren log4j-core derselben Konfiguration. Das Tool meldet solche Konfigurationen deshalb und setzt den Zustand `partial`. Ein Modul daneben wurde normal gesperrt; OSV-Scanner fand dort Log4Shell.
+
+# Stufe 1: OSV-Scanner {#sec-osv}
+
+## Festlegung
+
+```bash
+osv-scanner scan source --recursive --format json --output-file <output>/osv-scanner.json <Kopie>
+```
+
+| Exit-Code | Status im Tool |
+|---|---|
+| 0, 1 (Schwachstellen gefunden) | `ok` |
+| 128 (keine Pakete gefunden) | `skipped` |
+| alle anderen | `failed` |
+
+- **Image:** das offizielle Image, per Digest festgelegt, mit einer kleinen Ergänzung für die Versionsdatei des Tools.
+- **Ein Befund pro Gruppe:** Aus dem JSON-Bericht entsteht ein Befund pro Schwachstellengruppe und Paket.
+
+## Begründung und Belege
+
+- **Offizielles Image:** „The OSV-Scanner Docker image can be pulled from the GitHub Container Registry“ [OSV-usage]. Es gibt das Image für amd64 und arm64.
+- **Exit-Codes** laut Dokumentation [OSV-output]:
+  - „`0` Packages were found when scanning, but does not match any known vulnerabilities or findings.“
+  - „`1` Packages were found when scanning, and there are vulnerabilities or findings.“
+  - „`128` No packages found (likely caused by the scanning format not picking up any files to scan).“
+- **Maven transitiv:** „OSV-Scanner supports transitive dependency scanning for Maven pom.xml. This feature is enabled by default when scanning, but it can be disabled using the `--no-resolve` flag. It is also disabled in the offline mode.“ [OSV-files]. Die Auflösung nutzt standardmäßig die deps.dev-API [OSV-files].
+- **Online statt offline:** Der Offline-Modus „will not download or update the local database, nor will it send any project or dependency information anywhere“ [OSV-offline], schaltet aber die transitive Maven-Auflösung ab [OSV-files]. Gewählt wurde die Online-Abfrage (@sec-offen).
+- **Gruppen statt Einzeleinträge:** OSV-Scanner fasst die Kennungen derselben Schwachstelle zu Gruppen zusammen (`groups`, mit `aliases` und `max_severity`). Ein Befund pro Gruppe vermeidet Doppelzählungen innerhalb des Werkzeugs.
+
+## Testergebnisse
+
+- **Gefunden:**
+  - lodash 4.17.15 (u. a. CVE-2021-23337);
+  - Django 2.0;
+  - smallvec 1.6.0 (RUSTSEC-2021-0003);
+  - Newtonsoft.Json 12.0.1 (GHSA-5crp-9r3c-p9vr);
+  - log4j-core 2.14.1, auch über `gradle.lockfile` (u. a. CVE-2021-44228, „Log4Shell“).
+- **Gruppen:** Für Django 2.0 lieferte OSV 35 Einträge, die zu 24 Gruppen gehören, also 24 verschiedene Schwachstellen.
+- **Maven transitiv:** Aus `pom.xml` mit nur log4j-core meldete OSV-Scanner auch log4j-api als indirekte Abhängigkeit.
+- **Nicht gepinnte Anforderungen:**
+  - Für die Zeile `requests>=2.0` in `requirements.txt` wählte OSV-Scanner die Version 2.9.2 und meldete deren Schwachstellen.
+  - pip-audit löste dieselbe Zeile zu 2.34.2 auf, der Version, die pip installieren würde, und meldete keine.
+  - Bei nicht gepinnten Anforderungen sind die Befunde von OSV-Scanner also möglicherweise Fehlalarme. Die Dokumentation warnt davor [OSV-files].
+- **Keine Daten für Conan:**
+  - OSV-Scanner las `conan.lock` und fand zlib 1.2.11, meldete aber keine Schwachstelle, obwohl für zlib 1.2.11 Schwachstellen bekannt sind.
+  - Die Liste der Ökosysteme der OSV-Datenbank [OSV-ecosystems] enthält kein „ConanCenter“.
+  - Eine direkte Abfrage der OSV-API für `zlib` 1.2.11 im Ökosystem ConanCenter ergab 0 Einträge.
+- **`.csproj`:** OSV-Scanner las auch die Projektdatei direkt (nur direkte Abhängigkeiten), obwohl die Dokumentation sie nicht nennt. Transitive NuGet-Abhängigkeiten stehen erst im erzeugten `packages.lock.json`.
+
+## Grenzen
+
+- **Conan:** Ohne Daten zu ConanCenter liefert OSV-Scanner für Conan-Abhängigkeiten keine Befunde. Abgedeckt ist C/C++ nur über `conan audit` mit Token (@sec-audits) und über OSVs Erkennung kopierter Bibliotheken (Abgleich von Commits und Dateien).
+- **vcpkg und Conda** werden nicht gelesen. Die Liste der Ökosysteme der OSV-Datenbank [OSV-ecosystems] enthält keines der beiden. Abfragen der OSV-API für zlib, openssl, curl, libxml2 und expat im Ökosystem vcpkg ergaben am 12.11.2026 jeweils 0 Einträge.
+- **`bun.lockb`** (das binäre Lockfile älterer Bun-Versionen) liest OSV-Scanner nicht, `bun.lock` schon.
+- **Nicht gepinnte `requirements.txt`:** Die Versionen sind geschätzt (siehe Testergebnisse).
+
+# Stufe 2: Audits der Paketmanager {#sec-audits}
+
+## Festlegung
+
+| Paketmanager | Befehl | Image |
+|---|---|---|
+| npm | `npm audit --json` | `lint-node` |
+| Yarn 1 / Yarn 2+ | `yarn audit --json` / `yarn npm audit --all --recursive --json` | `lint-node` |
+| pnpm | `pnpm audit --json` | `lint-node` |
+| Bun | `bun audit --json` | `lint-node` |
+| Cargo | `cargo audit --json` | `lint-rust` |
+| NuGet | `dotnet restore <Ziel>`, dann `dotnet package list --project <Ziel> --vulnerable --include-transitive --format json` | `lint-dotnet` |
+| pip | `pip-audit -r <Datei> -f json`, bei `pyproject.toml` `pip-audit . -f json` | `audit-python` |
+| Poetry, uv, PDM, Pipenv | `poetry export`, `uv export --frozen`, `pdm export` bzw. `pipenv requirements`, dann `pip-audit -r <Export> --no-deps --disable-pip -f json` | `audit-python` |
+| Conan | `conan audit scan . --format=json`, nur mit `CONAN_AUDIT_TOKEN` | `lint-cpp` |
+
+: Audits der Stufe 2 {#tbl-audits}
+
+- **Yarn und pnpm über corepack:** Die Version kommt aus dem Feld `packageManager` des Projekts. Fehlt es, verwendet corepack die in seiner Version festgelegten Standardversionen (`COREPACK_DEFAULT_TO_LATEST=0`).
+- **Grund für diese Einstellung:** Ohne sie lud corepack im Test die jeweils neueste pnpm-Version aus dem Netz (12.18.0). Mit ihr ist es die festgelegte 11.24.0, und Läufe sind wiederholbar.
+
+## Begründung und Belege
+
+- **npm, Yarn, pnpm, Bun:** eingebaute Audits. npm „submits a description of the dependencies configured in your project to your default registry and asks for a report of known vulnerabilities“ [npm-audit]. Die Befehle von Yarn 2+ [Yarn-audit] und Bun [Bun-audit] stehen in deren Dokumentation.
+- **Cargo:** cargo-audit ist das Werkzeug des RustSec-Projekts: „Audit your dependencies for crates with security vulnerabilities reported to the RustSec Advisory Database.“ [cargo-audit]
+- **NuGet:** In das .NET SDK eingebaut. `--vulnerable` „Lists packages that have known vulnerabilities“, `--include-transitive` „Lists transitive packages, in addition to the top-level packages“ [dotnet-list].
+- **Python:** pip-audit ist das Werkzeug der PyPA: „`pip-audit` is a tool for scanning Python environments for packages with known vulnerabilities. It uses the Python Packaging Advisory Database (https://github.com/pypa/advisory-database) via the PyPI JSON API as a source of vulnerability reports.“ [pip-audit]
+  - Lockfiles der übrigen Python-Paketmanager liest es nicht. Als Projektdateien gilt: „At the moment, only `pyproject.toml` and `pylock.*.toml` are supported.“, und „`pip-audit` cannot process the `Pipfile[.lock]` files directly“ [pip-audit].
+  - Deshalb exportiert das Tool die Lockfiles mit dem jeweiligen Paketmanager in eine `requirements.txt` mit festen Versionen. pip-audit prüft diese mit `--no-deps --disable-pip`, also ohne eigene Auflösung.
+- **Conan:** Das Audit braucht eine Registrierung: „To use the command, you will first need to register for the free service at https://audit.conan.io/register.“ [Conan-audit]. Das Tool führt es deshalb nur aus, wenn `CONAN_AUDIT_TOKEN` gesetzt ist. Das Token wird über die Umgebung übergeben und erscheint in keinem Ergebnis.
+  - Das JSON-Format ist aus dem Quellcode von Conan übernommen [Conan-format]. Mit echten Daten ist es nicht getestet, weil kein Token vorlag.
+- **Maven, Gradle, vcpkg, Conda:** kein eigenes Audit. Maven und Gradle deckt OSV-Scanner ab.
+
+## Testergebnisse
+
+| Werkzeug | Ergebnis | Format der Ausgabe |
+|---|---|---|
+| npm audit | 5 Advisories für lodash | GHSA-Kennungen, CWE, CVSS |
+| Yarn 1 | 5 Advisories | eine JSON-Zeile pro Advisory und Pfad; Exit-Code als Bitmaske (im Test 12) |
+| Yarn 4 | 5 Advisories | eine JSON-Zeile pro Advisory |
+| pnpm, Bun | 5 Advisories | |
+| cargo audit | RUSTSEC-2021-0003 | 3 s inklusive Laden der Advisory-Datenbank |
+| `dotnet package list --vulnerable` | GHSA-5crp-9r3c-p9vr, Schwere „High“ | |
+| pip-audit | 34 Schwachstellen für Django 2.0, je 12 für jinja2 2.10 aus den Exporten von uv, Poetry und Pipenv | |
+
+: Audits auf den Testprojekten {#tbl-audit-tests}
+
+- **Fehler im ersten Entwurf:** Die Umleitung des Pipenv-Exports schrieb die Anforderungen auf die Fehlerausgabe statt in die Datei, und pip-audit meldete 0 Befunde. Nach der Korrektur fand es dieselben 12 Schwachstellen wie bei uv und Poetry. Der Integrationstest prüft das seitdem.
+
+## Grenzen
+
+- **Keine Schwere bei pip-audit und cargo-audit:** Beide liefern keine Schwere. Das Tool übernimmt sie vom Befund von OSV-Scanner zur selben Schwachstelle (@sec-befunde).
+- **Ohne CVE bei npm audit:** npm audit nennt nur GitHub-Advisories, keine CVE. Die Aliase kommen ebenfalls von OSV-Scanner.
+- **Conan ohne Token** wird nicht auditiert.
+
+# Befunde und Schweregrad {#sec-befunde}
+
+- **Einheitliches Format:** Jeder Befund hat Werkzeug, Paketmanager, Ökosystem, Manifest bzw. Lockfile, Paket, Version, Kennung und Aliase, Zusammenfassung, behobene Versionen, URL sowie Schwere und CVSS. Gradle-Befunde nennen zusätzlich Konfigurationen und Scope.
+- **Schwere aus CVSS:** Sie folgt der qualitativen Skala der CVSS-Spezifikation 3.1:
+
+  | Rating | CVSS Score |
+  |---|---|
+  | None | 0.0 |
+  | Low | 0.1 - 3.9 |
+  | Medium | 4.0 - 6.9 |
+  | High | 7.0 - 8.9 |
+  | Critical | 9.0 - 10.0 |
+
+  : „Table 14: Qualitative severity rating scale“ [CVSS31] {#tbl-cvss}
+
+- **Ohne CVSS-Wert:** Fehlt der Wert, gilt die Bezeichnung des Advisories (`moderate` → `medium`, `info` → `low`), sonst `unknown`.
+- **Ergänzung aus OSV:**
+  - Findet ein Audit dieselbe Schwachstelle im selben Paket wie OSV-Scanner (gleiche Kennung oder gleicher Alias), übernimmt der Befund die Aliase von OSV-Scanner.
+  - Hat er keine Schwere, übernimmt er auch Schwere und CVSS-Wert. Das Feld `severity_source` nennt dann die Herkunft, zum Beispiel `osv-scanner (PYSEC-2021-66)`.
+- **Gradle-Scope:** Gradle-Befunde nennen die Konfigurationen des Lockfiles, die das Paket enthalten, und den am weitesten ausgelieferten Scope:
+  - `runtime`: Konfigurationen auf `RuntimeClasspath`, z. B. `runtimeClasspath`, `releaseRuntimeClasspath`.
+  - `compile`: Konfigurationen auf `CompileClasspath`.
+  - `test`: alle Konfigurationen mit „test“ im Namen.
+  - `tooling`: alle anderen, z. B. `annotationProcessor` und Konfigurationen von Plugins.
+
+  Geprüft werden weiter alle Konfigurationen. Der Scope erlaubt es Schritt 6, Befunde zu gewichten oder zu filtern.
+- **Scope bei libgdx:** Von 351 Befunden betrafen 199 `tooling`, 83 `test`, 69 `compile` und keiner `runtime`.
+  - `tooling`: vor allem die Server-Runner des Gretty-Plugins, mit Tomcat und Jetty in vielen Versionen.
+  - `test`: die interne Testplattform des Android-Gradle-Plugins.
+  - `compile`: das GWT-SDK im Compile-Classpath der GWT-Module, z. B. Jetty 9.4.44 und HtmlUnit 2.55.0.
+- **Doppelte Befunde:** Werden nicht entfernt. Im Endtest ergaben 68 Befunde 42 verschiedene Paar-Kombinationen aus Paket und Schwachstelle.
+
+# Ergebnisse im Ausgabeordner
+
+Schritt 4 schreibt in den Ausgabeordner von Schritt 2: `OUTPUT_DIR/<Projekt>/<Datum_Zeit>Z/step4-dependencies/`.
+
+| Pfad | Inhalt |
+|---|---|
+| `summary.json` | Abdeckung pro Manifest (Lockfile vorhanden, erzeugt, teilweise erzeugt, fehlgeschlagen oder nicht unterstützt; welche Werkzeuge es prüften); pro Prüfung Werkzeug, Paketmanager, Manifest, Version, Befehle, Exit-Codes, Status, Dauer, Befunde nach Schwere, Notizen; Gradle-Befunde nach Scope |
+| `findings.json` | Befunde aller Prüfungen in einem Format |
+| `osv-scanner/` | JSON-Bericht und Protokolle von OSV-Scanner |
+| `audits/<nn>-<Paketmanager>/` | Rohausgabe jedes Audits |
+| `lockfiles/` | Die erzeugten Lockfiles |
+| `lockfile-logs/` | Protokolle der Lock-Befehle |
+
+: Ergebnisse von Schritt 4 {#tbl-ergebnisse}
+
+# Offene Punkte und Grenzen der Prüfung {#sec-offen}
+
+- **Kleine Testprojekte:** Die Tests zeigen das Verhalten der Werkzeuge. Wie vollständig sie auf echten Projekten Schwachstellen finden und wie viele Fehlalarme entstehen, ist nicht untersucht.
+- **Zeitabhängigkeit:** Erzeugte Lockfiles halten die Versionen fest, die am Tag der Analyse aufgelöst werden. Auch die Datenbanken ändern sich laufend. Ergebnisse verschiedener Tage sind daher nur bedingt vergleichbar. `summary.json` und die kopierten Lockfiles machen den Stand nachvollziehbar.
+- **Datenschutz:** Paketnamen und -versionen werden an OSV.dev, deps.dev und die Registries gesendet. Ein reiner Offline-Betrieb würde die Maven-Auflösung und die Audits der Stufe 2 ausschließen.
+- **Lücken:**
+  - C/C++ mit Conan ohne Token;
+  - vcpkg, Conda;
+  - nicht gepinnte `requirements.txt` bei OSV-Scanner;
+  - das Conan-JSON-Format, das nicht mit echten Daten getestet wurde.
+- **Gradle-Scope nach Namen:** Der Scope folgt den Namenskonventionen der Konfigurationen und ist eine Näherung. Ein Beispiel ist libgdx: Die GWT-Module übersetzen Java nach JavaScript. Was dort auf dem Compile-Classpath liegt, wird nicht ausgeliefert, erscheint aber als `compile`.
+- **Private Repositories:** Abhängigkeiten aus Repositories, die der Container nicht erreicht (z. B. ein Firmen-Nexus), lassen sich nicht auflösen. Die betroffenen Gradle-Konfigurationen bleiben ungeprüft (`partial`).
+
+# Quellen (noch nicht in `references.bib`) {#sec-quellen}
+
+::: {.callout-important}
+Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in `references.bib`. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 11.11.2026.
+:::
+
+**OSV-Scanner**
+
+- **[OSV-files]** Google: *Supported Artifacts and Manifests* (OSV-Scanner-Dokumentation), Version 2.7.1. <https://github.com/google/osv-scanner/blob/v2.7.1/docs/supported_languages_and_lockfiles.md>
+- **[OSV-output]** Google: *Output* (Abschnitt „Return Codes“), Version 2.7.0. <https://github.com/google/osv-scanner/blob/v2.7.0/docs/output.md>
+- **[OSV-offline]** Google: *Offline Mode*, Version 2.7.0. <https://github.com/google/osv-scanner/blob/v2.7.0/docs/offline-mode.md>
+- **[OSV-usage]** Google: *Usage* (Abschnitt „Running in a Docker Container“), Version 2.7.0. <https://github.com/google/osv-scanner/blob/v2.7.0/docs/usage.md>
+- **[OSV-ecosystems]** OSV: Liste der Ökosysteme der Datenbank. <https://osv-vulnerabilities.storage.googleapis.com/ecosystems.txt>
+
+**Paketmanager und Audits**
+
+- **[npm-audit]** npm: *npm-audit*, CLI-Version 10. <https://docs.npmjs.com/cli/v10/commands/npm-audit>
+- **[npm-install]** npm: *npm-install* (Option `package-lock-only`), CLI-Version 10. <https://docs.npmjs.com/cli/v10/commands/npm-install>
+- **[Yarn-audit]** Yarn: *yarn npm audit*. <https://yarnpkg.com/cli/npm/audit>
+- **[Bun-audit]** Bun: *bun audit*. <https://bun.com/docs/pm/cli/audit>
+- **[cargo-lock]** The Cargo Book: *cargo-generate-lockfile*. <https://doc.rust-lang.org/cargo/commands/cargo-generate-lockfile.html>
+- **[cargo-audit]** RustSec: *cargo-audit*, README. <https://github.com/rustsec/rustsec/tree/main/cargo-audit>
+- **[dotnet-list]** Microsoft Learn: *dotnet package list*. <https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-package-list>
+- **[dotnet-restore]** Microsoft Learn: *dotnet restore*. <https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-restore>
+- **[Gradle-locking]** Gradle: *Locking Dependency Versions* (Gradle User Manual). <https://docs.gradle.org/current/userguide/dependency_locking.html>
+- **[Gradle-ResolvableDependencies]** Gradle: *ResolvableDependencies* (Javadoc, Methode `getResolutionResult()`), abgerufen am 12.11.2026. <https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/ResolvableDependencies.html>
+- **[pip-audit]** PyPA: *pip-audit*, README, Version 2.10.1. <https://github.com/pypa/pip-audit/blob/v2.10.1/README.md>
+- **[Conan-audit]** Conan: *Checking package vulnerabilities* (Devops guide). <https://docs.conan.io/2/devops/audit.html>
+- **[Conan-format]** Conan: `conan/cli/formatters/audit/vulnerabilities.py`, Branch `develop2`. <https://github.com/conan-io/conan/blob/develop2/conan/cli/formatters/audit/vulnerabilities.py>
+
+**Bewertung**
+
+- **[CVSS31]** FIRST: *Common Vulnerability Scoring System v3.1: Specification Document*, Abschnitt „Qualitative Severity Rating Scale“, Table 14. <https://www.first.org/cvss/v3.1/specification-document>
