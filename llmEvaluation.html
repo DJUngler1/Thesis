@@ -1,0 +1,2217 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Felix Krauß">
+
+<title>LLM-Auswertung und Audit</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="llmEvaluation_files/libs/clipboard/clipboard.min.js"></script>
+<script src="llmEvaluation_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="llmEvaluation_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="llmEvaluation_files/libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="llmEvaluation_files/libs/quarto-html/popper.min.js"></script>
+<script src="llmEvaluation_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="llmEvaluation_files/libs/quarto-html/anchor.min.js"></script>
+<link href="llmEvaluation_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="llmEvaluation_files/libs/quarto-html/quarto-syntax-highlighting-dark-447e42e69aaa9833c0ba1b986f430b20.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="llmEvaluation_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="llmEvaluation_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="llmEvaluation_files/libs/bootstrap/bootstrap-d0a4af45de66b11030a5673244ae2f01.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+
+
+</head>
+
+<body class="quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Zum Hauptinhalt springen</a>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">Inhaltsverzeichnis</h2>
+   
+  <ul>
+  <li><a href="#zweck-und-vorgehen" id="toc-zweck-und-vorgehen" class="nav-link active" data-scroll-target="#zweck-und-vorgehen"><span class="header-section-number">1</span> Zweck und Vorgehen</a>
+  <ul class="collapse">
+  <li><a href="#grundsatz-der-festlegung" id="toc-grundsatz-der-festlegung" class="nav-link" data-scroll-target="#grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</a></li>
+  <li><a href="#prüfmethode" id="toc-prüfmethode" class="nav-link" data-scroll-target="#prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</a></li>
+  <li><a href="#sec-modelle" id="toc-sec-modelle" class="nav-link" data-scroll-target="#sec-modelle"><span class="header-section-number">1.3</span> Modelle</a></li>
+  <li><a href="#sec-einstellungen" id="toc-sec-einstellungen" class="nav-link" data-scroll-target="#sec-einstellungen"><span class="header-section-number">1.4</span> Einstellungen</a></li>
+  </ul></li>
+  <li><a href="#übersicht-der-festlegungen" id="toc-übersicht-der-festlegungen" class="nav-link" data-scroll-target="#übersicht-der-festlegungen"><span class="header-section-number">2</span> Übersicht der Festlegungen</a></li>
+  <li><a href="#sec-aufbereitung" id="toc-sec-aufbereitung" class="nav-link" data-scroll-target="#sec-aufbereitung"><span class="header-section-number">3</span> Teil 1: Aufbereitung durch das Tool</a>
+  <ul class="collapse">
+  <li><a href="#festlegung" id="toc-festlegung" class="nav-link" data-scroll-target="#festlegung"><span class="header-section-number">3.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege" id="toc-begründung-und-belege" class="nav-link" data-scroll-target="#begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</a></li>
+  <li><a href="#grenzen" id="toc-grenzen" class="nav-link" data-scroll-target="#grenzen"><span class="header-section-number">3.3</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-entscheidung" id="toc-sec-entscheidung" class="nav-link" data-scroll-target="#sec-entscheidung"><span class="header-section-number">4</span> Teil 2: Entscheidungen</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-1" id="toc-festlegung-1" class="nav-link" data-scroll-target="#festlegung-1"><span class="header-section-number">4.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-1" id="toc-begründung-und-belege-1" class="nav-link" data-scroll-target="#begründung-und-belege-1"><span class="header-section-number">4.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-beobachtungen" id="toc-sec-beobachtungen" class="nav-link" data-scroll-target="#sec-beobachtungen"><span class="header-section-number">4.3</span> Beobachtungen vom 13.11.2026</a></li>
+  <li><a href="#grenzen-1" id="toc-grenzen-1" class="nav-link" data-scroll-target="#grenzen-1"><span class="header-section-number">4.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-berichte" id="toc-sec-berichte" class="nav-link" data-scroll-target="#sec-berichte"><span class="header-section-number">5</span> Teil 3: Berichte</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-2" id="toc-festlegung-2" class="nav-link" data-scroll-target="#festlegung-2"><span class="header-section-number">5.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-2" id="toc-begründung-und-belege-2" class="nav-link" data-scroll-target="#begründung-und-belege-2"><span class="header-section-number">5.2</span> Begründung und Belege</a></li>
+  <li><a href="#grenzen-2" id="toc-grenzen-2" class="nav-link" data-scroll-target="#grenzen-2"><span class="header-section-number">5.3</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-audit" id="toc-sec-audit" class="nav-link" data-scroll-target="#sec-audit"><span class="header-section-number">6</span> Teil 4: Audit</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-3" id="toc-festlegung-3" class="nav-link" data-scroll-target="#festlegung-3"><span class="header-section-number">6.1</span> Festlegung</a></li>
+  <li><a href="#begründung" id="toc-begründung" class="nav-link" data-scroll-target="#begründung"><span class="header-section-number">6.2</span> Begründung</a></li>
+  <li><a href="#grenzen-3" id="toc-grenzen-3" class="nav-link" data-scroll-target="#grenzen-3"><span class="header-section-number">6.3</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-bedrohungsmodell" id="toc-sec-bedrohungsmodell" class="nav-link" data-scroll-target="#sec-bedrohungsmodell"><span class="header-section-number">7</span> Bedrohungsmodell</a>
+  <ul class="collapse">
+  <li><a href="#was-ein-bedrohungsmodell-ist" id="toc-was-ein-bedrohungsmodell-ist" class="nav-link" data-scroll-target="#was-ein-bedrohungsmodell-ist"><span class="header-section-number">7.1</span> Was ein Bedrohungsmodell ist</a></li>
+  <li><a href="#sec-bedrohungsmodell-festlegung" id="toc-sec-bedrohungsmodell-festlegung" class="nav-link" data-scroll-target="#sec-bedrohungsmodell-festlegung"><span class="header-section-number">7.2</span> Festlegung (18.11.2026)</a></li>
+  <li><a href="#begründung-1" id="toc-begründung-1" class="nav-link" data-scroll-target="#begründung-1"><span class="header-section-number">7.3</span> Begründung</a></li>
+  <li><a href="#grenzen-4" id="toc-grenzen-4" class="nav-link" data-scroll-target="#grenzen-4"><span class="header-section-number">7.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-speicher" id="toc-sec-speicher" class="nav-link" data-scroll-target="#sec-speicher"><span class="header-section-number">8</span> Modelle und Speicher</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-4" id="toc-festlegung-4" class="nav-link" data-scroll-target="#festlegung-4"><span class="header-section-number">8.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-3" id="toc-begründung-und-belege-3" class="nav-link" data-scroll-target="#begründung-und-belege-3"><span class="header-section-number">8.2</span> Begründung und Belege</a></li>
+  </ul></li>
+  <li><a href="#sec-kandidaten" id="toc-sec-kandidaten" class="nav-link" data-scroll-target="#sec-kandidaten"><span class="header-section-number">9</span> Kandidaten für den Modellvergleich</a>
+  <ul class="collapse">
+  <li><a href="#rahmenbedingungen" id="toc-rahmenbedingungen" class="nav-link" data-scroll-target="#rahmenbedingungen"><span class="header-section-number">9.1</span> Rahmenbedingungen</a></li>
+  <li><a href="#entscheidungsmodelle" id="toc-entscheidungsmodelle" class="nav-link" data-scroll-target="#entscheidungsmodelle"><span class="header-section-number">9.2</span> Entscheidungsmodelle</a></li>
+  <li><a href="#reasoning-modelle" id="toc-reasoning-modelle" class="nav-link" data-scroll-target="#reasoning-modelle"><span class="header-section-number">9.3</span> Reasoning-Modelle</a></li>
+  <li><a href="#vorschlag-für-den-vergleich" id="toc-vorschlag-für-den-vergleich" class="nav-link" data-scroll-target="#vorschlag-für-den-vergleich"><span class="header-section-number">9.4</span> Vorschlag für den Vergleich</a></li>
+  </ul></li>
+  <li><a href="#sec-entscheidungen" id="toc-sec-entscheidungen" class="nav-link" data-scroll-target="#sec-entscheidungen"><span class="header-section-number">10</span> Entscheidungen vom 13.11., 17.11. und 18.11.2026</a></li>
+  <li><a href="#sec-ergebnisse" id="toc-sec-ergebnisse" class="nav-link" data-scroll-target="#sec-ergebnisse"><span class="header-section-number">11</span> Ergebnisse im Ausgabeordner</a></li>
+  <li><a href="#sec-tests" id="toc-sec-tests" class="nav-link" data-scroll-target="#sec-tests"><span class="header-section-number">12</span> Testergebnisse</a>
+  <ul class="collapse">
+  <li><a href="#sec-erster-lauf" id="toc-sec-erster-lauf" class="nav-link" data-scroll-target="#sec-erster-lauf"><span class="header-section-number">12.1</span> Erster Lauf mit den echten Modellen (17.11.2026)</a></li>
+  <li><a href="#sec-zweiter-lauf" id="toc-sec-zweiter-lauf" class="nav-link" data-scroll-target="#sec-zweiter-lauf"><span class="header-section-number">12.2</span> Zweiter Lauf und Aufteilung nach Kategorie (17.11.2026)</a></li>
+  <li><a href="#sec-dritter-lauf" id="toc-sec-dritter-lauf" class="nav-link" data-scroll-target="#sec-dritter-lauf"><span class="header-section-number">12.3</span> Dritter Lauf mit der Aufteilung nach Kategorie (17.11.2026)</a></li>
+  <li><a href="#sec-vierter-lauf" id="toc-sec-vierter-lauf" class="nav-link" data-scroll-target="#sec-vierter-lauf"><span class="header-section-number">12.4</span> Vierter Lauf: libgdx (17. und 18.11.2026)</a></li>
+  </ul></li>
+  <li><a href="#sec-offen" id="toc-sec-offen" class="nav-link" data-scroll-target="#sec-offen"><span class="header-section-number">13</span> Offene Punkte</a></li>
+  <li><a href="#sec-quellen" id="toc-sec-quellen" class="nav-link" data-scroll-target="#sec-quellen"><span class="header-section-number">14</span> Quellen (noch nicht in <code>references.bib</code>)</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="llmEvaluation.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">LLM-Auswertung und Audit</h1>
+<p class="subtitle lead">Dokumentation der Festlegungen für Schritt 6 des Code-Analysis-Tools</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Autor:in</div>
+    <div class="quarto-title-meta-contents">
+             <p>Felix Krauß </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Veröffentlichungsdatum</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">18. November 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="zweck-und-vorgehen" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Zweck und Vorgehen</h1>
+<p>Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 6 („LLM evaluation“ und „Final audit“) die Ergebnisse der Schritte 2 bis 5 mit lokalen Sprachmodellen auswertet und daraus das Audit erstellt. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter <code>Code-Analysis-Tool/docs/LLMAudit/README.md</code>.</p>
+<p>Schritt 6 wertet drei Bereiche aus:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Ergebnisse aus</th>
+<th>Frage</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>Schritt 4 (OSV-Scanner, Audits der Paketmanager) und die Befunde aus Schritt 3 (OpenGrep, SonarQube), die ihr Werkzeug als Sicherheitsproblem oder Bug einstuft (<code>security</code>, <code>correctness</code>, <code>reliability</code>) oder gar nicht einstuft</td>
+<td>Welche Befunde sind echte Sicherheitsprobleme des ausgelieferten Produkts?</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>Schritt 2 (Linter und Formatter) und die übrigen Befunde aus Schritt 3 (Wartbarkeit, Best Practice, Portabilität, Performance, …)</td>
+<td>Welche Befunde sind relevant, und was haben die Formatter geändert?</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>Schritt 5 (Tests, Abdeckung, Mutation Testing)</td>
+<td>Funktionieren die Tests, und was entgeht ihnen?</td>
+</tr>
+</tbody>
+</table>
+<p>Schritt 6 hat vier Teile:</p>
+<ol type="1">
+<li><strong>Aufbereitung durch das Tool:</strong> Kennungen, Duplikate, Gruppen, Codeausschnitte (<a href="#sec-aufbereitung" class="quarto-xref">Kapitel&nbsp;3</a>).</li>
+<li><strong>Entscheidungen</strong> durch ein Entscheidungsmodell (<a href="#sec-entscheidung" class="quarto-xref">Kapitel&nbsp;4</a>).</li>
+<li><strong>Berichte:</strong> Struktur durch das Tool, Texte durch ein Reasoning-Modell (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>).</li>
+<li><strong>Audit:</strong> durch das Tool allein, ohne Modell (<a href="#sec-audit" class="quarto-xref">Kapitel&nbsp;6</a>).</li>
+</ol>
+<p><strong>Stand am 17.11.2026:</strong> Die Teile 1 und 2 wurden am 13.11.2026 umgesetzt, die Teile 3 und 4 am 17.11.2026. Alle Teile sind mit Unit-Tests gegen ein nachgebildetes Ollama geprüft (<a href="#sec-tests" class="quarto-xref">Kapitel&nbsp;12</a>). Im ersten Lauf mit den echten Modellen am 17.11.2026 kamen die Entscheidungen zustande; die Berichte scheiterten an der MLX-Variante von qwen3.8 (<a href="#sec-erster-lauf" class="quarto-xref">Kapitel&nbsp;12.1</a>). Die Modelle sollen verglichen werden; Kandidaten stehen in <a href="#sec-kandidaten" class="quarto-xref">Kapitel&nbsp;9</a>. Nach einem zweiten Lauf (87 min für Schritt 6) gehen seit dem 17.11.2026 nur noch die Befunde aus Schritt 3 in den Bereich Sicherheit, die ihr Werkzeug als Sicherheitsproblem oder Bug einstuft oder gar nicht einstuft; die übrigen gehen in die Codequalität (<a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a>). Ein dritter Lauf mit dieser Aufteilung brauchte für Schritt 6 noch 19 min (<a href="#sec-dritter-lauf" class="quarto-xref">Kapitel&nbsp;12.3</a>). Der vierte Lauf an libgdx (17./18.11.2026) ergab 2.527 Sicherheitseinträge. Die Berichte scheiterten zuerst wieder mit HTTP 501, diesmal an <code>nemotron-3.5-lightning:30b</code> (MLX). Mit <code>qwen3.8:27b-q4_K_M</code> dauerte eine Anfrage etwa 11,7 min (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). Seit dem 17.11.2026 setzt <code>--evaluate … --resume</code> einen Lauf fort und übernimmt die vorhandenen Entscheidungen. Seit dem 18.11.2026 bekommen im Bereich Sicherheit nur noch REAL-Befunde mit <code>critical</code>, <code>high</code> oder <code>error</code> einen eigenen Text, die übrigen einen Text je Regel (oder Paket) und Label (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>). Ebenfalls seit dem 18.11.2026 verlangt das Tool vor Schritt 2 ein vom Nutzer bestätigtes Bedrohungsmodell des Projekts, das die Entscheidungen und Berichte im Bereich Sicherheit als Kontext bekommen (<a href="#sec-bedrohungsmodell" class="quarto-xref">Kapitel&nbsp;7</a>); seine Wirkung ist noch nicht gemessen. Die Entscheidungen vom 13.11., 17.11. und 18.11.2026, die Schritt 6 bestimmen, stehen in <a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;10</a>.</p>
+<section id="grundsatz-der-festlegung" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</h2>
+<ul>
+<li><strong>Das Tool rechnet, die Modelle entscheiden und formulieren:</strong> Alles, was sich berechnen lässt, macht das Tool selbst: Kennungen, Duplikate, Gruppen, Zählungen, Sortierung, Statistiken, das Beispiel aus dem Patch und das Audit. Das Entscheidungsmodell vergibt nur Labels, das Reasoning-Modell schreibt nur Texte (Entscheidung vom 13.11.2026).</li>
+<li><strong>Die Entscheidungen sind endgültig:</strong> Das Reasoning-Modell ändert kein Label. Hält es eine Entscheidung für falsch, schreibt es einen Prüfhinweis. Diese Regel stammt aus den ersten Prompts des Nutzers (<code>docs/LLMAudit/prompts/</code>, im Git-Verlauf bis Commit <code>911ecab</code>).</li>
+<li><strong>Im Zweifel REAL:</strong> Bekommt ein Befund keine gültige Antwort, erhält er das vorsichtige Label (REAL, PROJECT, CRITICAL, TEST_GAP) und wird zur Prüfung markiert. Kein Befund wird herausgefiltert, nur weil das Modell nicht geantwortet hat.</li>
+<li><strong>Lokal:</strong> Beide Modelle laufen in Ollama auf dem Rechner des Nutzers. Codeausschnitte und Befunde verlassen den Rechner in Schritt 6 nicht.</li>
+<li><strong>Speicher schonen:</strong> Die beiden Modelle sind nie gleichzeitig geladen, die Anfragen an das Entscheidungsmodell sind klein (<a href="#sec-speicher" class="quarto-xref">Kapitel&nbsp;8</a>).</li>
+<li><strong>Nachvollziehbar:</strong> Jede Anfrage und jede Antwort wird gespeichert, beim Reasoning-Modell auch sein Denkweg (<code>thinking</code>).</li>
+</ul>
+</section>
+<section id="prüfmethode" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</h2>
+<ol type="1">
+<li><strong>Dokumentation im Original:</strong> Die Schnittstellen und Modelle wurden am 17.11.2026 in der Dokumentation und im Quellcode von Ollama (Version 0.40.16), auf den Modellseiten der Ollama-Bibliothek und in den Modellkarten von Qwen, OpenAI und Microsoft nachgelesen (<a href="#sec-quellen" class="quarto-xref">Kapitel&nbsp;14</a>). Zitate sind wörtlich und stehen in der Originalsprache (Englisch).</li>
+<li><strong>Angaben der installierten Modelle:</strong> <code>POST /api/show</code> von Ollama 0.40.16 auf dem Rechner des Nutzers (17.11.2026) für beide Modelle (<a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>). Dieser Aufruf liest nur die Metadaten der Modelle.</li>
+<li><strong>Unit-Tests:</strong> 136 Tests (Stand 18.11.2026) mit einem nachgebildeten Ollama, das wie die echten Endpunkte antwortet und mitzählt, welche Modelle gleichzeitig geladen sind (<a href="#sec-tests" class="quarto-xref">Kapitel&nbsp;12</a>).</li>
+<li><strong>Beobachtungen aus der Entwicklung:</strong> Ein Probeaufruf und zwei Speicherprobleme am 13.11.2026 (<a href="#sec-beobachtungen" class="quarto-xref">Kapitel&nbsp;4.3</a>). Sie sind nicht systematisch gemessen.</li>
+<li><strong>Echte Läufe:</strong> erster, zweiter und dritter Lauf am 17.11.2026 (<a href="#sec-erster-lauf" class="quarto-xref">Kapitel&nbsp;12.1</a>, <a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a>, <a href="#sec-dritter-lauf" class="quarto-xref">Kapitel&nbsp;12.3</a>), vierter Lauf an libgdx am 17. und 18.11.2026 (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>); der Vergleich der Modelle folgt (<a href="#sec-kandidaten" class="quarto-xref">Kapitel&nbsp;9</a>).</li>
+<li><strong>Probe ohne Modell:</strong> Die Gruppierung im Bereich Sicherheit und die Übernahme der Entscheidungen wurden am 18.11.2026 an einer Kopie bzw. an den Ergebnisdateien des vierten Laufs durchgerechnet, ohne Modell (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>).</li>
+</ol>
+</section>
+<section id="sec-modelle" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="sec-modelle"><span class="header-section-number">1.3</span> Modelle</h2>
+<div id="tbl-modelle" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-modelle-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;1: Die Modelle von Schritt 6 (Ollama 0.40.16, abgefragt am 17.11.2026)
+</figcaption>
+<div aria-describedby="tbl-modelle-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Entscheidungsmodell</th>
+<th>Reasoning-Modell</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Name</td>
+<td><code>pplx-decider-flash:latest</code></td>
+<td><code>qwen3.8:latest</code></td>
+</tr>
+<tr class="even">
+<td>Herkunft</td>
+<td>Perplexity, „built on Qwen3.5-4B“ [pplx-decider-flash]</td>
+<td>Qwen, Qwen3.8-27B [qwen3.8-card]</td>
+</tr>
+<tr class="odd">
+<td>Parameter</td>
+<td>4,54 Mrd. (4.539.639.296)</td>
+<td>27,8 Mrd. (27.781.081.984)</td>
+</tr>
+<tr class="even">
+<td>Architektur, Format</td>
+<td><code>qwen3_5</code>, safetensors, <code>mxfp8</code>, Runner MLX</td>
+<td><code>qwen3_5</code>, safetensors, <code>nvfp4</code>, Runner MLX</td>
+</tr>
+<tr class="odd">
+<td>Fähigkeiten laut <code>/api/show</code></td>
+<td><code>decision</code>, <code>vision</code></td>
+<td><code>completion</code>, <code>vision</code>, <code>tools</code>, <code>thinking</code></td>
+</tr>
+<tr class="even">
+<td>Voreinstellungen laut <code>/api/show</code></td>
+<td><code>num_ctx 32768</code></td>
+<td><code>temperature 1</code>, <code>top_k 20</code>, <code>top_p 0.95</code>, <code>min_p 0</code>, <code>presence_penalty 0</code>, <code>repeat_penalty 1</code></td>
+</tr>
+<tr class="odd">
+<td>Thinking laut <code>/api/show</code></td>
+<td>–</td>
+<td>Werte <code>false</code>, <code>low</code>, <code>medium</code>, <code>xhigh</code>; Standard <code>medium</code></td>
+</tr>
+<tr class="even">
+<td>Kontextlänge (Metadaten)</td>
+<td>262.144</td>
+<td>262.144</td>
+</tr>
+<tr class="odd">
+<td>Größe laut Ollama-Bibliothek</td>
+<td>5,6 GB [pplx-decider-flash]</td>
+<td>18 GB [qwen3.8-ollama]</td>
+</tr>
+<tr class="even">
+<td>Lizenz</td>
+<td>Apache 2.0</td>
+<td>Apache 2.0</td>
+</tr>
+<tr class="odd">
+<td>Schnittstelle</td>
+<td><code>POST /v1/systemone</code></td>
+<td><code>POST /api/chat</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>MLX-Build von qwen3.8.</strong> Die Angaben zu qwen3.8 in <a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a> gelten für das installierte <code>qwen3.8:latest</code>. Der Tag <code>latest</code> enthält laut seiner Seite zwei Builds, unter „Details“ als <code>mlx</code> (<code>47951e4a6661</code>, 1199 Tensoren, 18 GB) und <code>llamacpp</code> (<code>aaee06c39dcf</code>, GGUF Q4_K_M 17 GB und Vision-Projektor 931 MB) [qwen3.8-latest]. Installiert war der MLX-Build: Sein Digest <code>47951e4a6661…</code> steht in der <code>summary.json</code> des ersten Laufs, und das lokale Manifest vom 23.10.2026 besteht aus rund 1.200 einzelnen Tensor-Dateien statt einer GGUF-Modelldatei. Dass Ollama auf Apple Silicon bei einem Tag mit beiden Builds den MLX-Build lädt, ist aus diesen Befunden geschlossen, nicht dokumentiert. Der Nutzer hat <code>qwen3.8:latest</code> danach gelöscht und testet andere Reasoning-Modelle (<a href="#sec-kandidaten" class="quarto-xref">Kapitel&nbsp;9</a>).</p>
+<p><strong>Stand am 18.11.2026.</strong> In <code>code-analysis.toml</code> steht als Reasoning-Modell <code>qwen3.8:27b-q4_K_M</code> (Quantisierung <code>Q4_K_M</code>, eine GGUF-Modelldatei; <code>ollama ps</code> zeigte beim Lauf den Runner <code>llamacpp</code>) mit <code>temperature = 0</code>. Das zwischendurch eingesetzte <code>nemotron-3.5-lightning:30b</code> ist, wie <code>gemma4:26b</code>, auf dem Rechner des Nutzers im Format <code>nvfp4</code> als einzelne Tensor-Dateien installiert und läuft deshalb auf MLX, ohne Structured Output (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>).</p>
+<p>Beide Modelle und alle Einstellungen stehen in <code>code-analysis.toml</code> und werden bei jedem Lauf gelesen (<a href="#sec-einstellungen" class="quarto-xref">Kapitel&nbsp;1.4</a>). Das Tool prüft beim Start über <code>/api/tags</code>, ob beide Modelle installiert sind, und nennt fehlende mit dem Befehl <code>ollama pull &lt;Modell&gt;</code>.</p>
+</section>
+<section id="sec-einstellungen" class="level2" data-number="1.4">
+<h2 data-number="1.4" class="anchored" data-anchor-id="sec-einstellungen"><span class="header-section-number">1.4</span> Einstellungen</h2>
+<p>Seit dem 17.11.2026 auf Wunsch des Nutzers feiner einstellbar, jede Zeile in <code>code-analysis.toml</code> mit Kommentar:</p>
+<div id="tbl-einstellungen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-einstellungen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;2: Tabellen von <code>[llm]</code> in <code>code-analysis.toml</code>; in Klammern die Standardwerte
+</figcaption>
+<div aria-describedby="tbl-einstellungen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tabelle</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>[llm]</code></td>
+<td>Adresse von Ollama, Berichtssprache, ausgewertete Bereiche</td>
+</tr>
+<tr class="even">
+<td><code>[llm.input]</code></td>
+<td>was das Tool für die Modelle aufbereitet: Zeichen je Meldung (300) und Codeausschnitt (400), Zeilen um die Fundstelle (2), Beispiele je Gruppe (5, davon 3 mit Code; für Gruppen der Codequalität und seit 18.11.2026 der Sicherheit), Meldungen je Gruppe (3), ab welchem Schweregrad ein REAL-Sicherheitsbefund einen eigenen Eintrag bekommt (<code>security_single_severity</code>, <code>"high"</code>, seit 18.11.2026), Testnamen (5) und Zeichen der Fehlermeldung (600) je Gruppe fehlgeschlagener Tests, Zeichen der Deklarationen (300), Schwelle für schwach getestete Dateien (50 %), Zeilen des Diff-Beispiels (10), Ausschnitt aus <code>changes.patch</code> (32 KiB)</td>
+</tr>
+<tr class="odd">
+<td><code>[llm.decision]</code></td>
+<td>Entscheidungsmodell, Zeitlimit (300 s), Wiederholungen (2), <code>keep_alive</code> (10 min), Fragen und Text je Anfrage, Schwelle für niedrige <code>confidence</code></td>
+</tr>
+<tr class="even">
+<td><code>[llm.report]</code></td>
+<td>Reasoning-Modell, Zeitlimit (900 s), Wiederholungen (2), <code>keep_alive</code> (10 min), <code>think</code>, <code>temperature</code>, <code>top_p</code>, <code>top_k</code>, <code>min_p</code> (nicht gesetzt), <code>seed</code>, <code>num_ctx</code>, <code>num_predict</code>, Einträge je Anfrage, Zeichen je Token für die Schätzung des Kontexts (2,5)</td>
+</tr>
+<tr class="odd">
+<td><code>[llm.report.security]</code>, <code>[llm.report.code_quality]</code>, <code>[llm.report.test_quality]</code></td>
+<td>optional: andere Werte des Reasoning-Modells für einen Bereich, alle Schlüssel aus <code>[llm.report]</code> außer <code>model</code></td>
+</tr>
+<tr class="even">
+<td><code>[llm.threat_model]</code></td>
+<td>seit 18.11.2026: wie ein fehlendes Bedrohungsmodell entsteht (<code>create</code>: <code>"generate"</code> oder <code>"manual"</code>), wie viel Dokumentation der Entwurf liest (<code>docs_kib</code>, 24 KiB), wie viel davon Schritt 6 sieht (<code>context_chars</code>, 2.500 Zeichen) (<a href="#sec-bedrohungsmodell" class="quarto-xref">Kapitel&nbsp;7</a>)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Zeitlimit, Wiederholungen und <code>keep_alive</code> je Modell</strong> statt für beide gemeinsam: Im zweiten Lauf dauerte eine Anfrage an das Entscheidungsmodell im Mittel 3,7 s (154 Anfragen in 566 s), eine an das Reasoning-Modell 63 s (63 Anfragen in 3.968 s) (<a href="#tbl-zweiter-lauf" class="quarto-xref">Tabelle&nbsp;6</a>). Ein gemeinsames Zeitlimit von 900 s hätte eine hängende Entscheidungsanfrage erst spät erkannt.</li>
+<li><strong><code>think</code> als Stufe:</strong> Ollama erlaubt neben <code>true</code> und <code>false</code> „A string: select a supported level from <code>thinking.values</code>. Use the exact value from <code>/api/show</code>.“; „Unsupported names use the model default.“ und für <code>false</code>: „Models that cannot disable thinking use their lowest supported level instead.“ [ollama-thinking]. gpt-oss nennt auf seiner Modellseite „Configurable reasoning effort: Easily adjust the reasoning effort (low, medium, high)“ [gpt-oss], qwen3.8 laut <code>/api/show</code> <code>low</code>, <code>medium</code> und <code>xhigh</code> (<a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>). Das Tool reicht den Wert unverändert weiter. Bei <code>gpt-oss:20b</code> entspricht <code>true</code> der Stufe <code>medium</code> (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>).</li>
+<li><strong><code>min_p</code></strong> ist die einzige im Schema von <code>/api/chat</code> dokumentierte Option („Minimum probability threshold for token selection“ [ollama-chat]), die vorher fehlte. Ist sie nicht gesetzt, schickt das Tool sie nicht mit; dann gilt der Wert des Modells.</li>
+<li><strong>Einstellungen je Bereich</strong> erlauben z. B. mehr Denken für die Sicherheitstexte und weniger für die Codequalität. Alle Bereiche nutzen dasselbe Reasoning-Modell, damit nie zwei Reasoning-Modelle nacheinander geladen werden müssen und die Berichte vergleichbar bleiben. Das Audit nennt die abweichenden Werte unter „Methode und Grenzen“.</li>
+<li><strong>Unbekannte Schlüssel sind Fehler</strong> (Exitcode 9), ebenso ein Bereich, den es nicht gibt (z. B. <code>[llm.report.securty]</code>). Sonst würde ein Tippfehler still ignoriert. <code>timeout_seconds</code>, <code>retries</code> und <code>keep_alive</code> direkt unter <code>[llm]</code> werden mit dem Hinweis abgelehnt, dass sie jetzt je Modell gesetzt werden.</li>
+</ul>
+</section>
+</section>
+<section id="übersicht-der-festlegungen" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Übersicht der Festlegungen</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Einheit, die gelabelt wird</th>
+<th>Labels (das erste ist der Standard)</th>
+<th>Text vom Reasoning-Modell</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>jeder statische Befund mit Kategorie <code>security</code>, <code>correctness</code>, <code>reliability</code> oder ohne Kategorie (<code>S-0001</code>) und jeder Abhängigkeitsbefund (<code>D-0001</code>), ohne Duplikate</td>
+<td>REAL, FALSE_POSITIVE, NOISE</td>
+<td>je Eintrag; Zusammenfassung, Grenzen des Laufs</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>Gruppe aus Werkzeug, Regel und Bereich (<code>L-001</code>): Lint-Befunde und statische Befunde mit anderer Kategorie</td>
+<td>REAL, FALSE_POSITIVE, NOISE</td>
+<td>je Gruppe; Zusammenfassung, Arten der Formatter-Änderungen, auffällige Ausschlüsse</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>Gruppe fehlgeschlagener Tests (<code>T-001</code>)</td>
+<td>PROJECT, ENVIRONMENT</td>
+<td>je Eintrag; Zusammenfassung, Bewertung von Testläufen, Abdeckung und Mutation Testing</td>
+</tr>
+<tr class="even">
+<td></td>
+<td>schwach getestete Datei (<code>F-0001</code>)</td>
+<td>CRITICAL, NON_CRITICAL</td>
+<td></td>
+</tr>
+<tr class="odd">
+<td></td>
+<td>überlebender Mutant (<code>M-0001</code>)</td>
+<td>TEST_GAP, LOW_VALUE, POSSIBLY_EQUIVALENT</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sec-aufbereitung" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Teil 1: Aufbereitung durch das Tool</h1>
+<section id="festlegung" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="festlegung"><span class="header-section-number">3.1</span> Festlegung</h2>
+<p><strong>Zuordnung der Befunde aus Schritt 3 (seit 17.11.2026).</strong> Entscheidend ist die Einstufung durch das Werkzeug selbst, das Feld <code>category</code> in <code>step3-static-analysis/findings.json</code>. OpenGrep übernimmt es aus den Metadaten der Regel, SonarQube aus der Software-Qualität des Impacts mit dem höchsten Schweregrad (Security Hotspots immer <code>security</code>), siehe <code>staticAnalysis.qmd</code>. - <code>security</code>: Bereich Sicherheit. - <code>correctness</code> (OpenGrep) und <code>reliability</code> (SonarQube): ebenfalls Bereich Sicherheit. Beide bezeichnen Bugs, und Bugs können Sicherheitsfolgen haben. Ein Befund wird so eher zu hoch bewertet als übersehen. - keine Kategorie: Bereich Sicherheit. Ohne Kategorie lässt sich nicht ausschließen, dass es ein Sicherheitsbefund ist; er bleibt deshalb dort, wo strenger geprüft wird. - jede andere Kategorie (<code>maintainability</code>, <code>best-practice</code>, <code>portability</code>, <code>performance</code>, …): Bereich Codequalität, gruppiert wie die Lint-Befunde.</p>
+<p>Groß- und Kleinschreibung der Kategorie spielt keine Rolle. Gründe und Zahlen in <a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a>.</p>
+<p><strong>Kennungen.</strong> Das Tool vergibt eigene Kennungen: <code>S-0001</code> für statische Befunde (gezählt über alle Befunde von <code>findings.json</code>, <code>S-0005</code> ist der fünfte; die Kennungen im Bereich Sicherheit haben deshalb Lücken), <code>D-0001</code> für Abhängigkeitsbefunde, <code>L-001</code> für Gruppen der Codequalität, <code>T-001</code> für Gruppen fehlgeschlagener Tests, <code>F-0001</code> für schwach getestete Dateien, <code>M-0001</code> für überlebende Mutanten.</p>
+<p><strong>Duplikate (Sicherheit).</strong> - <strong>Statische Befunde</strong> gelten als Duplikate, wenn sie in derselben Datei an sich überschneidenden Zeilen liegen und dieselbe Regel oder eine gemeinsame CWE haben, auch über Werkzeuge hinweg (z. B. OpenGrep und SonarQube zur selben SQL-Injection). - <strong>Abhängigkeitsbefunde</strong> gelten als Duplikate bei gleichem Paket und Ökosystem, gleicher Advisory (Kennung oder Alias, z. B. eine GHSA und ihre CVE) und gleicher oder unbekannter Version. - <strong>Behalten</strong> wird je Gruppe der genaueste Befund: mit CWE und kleinstem Zeilenbereich; bei Abhängigkeiten der Befund von OSV-Scanner mit Version, CVSS und behobenen Versionen. Die anderen bekommen das Label DUPLICATE ohne Modell, mit Verweis auf den behaltenen Befund.</p>
+<p><strong>Gruppen (Codequalität).</strong> Lint-Befunde aus Schritt 2 und statische Befunde mit anderer Kategorie aus Schritt 3 werden getrennt behandelt, aber gemeinsam nummeriert. Exakte Duplikate (gleiches Werkzeug, Regel, Datei, Zeile, Spalte, Meldung) werden entfernt. Die übrigen Befunde werden nach Werkzeug, Regel und Bereich gruppiert. Jede Gruppe enthält die Anzahl, die Zahl der Dateien, den höchsten Schweregrad, bis zu drei Meldungen und bis zu fünf Beispiele aus möglichst verschiedenen Dateien, davon drei mit Code. Lint-Gruppen zeigen zusätzlich, wie viele Befunde das Werkzeug selbst behoben hat, Gruppen aus Schritt 3 die Kategorie und Unterkategorie des Werkzeugs (z. B. <code>maintainability</code>, <code>code_smell</code>). Außerdem merkt sich das Tool alle Fundstellen jeder Gruppe (Datei und Zeile) für Bericht und Audit; das Modell sieht davon nur die Beispiele, damit die Anfragen klein bleiben.</p>
+<p><strong>Testqualität.</strong> - Fehlgeschlagene Tests einer Suite mit derselben Ursache bilden eine Gruppe. Die Ursache ist die erste Zeile der Fehlermeldung ohne Zahlen, Pfade und Text in Anführungszeichen. - Schwach getestet ist eine Quelldatei, die kein Test geladen hat oder deren Zeilen zu weniger als der Hälfte abgedeckt sind (<code>weak_line_rate</code> in <code>[llm.input]</code>). Dazu kommen die Mutanten, die in ihr nicht erkannt wurden, und ihre Deklarationen (Klassen, Funktionen). - Überlebende Mutanten (<code>Survived</code>) mit Datei, Zeile, Mutator, Änderung und ursprünglicher Zeile.</p>
+<p><strong>Bereich einer Datei</strong> (aus dem Pfad): <code>generated</code> (von Schritt 2 ausgelassen), <code>vendored</code> (<code>vendor/</code>, <code>third_party/</code>, <code>node_modules/</code>, …), <code>test</code> (Testordner und Testdateinamen wie in Schritt 5), <code>docs/examples</code>, <code>ci</code>, <code>scripts</code>, sonst <code>main</code>.</p>
+<p><strong>Was ein Modell sieht.</strong> Die Fakten jedes Eintrags in knapper Form, z. B. Werkzeug, Regel, Schweregrad, CWE, Meldung (höchstens 300 Zeichen), Datei, Zeile, Bereich und bis zu zwei Zeilen Code um die Fundstelle (höchstens 400 Zeichen) aus dem Projekt im Stand nach Schritt 2. Nie die vollständigen Ergebnisdateien. Alle diese Grenzen stehen in <code>[llm.input]</code> (<a href="#tbl-einstellungen" class="quarto-xref">Tabelle&nbsp;2</a>).</p>
+</section>
+<section id="begründung-und-belege" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</h2>
+<p><strong>Mengen.</strong> Die Ergebnisdateien sind zu groß, um sie einem Modell unverarbeitet zu geben. Gemessen am 13.11.2026 an echten Läufen:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Projekt</th>
+<th>Lint-Befunde</th>
+<th>Patch</th>
+<th>Statische Befunde</th>
+<th>Abhängigkeitsbefunde</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>libgdx</td>
+<td>57.736 (19 MB)</td>
+<td>35 MB</td>
+<td>2.147</td>
+<td>351</td>
+</tr>
+<tr class="even">
+<td>strapi</td>
+<td>8.143</td>
+<td>62 MB</td>
+<td>1.577</td>
+<td>506</td>
+</tr>
+<tr class="odd">
+<td>ninakswebshopui</td>
+<td>208</td>
+<td>–</td>
+<td>462</td>
+<td>6</td>
+</tr>
+</tbody>
+</table>
+<p>Die <code>summary.json</code> von Schritt 2 ist bis zu 1 MB groß.</p>
+<p><strong>Eigene Kennungen.</strong> Die Befunde der Schritte haben keine einheitliche Kennung: Befunde aus Schritt 2 haben weder <code>id</code> noch <code>fingerprint</code>, Befunde aus Schritt 3 einen <code>fingerprint</code>, Befunde aus Schritt 4 die Kennung der Advisory mit Aliasen, die aber nicht je Befund eindeutig ist (stand 13.11.2026).</p>
+<p><strong>Duplikate durch das Tool.</strong> Das Entscheidungsmodell gibt nur ein Label je Frage zurück und kann keinen Verweis auf einen anderen Befund liefern („Returns one JSON response; streaming, video, tools, and generation controls are not supported.“ [ollama-systemone]). Ein Label DUPLICATE mit <code>duplicate_of</code>, wie in den ersten Prompts des Nutzers vorgesehen, ist damit nicht möglich. Die Kriterien für Duplikate sind eine eigene Festlegung, nicht aus einer Quelle übernommen.</p>
+<p><strong>Gruppen statt Einzelbefunde bei Lint.</strong> Lint-Befunde wiederholen sich: dieselbe Regel meldet oft Hunderte gleichartige Stellen. Eine Entscheidung je Gruppe hält die Zahl der Anfragen bei libgdx im Bereich von Gruppen statt von 57.736 Befunden (Entscheidung vom 13.11.2026). Für die statischen Befunde ohne Sicherheitsbezug gilt dasselbe: Im zweiten Lauf kamen 494 Befunde von einer einzigen OpenGrep-Regel (<a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a>).</p>
+<p><strong>Kategorie der Werkzeuge statt Modell.</strong> Ob ein statischer Befund im Bereich Sicherheit ausgewertet wird, entscheidet das Tool aus der Einstufung des Werkzeugs, nicht ein Modell. Das ist deterministisch und nachprüfbar, und das Entscheidungsmodell bekommt im Bereich Sicherheit nur Befunde, für die die Frage „echtes Sicherheitsproblem?“ sinnvoll ist (Entscheidung des Nutzers vom 17.11.2026).</p>
+<p><strong>Woher die Kategorie kommt.</strong> Bei OpenGrep trägt der Autor einer Regel die Kategorie von Hand in die Metadaten ein. Das Schema der Regelsammlung <code>opengrep-rules</code> erlaubt <code>security</code>, <code>correctness</code>, <code>best-practice</code>, <code>maintainability</code>, <code>portability</code>, <code>performance</code> und <code>accessibility</code>. Nur für <code>security</code> verlangt es zusätzlich <code>cwe</code>, <code>likelihood</code>, <code>impact</code> und <code>subcategory</code> (<code>metadata-schema.yaml.schm</code>, [opengrep-rules]). Nach welchen Kriterien die Autoren die Kategorie wählen, steht nicht in der Sammlung.</p>
+<p><strong>Warum <code>correctness</code> und <code>reliability</code> als Sicherheit zählen.</strong> Ausgewertet wurden die Regeln von <code>opengrep-rules</code> im Commit <code>f1d2b56</code> aus <code>code-analysis.toml</code>, nur in den Ordnern, die das Tool nutzt (C, C#, Java, JavaScript, TypeScript, Python, Rust), zeilenweise am 17.11.2026: - 792 Regeln: 639 <code>security</code>, 56 <code>correctness</code>, 45 <code>best-practice</code>, 25 <code>compatibility</code>, 16 <code>maintainability</code>, 5 <code>portability</code>, 5 <code>performance</code>, 1 <code>caching</code>. - Manche <code>correctness</code>-Regeln haben einen Sicherheitsbezug, aber keine CWE: - <code>double_goto</code> in <code>c/lang/correctness/goto-fail.yaml</code> meldet ein doppeltes <code>goto</code> („The second goto statement will always be executed.“). Das ist das Muster des „goto fail“-Fehlers in Apples TLS-Prüfung. - <code>tempfile-insecure</code> in <code>python/lang/correctness/tempfile/mktemp.yaml</code> meldet <code>tempfile.mktemp</code> und zitiert die Python-Dokumentation: „THIS FUNCTION IS UNSAFE AND SHOULD NOT BE USED.“ - Nur 2 Regeln außerhalb von <code>security</code> haben eine CWE, beide für C#: <code>structured-logging</code> (<code>best-practice</code>, CWE-117) und <code>correctness-sslcertificatetrust-handshake-no-trust</code> (<code>correctness</code>, CWE-200). - Die 49 Regeln von <code>0xdea-semgrep-rules</code> (Commit <code>b994260</code>) sind alle <code>security</code>. - <code>semgrep-rules</code> wurde wegen seiner Lizenz nicht heruntergeladen und nicht ausgewertet.</p>
+<p>SonarQube kennt keine Kategorie <code>correctness</code>; sein Gegenstück für Bugs ist die Software-Qualität <code>reliability</code>. Im zweiten Lauf hatte sie einen Befund mit Sicherheitsbezug: <code>typescript:S8786</code>, „Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking“ (Gefahr eines ReDoS). Der Nutzer entschied am 17.11.2026, <code>correctness</code> als Sicherheit zu zählen („eher zu hoch bewertet als übersehen“), und auf den Hinweis auf SonarQube auch <code>reliability</code>.</p>
+</section>
+<section id="grenzen" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="grenzen"><span class="header-section-number">3.3</span> Grenzen</h2>
+<ul>
+<li>Zwei verschiedene Probleme in derselben Zeile mit gemeinsamer CWE werden zu einem Eintrag zusammengeführt. Duplikate mit verschiedener CWE und verschiedener Regel werden nicht erkannt.</li>
+<li>Ein Label gilt für die ganze Gruppe. Einzelne echte Befunde in einer Gruppe, die als NOISE gilt, gehen im Bericht unter (sie bleiben in den Rohdaten von Schritt 2 bzw. 3).</li>
+<li>Die Zuordnung ist nur so gut wie die Kategorie der Werkzeuge. Eine Regel mit Sicherheitsbezug, die ihr Autor als <code>best-practice</code> oder <code>maintainability</code> eingestuft hat (z. B. <code>structured-logging</code> mit CWE-117), wird in der Codequalität ausgewertet, mit dem Prompt und den Labels der Codequalität. Bei SonarQube zählt nur der Impact mit dem höchsten Schweregrad; ein zusätzlicher, niedrigerer Sicherheits-Impact geht verloren, wenn der höchste <code>maintainability</code> ist, weil Schritt 3 nur eine Kategorie speichert.</li>
+<li>Mit <code>correctness</code> und <code>reliability</code> kommen auch Bugs ohne Sicherheitsbezug in den Bereich Sicherheit, z. B. im zweiten Lauf sechsmal „Prefer <code>Number.parseInt</code> over <code>parseInt</code>“ (SonarQube <code>typescript:S7773</code>, <code>reliability</code>). Sie kosten Anfragen und sollten dort als NOISE gelabelt werden. Bei Projekten mit vielen SonarQube-Befunden zur Zuverlässigkeit (z. B. Java) kann das den Bereich Sicherheit wieder deutlich vergrößern; gemessen ist das noch nicht.</li>
+<li>Lint-Befunde und statische Befunde zur selben Stelle (z. B. ESLint und SonarQube) werden nicht als Duplikate erkannt.</li>
+<li>Der Bereich einer Datei ist eine Heuristik über Pfade und Dateinamen.</li>
+</ul>
+</section>
+</section>
+<section id="sec-entscheidung" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Teil 2: Entscheidungen</h1>
+<section id="festlegung-1" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="festlegung-1"><span class="header-section-number">4.1</span> Festlegung</h2>
+<ul>
+<li><strong>Schnittstelle:</strong> <code>POST /v1/systemone</code>. Jede Anfrage enthält einen gemeinsamen Zustand (<code>state</code>: Regeln des Bereichs und kurze Fakten zum Lauf) und je Eintrag eine Frage vom Typ <code>choice</code> mit den Labels als Optionen (<code>criteria</code>). Die Texte stehen in den Entscheidungs-Prompts (<code>scheduler/src/scheduler/evaluation/prompts/*_decision.md</code>).</li>
+<li><strong>Ergebnis je Eintrag:</strong> Label, Wahrscheinlichkeit jedes Labels und <code>confidence</code>.</li>
+<li><strong>Größe einer Anfrage:</strong> höchstens <code>max_questions = 8</code> Fragen und <code>max_input_kib = 20</code> KiB Text, gerechnet als gemeinsamer Zustand einmal je Frage plus die Fragen. Unabhängig davon bleibt der gesendete Text unter 60 KiB.</li>
+<li><strong>Fehler:</strong> Eine gescheiterte Anfrage mit mehreren Fragen wird halbiert und erneut gesendet. Eine einzelne Frage wird <code>retries = 2</code> Mal wiederholt. Ein Eintrag ohne gültige Antwort bekommt das Standard-Label und wird zur Prüfung markiert.</li>
+<li><strong>Prüfung:</strong> Jede Entscheidung mit <code>confidence</code> unter <code>review_confidence = 0.6</code> wird markiert und erscheint in der Prüfliste des Audits.</li>
+</ul>
+</section>
+<section id="begründung-und-belege-1" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="begründung-und-belege-1"><span class="header-section-number">4.2</span> Begründung und Belege</h2>
+<p><strong>Die Schnittstelle.</strong> Ollama beschreibt sie so: „Use System One to classify text, answer yes/no questions, or score text against a rubric.“ [ollama-decision]. Der Fragetyp <code>choice</code> hat „2–26 named options with descriptions“ und liefert „The most likely option and each option’s probability“ [ollama-decision]. Das Modell selbst „returns a calibrated probability for every answer in a single forward pass. It doesn’t generate text.“ [pplx-decider-flash]</p>
+<p><strong>Folgen für die Prompts.</strong> Weil das Modell keinen Text erzeugt, können die Entscheidungs-Prompts kein JSON wie <code>{"decisions": […]}</code> verlangen. Ihre Regeln werden zum gemeinsamen Zustand, die Beschreibung jedes Labels zu seinem <code>criteria</code>-Text.</p>
+<p><strong>Grenzen einer Anfrage.</strong> - „Local requests’ text and schema, excluding images, must fit within 64 KiB, and the whole request within 32 MiB, including base64 and JSON. The complete input must fit the loaded context window. […] Input is never truncated.“ [ollama-systemone] - Eine Anfrage hat 1 bis 64 Fragen (<code>minProperties: 1</code>, <code>maxProperties: 64</code> im OpenAPI-Schema [ollama-systemone]; „1 to 64 named questions“ [pplx-decider-flash]). - Die Fragen sind unabhängig: „Named questions about the shared state. Answers are not passed to later questions.“ [ollama-systemone]</p>
+<p><strong>Warum nur 8 Fragen und 20 KiB.</strong> - Ollama zählt den gemeinsamen Zustand je Frage erneut: „Shared context is counted again when the model scores questions separately.“ (Feld <code>usage.input_tokens</code> [ollama-systemone]). - Der Speicherbedarf einer Anfrage wächst deshalb vermutlich mit der Zahl der Fragen. Das ist nicht gemessen, passt aber zu den Beobachtungen vom 13.11.2026 (<a href="#sec-beobachtungen" class="quarto-xref">Kapitel&nbsp;4.3</a>). - Perplexity nennt für das Modell eine etwas bessere Bewertung mit einer Frage je Anfrage: „Perplexity’s evaluation puts it at 58.88 overall on the Decision Index 0.3 (60.05 with one question per request)“ [pplx-decider-flash]. Mehrere Fragen je Anfrage kosten also nach Herstellerangabe etwas Genauigkeit und sparen Anfragen (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>).</p>
+<p><strong>Was <code>confidence</code> bedeutet.</strong> „For <code>choice</code> and <code>score</code>, <code>confidence</code> measures how strongly the model favors one answer over the others, from 0 to 1. A higher value does not guarantee the answer is correct.“ [ollama-decision]. Ebenso auf der Modellseite: „It isn’t the chance that the answer is right.“ [pplx-decider-flash]. Die Markierung unter 0,6 ist deshalb ein Hinweis für die manuelle Prüfung, kein Maß für die Richtigkeit. Auch Entscheidungen mit hoher <code>confidence</code> können falsch sein. Der Schwellenwert 0,6 ist eine eigene Festlegung.</p>
+<p><strong>Halbieren bei Fehlern.</strong> Antworten mit HTTP 400 und 413 bedeuten eine zu große oder ungültige Anfrage („Local text and schema exceed 64 KiB“ für 413 [ollama-systemone]). Eine kleinere Anfrage kann dann gelingen, eine gleiche nicht. HTTP 500 steht für „Model loading, rendering, or scoring failed.“ [ollama-systemone]</p>
+</section>
+<section id="sec-beobachtungen" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="sec-beobachtungen"><span class="header-section-number">4.3</span> Beobachtungen vom 13.11.2026</h2>
+<p>Diese Beobachtungen stammen aus der Entwicklung, nicht aus einer systematischen Messung (Mac mit 32 GB Arbeitsspeicher, Ollama 0.40.16):</p>
+<ul>
+<li><strong>Probeaufruf:</strong> zwei Befunde in 4 s. Ein Platzhalter-Geheimnis in einer Test-Fixture wurde NOISE (0,90), eine SQL-Injection REAL (0,99).</li>
+<li><strong>Speicher:</strong>
+<ul>
+<li>Anfragen mit bis zu 32 Fragen und etwa 30 KB verbrauchten den Arbeitsspeicher; macOS meldete Speichermangel, und Ollama stürzte ab. Schon die erste Anfrage mit 32 Fragen beendete den Runner.</li>
+<li>Eine Anfrage mit 5 bis 6 Lint-Fragen (etwa 20 KiB) senkte den freien Speicher innerhalb etwa einer Sekunde von 85 % auf 6 %.</li>
+<li>Anfragen mit 8 Fragen dauerten etwa 2 s.</li>
+<li>Die Gewichte des Modells sind nur etwa 5 GB groß; der Bedarf wächst offenbar mit der Eingabe je Anfrage. Die Ursache ist nicht geprüft.</li>
+</ul></li>
+</ul>
+</section>
+<section id="grenzen-1" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="grenzen-1"><span class="header-section-number">4.4</span> Grenzen</h2>
+<ul>
+<li>Die Labels stammen von einem Modell mit 4,5 Mrd. Parametern. Es begründet seine Entscheidungen nicht.</li>
+<li>Die Labels einer Anfrage werden mit denselben Regeln, aber unabhängig voneinander entschieden. Ein Vergleich zwischen Befunden findet nicht statt.</li>
+</ul>
+</section>
+</section>
+<section id="sec-berichte" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Teil 3: Berichte</h1>
+<section id="festlegung-2" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="festlegung-2"><span class="header-section-number">5.1</span> Festlegung</h2>
+<p><strong>Struktur durch das Tool.</strong> - <strong>Sicherheit (seit 18.11.2026):</strong> - <strong>Einzelne Einträge</strong> (<code>E-001</code>) bekommen nur REAL-Befunde mit Schweregrad <code>critical</code>, <code>high</code> oder <code>error</code> (<code>security_single_severity = "high"</code> in <code>[llm.input]</code>). Jeder hat alle zusammengeführten Kennungen in <code>source_ids</code>, die Werkzeuge, Regeln, CWE/CVE/anderen Kennungen, Ort oder Paket mit behobenen Versionen, den Schweregrad wie von den Werkzeugen gemeldet, Label und <code>confidence</code>. - <strong>Gruppen:</strong> Alle anderen Befunde werden gruppiert: statische Befunde nach Werkzeug, Regel und Label, Abhängigkeitsbefunde nach Paket und Label. Eine Gruppe mit nur einem Befund wird wie ein einzelner Eintrag behandelt. Eine Gruppe enthält Anzahl, Dateien, Schweregrade, Bereiche, alle Fundstellen (<code>locations</code>) und jeden Befund mit seiner eigenen Entscheidung (<code>findings</code>). Bei Abhängigkeiten kommen installierte und behobene Versionen hinzu. - <strong>Was das Modell sieht:</strong> je Gruppe bis zu 5 Beispiele, davon 3 mit Code, und bis zu 3 Meldungen; es schreibt einen Text für die ganze Gruppe. - <strong>Reihenfolge:</strong> REAL nach Schweregrad und Größe, dann FALSE_POSITIVE, dann NOISE. - <strong>Statistik:</strong> zählt weiter je Befund (Labels, REAL nach Schweregrad, niedrige <code>confidence</code>), dazu die Zahl der Einträge und Gruppen und, wie viele Befunde aus Schritt 3 in die Codequalität gingen. Jede Eingangskennung steht in genau einem Eintrag. - <strong>Bis 17.11.2026</strong> gab es einen Eintrag je Befund. - <strong>Codequalität:</strong> ein Eintrag je Gruppe (<code>G-001</code>) mit Werkzeug, Regel, bei Befunden aus Schritt 3 der Kategorie des Werkzeugs, und allen Fundstellen nach Datei mit ihren Zeilen; die Befunde aus Schritt 2 und Schritt 3 getrennt gezählt; dazu die Änderungen der Formatter aus <code>changes.patch</code> (Werkzeuge, die Dateien geändert haben, Dateien, hinzugefügte und entfernte Zeilen, der erste Hunk wörtlich als Beispiel mit höchstens 10 Zeilen) und die ausgeschlossenen Dateien nach Grund. - <strong>Testqualität:</strong> ein Eintrag je Gruppe fehlgeschlagener Tests, schwach getesteter Datei und überlebendem Mutanten; dazu Testläufe, Abdeckung und Mutation Testing aus Schritt 5.</p>
+<p><strong>Texte durch das Reasoning-Modell</strong> über <code>POST /api/chat</code> mit JSON-Schema (<code>format</code>), <code>think</code> und den Optionen aus <code>[llm.report]</code> oder der Tabelle des Bereichs (in <code>code-analysis.toml</code> am 17.11.2026: <code>think true</code>, <code>temperature 0.6</code>, <code>top_p 0.95</code>, <code>top_k 20</code>, <code>seed 42</code>, <code>num_ctx 16384</code>, <code>num_predict 6144</code>, <code>min_p</code> nicht gesetzt; am 18.11.2026 <code>temperature 0</code>, sonst gleich): - <strong>je Eintrag:</strong> ein Titel; bei Labels, die Handeln verlangen (REAL, PROJECT, CRITICAL, TEST_GAP), eine Beschreibung und eine Empfehlung, sonst eine kurze Begründung; ein Prüfhinweis, wenn das Modell eine Entscheidung bezweifelt. In Stapeln von höchstens <code>entries_per_request = 10</code> Einträgen, die in das Kontextfenster passen. - <strong>je Bereich:</strong> Zusammenfassung und Grenzen des Laufs; bei Codequalität die Arten der Formatter-Änderungen und auffällige Ausschlüsse; bei Testqualität eine Bewertung der Testläufe, der Abdeckung und des Mutation Testing.</p>
+<p><strong>Prüfung der Antworten.</strong> Jede Antwort muss gültiges JSON sein, jeden angefragten Eintrag genau einmal enthalten und die Texte, die sein Label verlangt. Eine ungültige Antwort wird halbiert und erneut angefragt; ein einzelner Eintrag wird mit anderem Seed (<code>seed + 1</code>, <code>seed + 2</code>) erneut angefragt, <code>retries</code> Mal. Was danach fehlt, bleibt leer und wird gezählt (<code>texts_missing</code>). Der Bereich gilt dann als <code>partial</code>.</p>
+<p><strong>Prompts.</strong> <code>security_report.md</code>, <code>lint_report.md</code> und <code>test_report.md</code> mit den Abschnitten <code>## System</code>, <code>## Entries</code> und <code>## Summary</code>. Sie übernehmen aus den ersten Prompts des Nutzers die Regeln „The decisions are final“, die Regel zu nicht vertrauenswürdigen Projektdaten und den Platzhalter für die Berichtssprache. Die Anweisungen zum Zählen, Gruppieren und Zusammenführen sind entfallen, weil das Tool sie übernimmt. Am 18.11.2026 kam in <code>## Entries</code> von <code>security_report.md</code> ein Satz zu Gruppen hinzu, vom Nutzer freigegeben: „An entry with <code>count</code> greater than 1 is a group: all findings of one rule (static analysis) or one package (dependencies) with the same label. <code>samples</code> shows some of its locations, <code>files</code> and <code>severities</code> describe the whole group. Write the texts for the group as a whole, not for one sample.“ Enthält eine Gruppe Befunde mit niedriger <code>confidence</code>, setzt das Tool <code>low_confidence: true</code> und nennt ihre Zahl (<code>low_confidence_findings</code>). So gilt der bestehende Satz zu <code>low_confidence</code> im System-Prompt auch für Gruppen.</p>
+</section>
+<section id="begründung-und-belege-2" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="begründung-und-belege-2"><span class="header-section-number">5.2</span> Begründung und Belege</h2>
+<p><strong>JSON-Schema.</strong> „Structured outputs let you enforce a JSON schema on model responses so you can reliably extract structured data, describe images, or keep every reply consistent.“ und „Provide a JSON schema to the <code>format</code> field.“ [ollama-structured]. Im Feld <code>format</code> von <code>/api/chat</code>: „Format to return a response in. Can be <code>json</code> or a JSON schema“ [ollama-chat]. Die Dokumentation empfiehlt außerdem: „It is ideal to also pass the JSON schema as a string in the prompt to ground the model’s response.“ [ollama-structured]. Das Tool beschreibt die Felder im Prompt in Worten, gibt das Schema aber nicht als Text mit (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>).</p>
+<p><strong>Thinking.</strong> „Thinking-capable models emit a <code>thinking</code> field that separates their reasoning trace from the final answer.“ und „The reasoning output and answer use separate fields. Chat returns <code>message.thinking</code> and <code>message.content</code>.“ [ollama-thinking]. Das Tool liest die Antwort aus <code>message.content</code> und speichert <code>message.thinking</code> mit jeder Anfrage. Zu den Werten von <code>think</code>: „<code>true</code>: request thinking output.“ und „A string: select a supported level from <code>thinking.values</code>. Use the exact value from <code>/api/show</code>.“ [ollama-thinking]. Für qwen3.8 nennt <code>/api/show</code> die Werte <code>false</code>, <code>low</code>, <code>medium</code> und <code>xhigh</code> mit Standard <code>medium</code> (<a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>). Welche Stufe <code>true</code> wählt, steht nicht in der Dokumentation.</p>
+<p>Für <code>gpt-oss:20b</code> zeigt es der Quellcode von Ollama 0.40.16:</p>
+<ul>
+<li><strong>Ollama übersetzt <code>true</code> in <code>medium</code>:</strong> <code>ThinkValue.String()</code> gibt für <code>true</code> „medium“ zurück: <code>return "medium" // Default level when just true</code> (<code>types/model/thinking.go</code>, Zeile 128) [ollama-src-thinking].</li>
+<li><strong>Die Stufe geht ins Template:</strong> Hat ein Modell keinen eigenen Renderer, setzt <code>renderPrompt</code> diese Stufe in sein Template ein: <code>thinkLevel = think.String()</code> (<code>server/prompt.go</code>, Zeile 150) [ollama-src-prompt]. Die Konfiguration von <code>gpt-oss:20b</code> in der Ollama-Registry nennt keinen Renderer.</li>
+<li><strong>Das Template schreibt sie in die Systemnachricht:</strong> Das Template von <code>gpt-oss:20b</code> (Tag-Digest <code>f38aa0c53da5</code>, derselbe wie in <code>summary.json</code> des zweiten und dritten Laufs) schreibt <code>Reasoning: {{ .ThinkLevel }}</code> in die Systemnachricht, sonst <code>Reasoning: medium</code> [gpt-oss-template].</li>
+</ul>
+<p>Bei <code>gpt-oss:20b</code> bedeutet <code>think = true</code> also „medium“, den Standard des Modells. Für qwen3.8 ist das nicht nachverfolgt. Seit dem 17.11.2026 nimmt <code>think</code> in <code>code-analysis.toml</code> auch eine Stufe (<a href="#sec-einstellungen" class="quarto-xref">Kapitel&nbsp;1.4</a>).</p>
+<p><strong>Optionen.</strong> Aus dem Schema von <code>/api/chat</code> [ollama-chat]: - <code>seed</code>: „Random seed used for reproducible outputs“. Eine Wiederholung mit gleichem Seed brächte deshalb voraussichtlich dieselbe ungültige Antwort; das Tool ändert den Seed bei einer Wiederholung. - <code>num_ctx</code>: „Context length size (number of tokens)“; <code>num_predict</code>: „Maximum number of tokens to generate“. - <code>keep_alive</code>: „Model keep-alive duration (for example <code>5m</code> or <code>0</code> to unload immediately)“.</p>
+<p><strong>Kontextfenster.</strong> - Ohne Angabe nutzt Ollama ein kleines Fenster: „By default, Ollama uses a context window size of 4096 tokens.“ [ollama-faq]. Das Tool setzt <code>num_ctx</code> deshalb ausdrücklich. - Das Modell könnte 262.144 Tokens (<a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>), aber: „Setting a larger context length will increase the amount of memory required to run a model.“ [ollama-context]. 16.384 Tokens sind ein Kompromiss für einen Mac mit 32 GB und eine eigene Festlegung. - Wie viele Einträge in eine Anfrage passen, schätzt das Tool mit 2,5 Zeichen je Token auf <code>num_ctx − num_predict</code> (<code>chars_per_token</code> in <code>[llm.report]</code>). Diese Schätzung ist eine eigene, vorsichtige Annahme und nicht gemessen (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>).</p>
+<p><strong>Sampling-Parameter.</strong> Qwen schreibt in der Modellkarte: „We recommend using the following sets of sampling parameters for generation:“, darunter „Thinking Mode: <code>temperature=1.0</code>, <code>top_p=0.95</code>, <code>top_k=20</code>, <code>min_p=0.0</code>, <code>presence_penalty=0.0</code>, <code>repetition_penalty=1.0</code>“ [qwen3.8-card]. Dieselben Werte setzt Ollama als Voreinstellung des Modells (<a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>). <code>top_p</code> und <code>top_k</code> in <code>code-analysis.toml</code> entsprechen dem. <strong><code>temperature = 0.6</code> weicht davon ab</strong> und ist durch keine der gelesenen Quellen belegt (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>).</p>
+<p><strong>Texte für alle Einträge.</strong> Auch Einträge mit FALSE_POSITIVE und NOISE bekommen eine kurze Begründung. So sahen es die ersten Prompts des Nutzers vor („FALSE_POSITIVE and NOISE entries: give one short sentence explaining why“). Seit dem 18.11.2026 gilt die Begründung im Bereich Sicherheit für eine ganze Gruppe statt für jeden Befund.</p>
+<p><strong>Gruppen im Bereich Sicherheit (18.11.2026).</strong> Bei libgdx hätte das Reasoning-Modell 2.527 Texte schreiben müssen, davon 1.797 Begründungen für NOISE und FALSE_POSITIVE. Mit etwa 11,7 min je Anfrage wären das mehr als zwei Tage gewesen (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). - <strong>Was eine Einzelbegründung beiträgt:</strong> Das Label vergibt das Entscheidungsmodell mit Wahrscheinlichkeiten. Die Begründung des Reasoning-Modells erklärt im Nachhinein ein Label, das es nicht selbst vergeben hat. Ein zusätzlicher Beleg für die Entscheidung ist sie nicht. - <strong>Was gleich bleibt:</strong> Jeder Befund behält seine eigene Entscheidung und Fundstelle, im Bericht und im Audit. - <strong>Was wegfällt:</strong> Für die meisten Befunde schreibt das Modell keinen eigenen Text mehr. Einen eigenen Text behalten nur die REAL-Befunde mit hohem Schweregrad. - <strong>Variante:</strong> Mit Einzeltexten für alle Befunde mit hohem Schweregrad, unabhängig vom Label, wären es bei libgdx 449 statt 160 Einträge gewesen, davon 304 Einzelbegründungen für NOISE und FALSE_POSITIVE. Der Nutzer wählte „nur REAL“ (<a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;10</a>).</p>
+</section>
+<section id="grenzen-2" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="grenzen-2"><span class="header-section-number">5.3</span> Grenzen</h2>
+<ul>
+<li>Die Texte schreibt ein Sprachmodell. Die Regel, nur mit Fakten aus der Eingabe zu begründen, steht im Prompt, kann aber vom Tool nicht geprüft werden. Geprüft wird nur, ob die Texte vorhanden sind.</li>
+<li>Bei großen Projekten sind es viele Anfragen, jede mit Thinking. Im zweiten Lauf brauchten 63 Anfragen für 614 Sicherheitseinträge 66 min (<a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a>). Bei libgdx waren es auch nach der Aufteilung nach Kategorie 2.527 Sicherheitseinträge (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). Mit den Gruppen sind es dort 160 Einträge. Die Codequalität bleibt mit 359 Gruppen der größte Posten. Bei strapi (1.577 statische Befunde) ist die Dauer noch nicht gemessen.</li>
+<li>In einer Gruppe steht ein Text für alle Befunde. Weicht ein einzelner Befund vom Rest ab, z. B. ein echter Befund in einer Gruppe mit vielen ähnlichen Stellen, geht das im Text unter. Sein Label vergibt aber weiterhin das Entscheidungsmodell je Befund, und die Prüfliste nennt, wie viele Befunde der Gruppe eine niedrige <code>confidence</code> haben.</li>
+<li>Das Modell sieht von einer Gruppe nur die Beispiele. Bei 489 Befunden einer Regel sind das 5 Stellen, 3 davon mit Code.</li>
+</ul>
+</section>
+</section>
+<section id="sec-audit" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Teil 4: Audit</h1>
+<section id="festlegung-3" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="festlegung-3"><span class="header-section-number">6.1</span> Festlegung</h2>
+<p>Das Tool schreibt <code>audit.md</code> und <code>audit.json</code> in den Ordner des Laufs, allein aus <code>run.json</code>, den <code>summary.json</code> der Schritte 2 bis 6 und den Berichten von Schritt 6, ohne Modell. Die Texte des Reasoning-Modells werden unverändert übernommen.</p>
+<p><code>audit.md</code> hat sieben Abschnitte:</p>
+<ol type="1">
+<li><strong>Überblick:</strong> Projekt, Commit, Datum, Sprachen, Modelle, Status der Schritte 2 bis 6.</li>
+<li><strong>Kennzahlen:</strong> REAL-Sicherheitsbefunde nach Schweregrad und die Zahl der statischen Befunde, die in die Codequalität gingen; REAL-Gruppen der Codequalität mit der Zahl der Befunde aus der statischen Analyse; Testergebnisse, Abdeckung, Mutations-Score, Zahl der Entscheidungen zur Prüfung.</li>
+<li><strong>Sicherheit:</strong> Zusammenfassung, REAL-Einträge mit der Zahl ihrer Befunde, Ort und Empfehlung, herausgefilterte mit Begründung. Seit dem 18.11.2026 steht unter den REAL- und den herausgefilterten Einträgen je Gruppe eine aufklappbare Liste aller Befunde: Dateien mit ihren Zeilen, bei Paketen die Advisories mit installierter und behobener Version. Die Überschriften zählen Befunde, nicht Einträge.</li>
+<li><strong>Codequalität:</strong> Zusammenfassung, REAL-Gruppen (bei Befunden aus Schritt 3 mit der Kategorie hinter der Regel) mit ihren Fundstellen: in der Tabelle die erste Fundstelle und die Zahl der weiteren, darunter je Gruppe eine aufklappbare Liste aller Dateien mit ihren Zeilen (seit 17.11.2026, auf Wunsch des Nutzers: Vorher nannte das Audit nur, was gefunden wurde, nicht wo); herausgefilterte Gruppen mit ihrer ersten Fundstelle; Formatter-Änderungen mit Beispiel, ausgeschlossene Dateien.</li>
+<li><strong>Testqualität:</strong> Zusammenfassung, Testläufe, Abdeckung, Mutation Testing, fehlgeschlagene Tests mit Ursache im Projekt, kritische Dateien mit wenig Abdeckung, Testlücken.</li>
+<li><strong>Zu prüfen:</strong> Entscheidungen mit niedriger <code>confidence</code> und Einträge mit Prüfhinweis. Bei einer Gruppe im Bereich Sicherheit steht, wie viele ihrer Befunde eine niedrige <code>confidence</code> haben (z. B. „2 / 2 low confidence“). Die Kennzahl „Entscheidungen mit niedriger Konfidenz“ zählt Befunde, nicht Gruppen.</li>
+<li><strong>Methode und Grenzen:</strong> Werkzeuge und Versionen je Bereich, Modelle mit Einstellungen, der Hinweis, dass die Labels von einem Sprachmodell stammen und falsch sein können. Nach <code>--resume</code> auch, aus welcher Auswertung die übernommenen Entscheidungen stammen.</li>
+</ol>
+<p>Die Überschriften sind deutsch, wenn <code>report_language</code> Deutsch ist, sonst englisch. Das Audit lässt sich aus den Berichten neu schreiben: <code>python -m scheduler.evaluation.audit &lt;Ordner des Laufs&gt;</code>.</p>
+</section>
+<section id="begründung" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="begründung"><span class="header-section-number">6.2</span> Begründung</h2>
+<ul>
+<li>Das Audit enthält keine neuen Aussagen eines Modells. Zahlen und Tabellen sind aus den Berichten berechnet und damit reproduzierbar. Dass ein Python-Skript das Audit aus den Berichten erstellt, hat der Nutzer am 13.11.2026 festgelegt (<a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;10</a>).</li>
+<li><code>audit.json</code> enthält dasselbe als Daten, mit den vollständigen Berichten, für die weitere Auswertung in der Thesis.</li>
+</ul>
+</section>
+<section id="grenzen-3" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="grenzen-3"><span class="header-section-number">6.3</span> Grenzen</h2>
+<ul>
+<li>Die Schweregrade werden übernommen, wie die Werkzeuge sie melden. Statische Befunde nutzen die Stufen <code>error</code>, <code>warning</code> und <code>note</code> (wie in Schritt 2), Abhängigkeitsbefunde die Stufen <code>critical</code> bis <code>low</code>. Für die Sortierung gelten <code>error</code> und <code>high</code> als gleich hoch. Das Tool bewertet nicht neu, so wie es die ersten Prompts des Nutzers verlangten („Do not re-rate.“).</li>
+</ul>
+</section>
+</section>
+<section id="sec-bedrohungsmodell" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Bedrohungsmodell</h1>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Hinweis
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Die Quellen in diesem Abschnitt sind <strong>Vorschläge</strong>. Sie stehen in <code>Quellenvorschlaege.md</code> (Abschnitt G, Recherche vom 18.11.2026), noch nicht in <code>references.bib</code>, und sind nicht gelesen. Sie belegen hier nichts. Sie zeigen nur, wo sich die Begriffe nachlesen ließen.</p>
+</div>
+</div>
+<section id="was-ein-bedrohungsmodell-ist" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="was-ein-bedrohungsmodell-ist"><span class="header-section-number">7.1</span> Was ein Bedrohungsmodell ist</h2>
+<p>Ein Bedrohungsmodell hält schriftlich fest, wer eine Software angreifen könnte, über welche Eingaben und was dabei auf dem Spiel steht. Das Threat Modeling Manifesto definiert Threat Modeling als „analyzing representations of a system to highlight concerns about security and privacy characteristics“ und ordnet es um vier Fragen, deren erste „What are we working on?“ ist [Vorschlag: Braiterman et al., Threat Modeling Manifesto; Shostack 2024, Four-Question Framework]. Die gängigen Methoden beschreiben das System mit Vertrauensgrenzen und Datenflüssen [Vorschlag: OWASP Threat Modeling Cheat Sheet; Shostack 2014].</p>
+<p>Für die Triage im Tool reicht ein kleiner Teil davon, die Antworten auf drei Fragen:</p>
+<ol type="1">
+<li>Was ist das für Software, und wie wird sie eingesetzt? (Bibliothek, Web-Server, App, CLI-Tool …)</li>
+<li>Wo kommen nicht vertrauenswürdige Daten herein? (die Vertrauensgrenzen)</li>
+<li>Was wird ausgeliefert, was nicht? (Tests, Build-Tools, Beispiele …)</li>
+</ol>
+<p><strong>Warum das Tool eines braucht.</strong> Im vierten Lauf an libgdx entschied das Entscheidungsmodell 1.512 von 2.527 Sicherheitsbefunden mit niedriger <code>confidence</code>, fast immer als Patt zwischen REAL und NOISE (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). - <strong>Was fehlt:</strong> Bei vielen dieser Befunde fehlt kein Security-Fachwissen, sondern die Antwort auf Frage 2. Beispiel: ein <code>btAssert</code> in Bullet prüft einen Index, den der aufrufende Spielcode übergibt. Ob das relevant ist, hängt davon ab, ob ein Angreifer den Index steuert. - <strong>Lücke im Prompt:</strong> Bei den Abhängigkeiten nennt der Entscheidungs-Prompt den Scope <code>tooling</code> nicht (Frage 3).</p>
+<p>Ein Bedrohungsmodell macht diese Antworten für das Modell und für Menschen, die Befunde prüfen, sichtbar.</p>
+</section>
+<section id="sec-bedrohungsmodell-festlegung" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="sec-bedrohungsmodell-festlegung"><span class="header-section-number">7.2</span> Festlegung (18.11.2026)</h2>
+<ul>
+<li><strong>Wann:</strong> nach Schritt 1, vor Schritt 2; bei <code>--evaluate</code> vor Schritt 6.</li>
+<li><strong>Wo:</strong>
+<ul>
+<li>Eine im Projekt committete <code>.code-analysis/threat-model.md</code> gilt als bestätigt und hat Vorrang, z. B. für CI.</li>
+<li>Sonst <code>OUTPUT_DIR/&lt;Projekt&gt;/threat-model.md</code> mit <code>threat-model.json</code>: Status, Zeitpunkt und SHA-256 der Bestätigung, Antworten, gelesene Dokumentation, Modell.</li>
+<li>Im Projekt selbst legt das Tool nichts an, weil Schritt 1 ein sauberes Git-Repo verlangt.</li>
+</ul></li>
+<li><strong>Selbst schreiben (seit 18.11.2026 ausdrücklich in der README):</strong> Das Bedrohungsmodell ist eine Markdown-Datei mit festen Überschriften. Der Nutzer kann sie jederzeit selbst schreiben und ablegen:
+<ul>
+<li>im Projekt als <code>.code-analysis/threat-model.md</code>, committet; sie wird ohne Rückfrage genutzt, auch in CI,</li>
+<li>im Ergebnisordner als <code>OUTPUT_DIR/&lt;Projekt&gt;/threat-model.md</code>; das Tool fragt beim nächsten Lauf einmal nach der Bestätigung.</li>
+</ul>
+Eine Datei, die nur Überschriften enthält, zählt nicht.</li>
+<li><strong>Erstellen, wenn keines bestätigt ist:</strong> Das legt <code>create</code> in <code>[llm.threat_model]</code> von <code>code-analysis.toml</code> fest (seit 18.11.2026):
+<ul>
+<li><code>create = "generate"</code> (Standard):
+<ul>
+<li>Der Nutzer beantwortet die drei Fragen im Terminal.</li>
+<li>Das Reasoning-Modell aus <code>[llm.report]</code> schreibt daraus einen Entwurf. Es nutzt dazu die Fakten aus Schritt 1 (Sprachen, Paketmanager, Ordner der obersten Ebene mit Bereich) und <code>README*</code>, <code>SECURITY*</code> und <code>docs/</code> des Projekts (Prompt <code>threat_model.md</code>, JSON-Schema, feste Überschriften). Danach wird es entladen.</li>
+<li>Der Nutzer liest den Entwurf, korrigiert ihn im Editor und bestätigt mit <code>c</code>. Mit <code>r</code> gibt er neue Antworten und erhält einen neuen Entwurf, mit <code>a</code> bricht er ab.</li>
+</ul></li>
+<li><code>create = "manual"</code>:
+<ul>
+<li>Das Tool schreibt eine Vorlage mit den Überschriften. Die drei Fragen stehen als HTML-Kommentare darin, die die Modelle nicht sehen.</li>
+<li>Der Nutzer schreibt das Bedrohungsmodell und bestätigt mit <code>c</code> oder bricht mit <code>a</code> ab. Ein Modell ist nicht beteiligt.</li>
+</ul></li>
+</ul></li>
+<li><strong>Geändert:</strong> Ein Text, der nach der Bestätigung geändert wurde, muss erneut bestätigt werden.</li>
+<li><strong>Ohne Terminal:</strong> Abbruch mit Exitcode 10 und Hinweis.</li>
+<li><strong>Im Lauf:</strong>
+<ul>
+<li>Jeder Lauf kopiert das verwendete Bedrohungsmodell in seinen Ordner.</li>
+<li>Nur der Bereich Sicherheit nutzt es, in den Entscheidungen (<code>security_decision.md</code>, Regel 6) und in den Berichten (<code>security_report.md</code>), gekürzt auf <code>context_chars</code> (Standard 2.500 Zeichen).</li>
+<li><code>summary.json</code> und das Audit nennen Quelle, Bestätigung und Hash. Das Audit enthält den Text aufklappbar.</li>
+<li>Ändert sich das Bedrohungsmodell, labelt <code>--resume</code> den Bereich Sicherheit neu.</li>
+</ul></li>
+<li><strong>Prompts:</strong> Der Prompt <code>threat_model.md</code>, Regel 6 in <code>security_decision.md</code> und der Absatz in <code>security_report.md</code> sind Entwürfe von Claude. Sie sind dort als solche markiert, der Nutzer prüft sie vor dem ersten echten Lauf.</li>
+</ul>
+</section>
+<section id="begründung-1" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="begründung-1"><span class="header-section-number">7.3</span> Begründung</h2>
+<ul>
+<li><strong>Entwurf durch ein Modell, Bestätigung durch den Nutzer:</strong>
+<ul>
+<li>Die Antworten auf die drei Fragen kennt der Nutzer besser als jedes Modell.</li>
+<li>Die Formulierung als konkrete Liste, mit Modulen, Ordnern und Dateiformaten aus der Dokumentation, kann ein Modell vorbereiten.</li>
+<li>Einen halbseitigen Entwurf zu prüfen braucht kein Security-Fachwissen.</li>
+<li>Arbeiten zu LLM-erzeugten Bedrohungsmodellen berichten brauchbare, aber nicht durchgehend richtige Ergebnisse [Vorschlag: Elsharef et al.&nbsp;2024; Munshi et al.&nbsp;2025; AbdulGhaffar &amp; Matrawy 2025]. Das spricht gegen eine ungeprüfte Übernahme.</li>
+</ul></li>
+<li><strong>Warum nicht ungeprüft:</strong> Entwirft dieselbe Pipeline das Bedrohungsmodell und entscheidet danach damit, setzen sich Fehler fort. Man könnte dann nicht mehr unterscheiden, ob eine falsche Entscheidung vom Bedrohungsmodell oder vom Entscheidungsmodell kommt.</li>
+<li><strong>Mehr Kontext für das Entscheidungsmodell:</strong> Die Ausschnitte aus 5 Zeilen Code reichten bei libgdx für viele Regeln nicht aus (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). Dass fehlender oder ungenauer Kontext LLMs bei der Bewertung von SAST-Warnungen in die Irre führt, beschreibt [Vorschlag: Chen et al.&nbsp;2024, LLM4FPM]. Eine Arbeit, die ausdrücklich ein Bedrohungsmodell als Kontext für die LLM-Triage nutzt, wurde bei der Recherche nicht gefunden.</li>
+<li><strong>Gleich für alle Modelle:</strong> Im Modellvergleich bleibt das bestätigte Bedrohungsmodell fest. Sonst würden zwei Dinge gleichzeitig verglichen.</li>
+</ul>
+</section>
+<section id="grenzen-4" class="level2" data-number="7.4">
+<h2 data-number="7.4" class="anchored" data-anchor-id="grenzen-4"><span class="header-section-number">7.4</span> Grenzen</h2>
+<ul>
+<li><strong>Abhängig vom Nutzer:</strong> Das Bedrohungsmodell ist nur so gut wie die Antworten und die Prüfung durch den Nutzer. Ein falsch bestätigtes Bedrohungsmodell verschiebt die Entscheidungen systematisch.</li>
+<li><strong>Mehr Anfragen bei langem Text:</strong> Das Entscheidungsmodell liest das Bedrohungsmodell einmal je Frage. Bei libgdx brachten bis etwa 1.200 Zeichen keine zusätzlichen Anfragen. Mit 2.500 Zeichen waren es 843 statt 632 Entscheidungsanfragen (<code>max_input_kib 20</code>, gemessen ohne Modell am 18.11.2026).</li>
+<li><strong>Kein Beleg für die Wirkung:</strong> Ob die Patts zwischen REAL und NOISE zurückgehen, ist noch nicht gemessen (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>, Punkt 11).</li>
+<li><strong>Committete Projektdatei:</strong> Eine im Projekt committete Datei wird ohne Rückfrage verwendet. Bei <code>--evaluate</code> (ohne Schritt 1) gilt das auch für eine nicht committete Datei.</li>
+</ul>
+</section>
+</section>
+<section id="sec-speicher" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Modelle und Speicher</h1>
+<section id="festlegung-4" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="festlegung-4"><span class="header-section-number">8.1</span> Festlegung</h2>
+<ul>
+<li><strong>Nie beide Modelle gleichzeitig:</strong> Vor den Entscheidungen wird ein noch geladenes Reasoning-Modell entladen. Nach den Entscheidungen wird das Entscheidungsmodell entladen, und die Berichte beginnen erst, wenn es nicht mehr geladen ist (Prüfung über <code>/api/ps</code>). Am Ende wird das Reasoning-Modell entladen.</li>
+<li><strong>Entladen:</strong> <code>POST /api/generate</code> mit <code>keep_alive: 0</code>, wie <code>ollama stop</code>.</li>
+<li><strong>Abbruch:</strong> Nach 3 gescheiterten Anfragen in Folge (Ollama nicht erreichbar oder ein Serverfehler) bricht Schritt 6 ab, statt weitere Anfragen zu senden. Abgelehnte Anfragen (HTTP 4xx) zählen nicht. Was bis dahin entschieden und geschrieben wurde, bleibt erhalten.</li>
+</ul>
+</section>
+<section id="begründung-und-belege-3" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="begründung-und-belege-3"><span class="header-section-number">8.2</span> Begründung und Belege</h2>
+<ul>
+<li><strong>Ollama hält mehrere Modelle, wenn der Speicher reicht:</strong> „If your system has sufficient available memory (system memory when using CPU inference, or VRAM for GPU inference) then multiple models can be loaded at the same time.“ und <code>OLLAMA_MAX_LOADED_MODELS</code>: „The default is 3 * the number of GPUs or 3 for CPU inference.“ [ollama-faq]. Ollama verhindert also nicht, dass beide Modelle (zusammen etwa 24 GB laut Ollama-Bibliothek, <a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>) gleichzeitig geladen sind. Das Tool entlädt deshalb selbst.</li>
+<li><strong>Entladen laut Dokumentation:</strong> „If you want to immediately unload a model from memory, use the <code>ollama stop</code> command“ und für die API „To unload the model and free up memory use:“ mit <code>curl http://localhost:11434/api/generate -d '{"model": "llama3.2", "keep_alive": 0}'</code> [ollama-faq].</li>
+<li><strong>Standard-Haltezeit:</strong> „By default models are kept in memory for 5 minutes before being unloaded.“ [ollama-faq]. In <code>code-analysis.toml</code> ist <code>keep_alive = "10m"</code> gesetzt, damit ein Modell zwischen den Anfragen geladen bleibt; nach seinem Abschnitt entlädt das Tool es sofort.</li>
+<li><strong>Abbruch:</strong> Am 13.11.2026 liefen nach einem Absturz des Runners weitere Anfragen, die den Rechner zusätzlich belasteten (<a href="#sec-beobachtungen" class="quarto-xref">Kapitel&nbsp;4.3</a>). HTTP 500 steht für „Model loading, rendering, or scoring failed.“ [ollama-systemone]; bei einem abgestürzten oder nicht erreichbaren Server würden weitere Anfragen genauso scheitern.</li>
+</ul>
+</section>
+</section>
+<section id="sec-kandidaten" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Kandidaten für den Modellvergleich</h1>
+<p>Stand der Ollama-Bibliothek am 17.11.2026 [ollama-search-decision] [ollama-search-thinking]. Größe, Kontext und Lizenz stammen von den Modellseiten. Genauigkeitswerte sind Angaben der Herausgeber, keine eigenen Messungen. „–“ heißt: auf der Seite nicht geprüft.</p>
+<section id="rahmenbedingungen" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="rahmenbedingungen"><span class="header-section-number">9.1</span> Rahmenbedingungen</h2>
+<ul>
+<li><strong>Rechner:</strong> Entwickler-Laptop mit 32 GB gemeinsamem Speicher. Neben dem Modell brauchen macOS, die Colima-VM (8 GiB) und der Kontext des Modells Speicher. Für die Modelldatei bleiben realistisch höchstens 18 bis 20 GB. Weil die beiden Modelle nie gleichzeitig geladen sind (<a href="#sec-speicher" class="quarto-xref">Kapitel&nbsp;8</a>), gilt die Grenze für jedes Modell einzeln.</li>
+<li><strong>Nur lokal:</strong> Cloud-Varianten (<code>:cloud</code>) scheiden aus, weil Code und Befunde den Rechner nicht verlassen sollen.</li>
+<li><strong>Entscheidungsmodelle</strong> brauchen die Fähigkeit <code>decision</code> (Schnittstelle <code>/v1/systemone</code>). MLX-Builds funktionieren dafür (<a href="#sec-erster-lauf" class="quarto-xref">Kapitel&nbsp;12.1</a>). Das Kontextfenster muss die Anfrage fassen: „The complete input must fit the loaded context window.“ [ollama-systemone]. Modelle mit 4.096 Tokens Kontext gehen nur mit deutlich kleineren Anfragen (<code>max_input_kib</code>).</li>
+<li><strong>Reasoning-Modelle</strong> brauchen Structured Output (<code>format</code>). Mit dem MLX-Build von qwen3.8 kam HTTP 501 (<a href="#sec-erster-lauf" class="quarto-xref">Kapitel&nbsp;12.1</a>), mit <code>nemotron-3.5-lightning:30b</code> (<code>nvfp4</code>, MLX) ebenso (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>), daher GGUF-Builds wählen. Am Format <code>nvfp4</code> oder an vielen einzelnen Tensor-Dateien im Manifest ist ein MLX-Modell zu erkennen; GGUF-Modelle haben eine Modelldatei und eine Quantisierung wie <code>Q4_K_M</code>. Tags ohne Quantisierung im Namen können auf dem Mac den MLX-Build laden, wenn es beide gibt. Ob <code>format</code> funktioniert, zeigt ein einzelner kleiner Aufruf vor dem eigentlichen Lauf.</li>
+<li><strong>Speicher beim Entscheiden:</strong> Schon das 4,5B-Modell brauchte bei vielen Fragen je Anfrage sehr viel Speicher (<a href="#sec-beobachtungen" class="quarto-xref">Kapitel&nbsp;4.3</a>). Bei den 27B-Entscheidungsmodellen mit <code>max_questions</code> 1 bis 2 beginnen und den Speicher beobachten.</li>
+</ul>
+</section>
+<section id="entscheidungsmodelle" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="entscheidungsmodelle"><span class="header-section-number">9.2</span> Entscheidungsmodelle</h2>
+<div id="tbl-kandidaten-entscheidung" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-kandidaten-entscheidung-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;3: Entscheidungsmodelle bis etwa 20 GB (Ollama-Bibliothek, 17.11.2026)
+</figcaption>
+<div aria-describedby="tbl-kandidaten-entscheidung-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Modell</th>
+<th>Herausgeber, Basis</th>
+<th>Größe</th>
+<th>Kontext</th>
+<th>Lizenz</th>
+<th>Angaben des Herausgebers</th>
+<th>Quelle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>pplx-decider-flash:4b</code> (bisher)</td>
+<td>Perplexity, Qwen3.5-4B</td>
+<td>5,6 GB</td>
+<td>256K</td>
+<td>Apache 2.0</td>
+<td>Decision Index 0.3: 58,88 (60,05 mit einer Frage je Anfrage)</td>
+<td>[pplx-decider-flash]</td>
+</tr>
+<tr class="even">
+<td><code>pplx-decider:27b</code></td>
+<td>Perplexity, Qwen3.8-27B</td>
+<td>17 GB</td>
+<td>256K</td>
+<td>Apache 2.0</td>
+<td>Decision Index 0.3: 68,09</td>
+<td>[pplx-decider], [pplx-decider-flash]</td>
+</tr>
+<tr class="odd">
+<td><code>clef:27b</code></td>
+<td>Cloudflare</td>
+<td>18–20 GB</td>
+<td>64K laut Herausgeber</td>
+<td>Apache 2.0</td>
+<td>„Clef tops the Decision Index, Cloudflare’s leaderboard of decision models“</td>
+<td>[clef]</td>
+</tr>
+<tr class="even">
+<td><code>clef-flash:9b</code></td>
+<td>Cloudflare</td>
+<td>11–12 GB</td>
+<td>64K laut Herausgeber</td>
+<td>Apache 2.0</td>
+<td>„Clef Flash had the lowest measured latency of any decision model in Cloudflare’s Decision Index runs“</td>
+<td>[clef-flash]</td>
+</tr>
+<tr class="odd">
+<td><code>nimble:9b</code></td>
+<td>Bespoke Labs</td>
+<td>9,3 GB</td>
+<td>256K</td>
+<td>Apache 2.0</td>
+<td>„Nimble answers in under 100ms on a MacBook Pro with an M5 Max.“</td>
+<td>[nimble]</td>
+</tr>
+<tr class="even">
+<td><code>nimble-v3:9b</code></td>
+<td>Bespoke Labs, Qwen3.5-9B</td>
+<td>9,3 GB</td>
+<td>32K</td>
+<td>CC BY-NC 4.0 (nicht kommerziell)</td>
+<td>Decision Index 0.2.1: 56,88</td>
+<td>[nimble-v3]</td>
+</tr>
+<tr class="odd">
+<td><code>autotrust-jev:9b</code></td>
+<td>AutoTrust</td>
+<td>11 GB</td>
+<td>256K</td>
+<td>Apache 2.0</td>
+<td>–</td>
+<td>[autotrust-jev]</td>
+</tr>
+<tr class="even">
+<td><code>kev:9b-q4_K_M</code></td>
+<td>Jared Palmer, Qwen3.5</td>
+<td>5,6 GB</td>
+<td>256K</td>
+<td>Apache 2.0</td>
+<td>–</td>
+<td>[kev]</td>
+</tr>
+<tr class="odd">
+<td><code>d1:3b</code></td>
+<td>Liquid AI, LFM2.5-VL-3B</td>
+<td>3,7 GB</td>
+<td>32K</td>
+<td>LFM Open License v1.0</td>
+<td>Decision Index 0.2.1: 48,57; mehrsprachig, u. a. Deutsch</td>
+<td>[d1]</td>
+</tr>
+<tr class="even">
+<td><code>tev1:4b</code></td>
+<td>Together AI</td>
+<td>4,4 GB</td>
+<td>256K</td>
+<td>– (MIT nur für Datensatz-Builder und Trainingsskripte)</td>
+<td>„Together AI hasn’t fully tested prompt injection, languages other than English, calibration, or how it handles inputs unlike its training data.“</td>
+<td>[tev1]</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Werte des Decision Index nicht direkt vergleichen:</strong> Sie stammen aus verschiedenen Versionen (0.2.1, 0.3, 0.3.2) und von verschiedenen Herausgebern. Teils gelten sie für die Original-Checkpoints, wie d3 ausdrücklich schreibt: „They are not scores for the Ollama quantized packages.“ [d3]</li>
+<li><strong>Nicht oder nur eingeschränkt geeignet:</strong> <code>d3</code> (die Ollama-Pakete nutzen laut Seite „a 4,096-token context“ [d3]; <code>d3:27b</code> mit 29 GB zu groß), <code>strands-decider:2b</code> („4K context“ [strands-decider]), <code>autotrust-jev:35b</code> (26 GB), <code>clef:cloud</code> (Cloud).</li>
+<li><strong>Hinweis zu <code>tev1</code>:</strong> Die Befunde enthalten nicht vertrauenswürdige Texte aus dem Projekt; dass Prompt Injection nicht vollständig getestet ist, spricht gegen dieses Modell.</li>
+</ul>
+</section>
+<section id="reasoning-modelle" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="reasoning-modelle"><span class="header-section-number">9.3</span> Reasoning-Modelle</h2>
+<div id="tbl-kandidaten-bericht" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-kandidaten-bericht-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;4: Reasoning-Modelle bis etwa 20 GB (Ollama-Bibliothek, 17.11.2026)
+</figcaption>
+<div aria-describedby="tbl-kandidaten-bericht-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Modell</th>
+<th>Herausgeber</th>
+<th>Größe</th>
+<th>Architektur</th>
+<th>Kontext</th>
+<th>Lizenz</th>
+<th>Hinweise</th>
+<th>Quelle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>gpt-oss:20b</code></td>
+<td>OpenAI</td>
+<td>14 GB</td>
+<td>MoE, „21B parameters with 3.6B active parameters“, MoE-Gewichte in MXFP4 („4.25 bits per parameter“)</td>
+<td>128K</td>
+<td>Apache 2.0</td>
+<td>Denkaufwand low, medium, high; die Seite nennt „structured outputs“; im zweiten und dritten Lauf verwendet</td>
+<td>[gpt-oss], [gpt-oss-card]</td>
+</tr>
+<tr class="even">
+<td><code>nemotron-3.5-lightning:30b</code></td>
+<td>NVIDIA</td>
+<td>19 GB</td>
+<td>MoE, 30B gesamt, 3B aktiv</td>
+<td>1M</td>
+<td>–</td>
+<td>Thinking; laut Seite auch für Sicherheitsarbeit („classifying incidents […] preparing structured findings for analysts“); knapp an der Speichergrenze; installiert als <code>nvfp4</code> (MLX): HTTP 501 im vierten Lauf</td>
+<td>[nemotron-3.5-lightning]</td>
+</tr>
+<tr class="odd">
+<td><code>gemma4:26b</code></td>
+<td>Google</td>
+<td>16 GB</td>
+<td>MoE, 4B aktiv</td>
+<td>128K</td>
+<td>–</td>
+<td>installiert als <code>nvfp4</code> (MLX): voraussichtlich kein Structured Output, nicht getestet</td>
+<td>[gemma4]</td>
+</tr>
+<tr class="even">
+<td><code>qwen3.8:27b-q4_K_M</code></td>
+<td>Qwen</td>
+<td>18 GB</td>
+<td>dicht</td>
+<td>256K</td>
+<td>Apache 2.0</td>
+<td>Thinking-Stufen low, medium, xhigh</td>
+<td>[qwen3.8-tags]</td>
+</tr>
+<tr class="odd">
+<td><code>muse-glimmer:30b</code></td>
+<td>Meta</td>
+<td>18 GB</td>
+<td>30B</td>
+<td>128K</td>
+<td>Apache 2.0</td>
+<td>„Controllable Effort“; über 100 Sprachen</td>
+<td>[muse-glimmer]</td>
+</tr>
+<tr class="even">
+<td><code>gemma4:31b</code></td>
+<td>Google</td>
+<td>19 GB</td>
+<td>dicht</td>
+<td>128K</td>
+<td>–</td>
+<td></td>
+<td>[gemma4]</td>
+</tr>
+<tr class="odd">
+<td><code>mistral-small3.2:24b</code></td>
+<td>Mistral</td>
+<td>15 GB</td>
+<td>dicht, ohne Thinking</td>
+<td>–</td>
+<td>–</td>
+<td>ohne Denkweg weniger Ausgabe-Tokens, rechnet aber je Token mit allen Parametern</td>
+<td>[mistral-small3.2]</td>
+</tr>
+<tr class="even">
+<td><code>magistral:24b</code></td>
+<td>Mistral</td>
+<td>14 GB</td>
+<td>dicht, Reasoning</td>
+<td>–</td>
+<td>–</td>
+<td></td>
+<td>[magistral]</td>
+</tr>
+<tr class="odd">
+<td><code>phi4-reasoning:14b</code></td>
+<td>Microsoft</td>
+<td>11 GB</td>
+<td>dicht, Reasoning: „14B parameters, dense decoder-only Transformer model“</td>
+<td>32K</td>
+<td>MIT</td>
+<td>kleinste Datei der Liste, rechnet aber je Token mit allen 14B Parametern, etwa viermal so vielen wie <code>gpt-oss:20b</code>; daher eher langsamer als dieses (geschlossen, nicht gemessen)</td>
+<td>[phi4-reasoning], [phi4-reasoning-card]</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Zu groß für 32 GB:</strong> <code>qwen3.6:35b</code> und <code>ornith-1.5:35b</code> (je 23 GB), <code>gpt-oss:120b</code> (65 GB), <code>qwen3.8-flash-next</code> (105 GB).</li>
+<li><strong>Tempo:</strong>
+<ul>
+<li><strong>Aktive Parameter zählen, nicht die Dateigröße:</strong> Mixture-of-Experts-Modelle (MoE) rechnen je Token nur mit einem Teil ihrer Parameter. <code>gpt-oss:20b</code> hat „21B parameters with 3.6B active parameters“ [gpt-oss-card]. Laut ihren Seiten sind es bei <code>nemotron-3.5-lightning:30b</code> 3B und bei <code>gemma4:26b</code> 4B aktive Parameter. Die dichten Modelle der Tabelle rechnen je Token mit allen Parametern, 14B bis 31B. Ein kleineres dichtes Modell ist deshalb nicht automatisch schneller als <code>gpt-oss:20b</code>.</li>
+<li><strong>Die Zeit geht in die Ausgabe:</strong> Im dritten Lauf gingen 92 % der Zeit für die Texte auf das Erzeugen der Ausgabe. Knapp 60 % der erzeugten Zeichen waren Denkweg (<a href="#sec-dritter-lauf" class="quarto-xref">Kapitel&nbsp;12.3</a>).</li>
+<li><strong><code>think</code> bei gpt-oss:</strong> Zu <code>think: false</code> schreibt Ollama: „Models that cannot disable thinking use their lowest supported level instead.“ [ollama-thinking]. Für <code>gpt-oss</code> nennt die Dokumentation die Stufen <code>low</code>, <code>medium</code> und <code>high</code> mit Standard <code>medium</code> [ollama-thinking]. Mit <code>think = false</code> liefe <code>gpt-oss</code> also auf <code>low</code>. Mit <code>think = true</code> läuft es auf <code>medium</code> (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>).</li>
+</ul></li>
+</ul>
+</section>
+<section id="vorschlag-für-den-vergleich" class="level2" data-number="9.4">
+<h2 data-number="9.4" class="anchored" data-anchor-id="vorschlag-für-den-vergleich"><span class="header-section-number">9.4</span> Vorschlag für den Vergleich</h2>
+<ul>
+<li><strong>Getrennt vergleichen:</strong> Entscheidungsmodelle untereinander bei festem Reasoning-Modell, Reasoning-Modelle untereinander bei festem Entscheidungsmodell. Immer derselbe Ordner eines Laufs und dieselben Einstellungen; Name und Digest jedes Modells stehen in <code>summary.json</code>.</li>
+<li><strong>Mögliche Auswahl:</strong>
+<ul>
+<li>Entscheidung: <code>pplx-decider-flash:4b</code> (bisher), <code>clef-flash:9b</code>, <code>nimble:9b</code>, <code>pplx-decider:27b</code> (Speicher beachten).</li>
+<li>Bericht: <code>gpt-oss:20b</code>, <code>nemotron-3.5-lightning:30b</code>, <code>qwen3.8:27b-q4_K_M</code>, eventuell <code>gemma4:26b</code>.</li>
+</ul></li>
+<li><strong>Kennzahlen Entscheidung</strong> (aus <code>summary.json</code> und <code>decisions.json</code>): Dauer, Anfragen, Input-Tokens, Verteilung der Labels, Anteil niedriger <code>confidence</code>, Standard-Labels; Übereinstimmung mit einer von Hand gelabelten Stichprobe, z. B. alle REAL-Befunde und eine Zufallsstichprobe der NOISE-Befunde; Übereinstimmung der Modelle untereinander.</li>
+<li><strong>Kennzahlen Bericht</strong> (aus <code>summary.json</code> und <code>requests/</code>): Dauer, Anfragen, <code>prompt_eval_count</code> und <code>eval_count</code>, ungültige Antworten, Halbierungen, fehlende Texte; Bewertung einer Stichprobe der Texte (Fakten richtig, Empfehlung umsetzbar, Sprache).</li>
+<li><strong>Wechsel nur des Reasoning-Modells:</strong> Seit dem 17.11.2026 übernimmt <code>--evaluate &lt;Ordner&gt; --resume</code> die vorhandenen Entscheidungen, wenn sich nichts geändert hat, was sie bestimmt (<a href="#sec-ergebnisse" class="quarto-xref">Kapitel&nbsp;11</a>). Bei libgdx spart das 46 min Entscheidungen je Versuch. Ein Lauf nur mit Entscheidungen, für den Vergleich der Entscheidungsmodelle, fehlt noch (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>).</li>
+</ul>
+</section>
+</section>
+<section id="sec-entscheidungen" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Entscheidungen vom 13.11., 17.11. und 18.11.2026</h1>
+<p>Am 13.11.2026 vom Nutzer festgelegt (Plan für Schritt 6):</p>
+<ul>
+<li><strong>Eine Konfigurationsdatei:</strong> <code>code-analysis.toml</code> im Repository ersetzt <code>config/opengrep.toml</code> und <code>config/tests.toml</code> und enthält die Einstellungen beider Modelle (<code>[llm]</code>, <code>[llm.decision]</code>, <code>[llm.report]</code>).</li>
+<li><strong>Zwei Modelle:</strong> ein Entscheidungsmodell (<code>pplx-decider-flash:latest</code>) und ein Reasoning-Modell, das zusammenfasst und die Berichte schreibt (<code>qwen3.8:latest</code>).</li>
+<li><strong>Entscheidungen:</strong>
+<ul>
+<li>Das Tool erkennt Duplikate und vergibt Kennungen.</li>
+<li>Das Entscheidungsmodell labelt die übrigen Einträge: Sicherheit je Befund, Lint je Gruppe, Tests je fehlgeschlagenem Test, je schwach getesteter Datei und je überlebendem Mutanten.</li>
+<li>Niedrige <code>confidence</code> wird zur Prüfung markiert.</li>
+</ul></li>
+<li><strong>Berichte:</strong> Das Tool bildet Gruppen, Einträge, Statistiken und Beispiele. Das Reasoning-Modell schreibt nur die Texte, als strukturiertes JSON, in Stapeln, die in <code>num_ctx</code> passen. Die Berichte behalten die Struktur der Prompts des Nutzers.</li>
+<li><strong>Audit:</strong> Ein Python-Skript erstellt aus den Berichten das Audit, <code>audit.md</code> und <code>audit.json</code> im Ordner des Laufs.</li>
+<li><strong>Berichtssprache:</strong> standardmäßig Englisch, einstellbar.</li>
+<li><strong>Wiederholung:</strong> <code>--evaluate &lt;Ordner des Laufs&gt;</code> führt nur Schritt 6 auf einem früheren Lauf aus, um Prompts und Modelle zu erproben, ohne die Schritte 1 bis 5 zu wiederholen. Exitcode 9, wenn Schritt 6 unvollständig ist.</li>
+</ul>
+<p>Am 17.11.2026 nach dem zweiten Lauf vom Nutzer festgelegt (<a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a>):</p>
+<ul>
+<li><strong>Aufteilung der Befunde aus Schritt 3 nach der Kategorie des Werkzeugs:</strong> <code>security</code>, <code>correctness</code> (OpenGrep) und <code>reliability</code> (SonarQube) in den Bereich Sicherheit, jede andere Kategorie in die Codequalität. Befunde ohne Kategorie bleiben zur Sicherheit im Bereich Sicherheit. Begründung für die Bugs: Sie können Sicherheitsbezug haben; lieber zu hoch bewertet als übersehen. SonarQube bleibt Teil von Schritt 3.</li>
+<li><strong>Feinere Einstellungen</strong> in <code>code-analysis.toml</code>, jede Zeile mit Kommentar: Stufen für <code>think</code> und <code>min_p</code>; Zeitlimit, Wiederholungen und <code>keep_alive</code> je Modell; optionale Einstellungen des Reasoning-Modells je Bereich; die bisher festen Grenzen der Aufbereitung in <code>[llm.input]</code> (<a href="#sec-einstellungen" class="quarto-xref">Kapitel&nbsp;1.4</a>).</li>
+</ul>
+<p>Am 17.11.2026 abends nach dem Abbruch des vierten Laufs vom Nutzer gewünscht (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>):</p>
+<ul>
+<li><strong>Fortsetzen an der Abbruchstelle:</strong> <code>--evaluate &lt;Ordner des Laufs&gt; --resume</code> übernimmt die Entscheidungen der früheren Auswertung und schreibt die Berichte neu, auch mit einem anderen Reasoning-Modell. Die Bedingungen stehen in <a href="#sec-ergebnisse" class="quarto-xref">Kapitel&nbsp;11</a>.</li>
+</ul>
+<p>Am 18.11.2026 vom Nutzer festgelegt, nachdem der vierte Lauf mit <code>qwen3.8:27b-q4_K_M</code> über Nacht nicht fertig wurde:</p>
+<ul>
+<li><strong>Gruppen im Bereich Sicherheit:</strong> Befunde werden nach Regel (bei Abhängigkeiten nach Paket) und Label gruppiert. Nur REAL-Befunde mit <code>critical</code>, <code>high</code> oder <code>error</code> werden einzeln beschrieben. Zur Wahl stand auch „alle Befunde mit hohem Schweregrad einzeln, unabhängig vom Label“ (bei libgdx 449 statt 160 Einträge).</li>
+<li><strong>Alle Fundstellen bleiben im Bericht:</strong> Die Frage des Nutzers war, ob das Modell alle Fundstellen einer Regel bekommt. Das Modell sieht nur Beispiele, weil das Kontextfenster sonst nicht reicht. Bericht und Audit enthalten aber jede Fundstelle.</li>
+<li><strong>Prompt:</strong> Der Satz zu Gruppen in <code>security_report.md</code> (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>) wurde vom Nutzer freigegeben und eingefügt.</li>
+</ul>
+<p>Am 18.11.2026 nach der Analyse der unsicheren Entscheidungen vom Nutzer festgelegt (<a href="#sec-bedrohungsmodell" class="quarto-xref">Kapitel&nbsp;7</a>):</p>
+<ul>
+<li><strong>Keine Handlabels an libgdx als Ground Truth:</strong> Der Nutzer kann Security-Befunde nicht kompetent einschätzen. Die Genauigkeit wird, wie im Exposé (Ziel 4) geplant, an Projekten mit bekannten Sicherheitslücken gemessen, zunächst an bestehenden, später an eigenen Beispielen. Die Stichprobe aus libgdx bleibt liegen.</li>
+<li><strong>Bedrohungsmodell:</strong> Der Nutzer beantwortet drei Fragen, das Tool erstellt daraus und aus der Dokumentation des Projekts einen Entwurf, der Nutzer prüft und bestätigt ihn. Ein bestätigtes Bedrohungsmodell wird wiederverwendet. Gespeichert wird es im Ergebnisordner, eine im Projekt committete Datei hat Vorrang. Genutzt wird es nur im Bereich Sicherheit. Ohne Terminal bricht das Tool ab. Die Prompt-Teile entwirft Claude, der Nutzer prüft sie.</li>
+<li><strong>Selbst geschrieben oder erzeugt:</strong> In <code>code-analysis.toml</code> lässt sich festlegen, ob ein fehlendes Bedrohungsmodell vom Tool entworfen (<code>create = "generate"</code>) oder vom Nutzer selbst geschrieben wird (<code>create = "manual"</code>, Vorlage ohne Modell). Die README nennt ausdrücklich, dass das Bedrohungsmodell auch ohne Tool geschrieben und abgelegt werden kann. Das Ablaufdiagramm (<code>docs/flowchart_en.html</code>, <code>docs/toolflow_en.png</code>) zeigt den Schritt zwischen Schritt 1 und 2.</li>
+</ul>
+</section>
+<section id="sec-ergebnisse" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Ergebnisse im Ausgabeordner</h1>
+<p>Schritt 6 schreibt in den Ordner des Laufs <code>OUTPUT_DIR/&lt;Projekt&gt;/&lt;Datum_Zeit&gt;Z/</code>. Ein früheres Ergebnis von Schritt 6 in diesem Ordner wird vorher entfernt, außer mit <code>--resume</code>.</p>
+<p><strong>Fortsetzen mit <code>--resume</code> (seit 17.11.2026).</strong> <code>bin/code-analysis --evaluate &lt;Ordner des Laufs&gt; --resume</code> übernimmt die Entscheidungen eines Bereichs nur, wenn sich nichts geändert hat, was sie bestimmt: - das Entscheidungsmodell (Name und Digest), - <code>max_questions</code>, <code>max_input_kib</code> und <code>review_confidence</code> aus <code>[llm.decision]</code>, - die Einträge: <code>decisions.json</code> enthält genau die Einträge und Duplikate, die das Tool jetzt aufbereitet, - die Frage an jeden Eintrag: gemeinsamer Zustand und Frage wie in den gespeicherten Anfragen (<code>requests/*-decision.json</code>). Damit fallen auch geänderte Entscheidungs-Prompts, geänderte Fakten der Einträge und geänderte Werte in <code>[llm.input]</code> auf.</p>
+<p>Sonst nennt die Konsole den Grund, und der Bereich wird neu gelabelt. - <strong>Was erhalten bleibt:</strong> Die Anfragen der übernommenen Entscheidungen bleiben in <code>requests/</code>, neue Anfragen werden danach nummeriert. - <strong>Was ersetzt wird:</strong> die Berichte, ihre Anfragen, <code>summary.json</code> und das Audit. - <strong>Wo es vermerkt ist:</strong> <code>summary.json</code> (<code>decisions_reused_from</code>) und der Abschnitt „Methode und Grenzen“ des Audits nennen die Auswertung, aus der die Entscheidungen stammen. - <strong>Ältere Läufe:</strong> Läufe ohne <code>decisions_info.json</code> werden aus ihrer <code>summary.json</code> ergänzt, bevor diese ersetzt wird. So bleiben die Entscheidungen auch übernehmbar, wenn die Fortsetzung selbst abbricht, z. B. weil Ollama nicht erreichbar ist.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Datei</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>audit.md</code>, <code>audit.json</code></td>
+<td>das Audit (<a href="#sec-audit" class="quarto-xref">Kapitel&nbsp;6</a>)</td>
+</tr>
+<tr class="even">
+<td><code>threat-model.md</code>, <code>threat-model.json</code></td>
+<td>seit 18.11.2026: das Bedrohungsmodell, das der Lauf verwendet hat (<a href="#sec-bedrohungsmodell" class="quarto-xref">Kapitel&nbsp;7</a>): Text, Quelle, Bestätigung, SHA-256</td>
+</tr>
+<tr class="odd">
+<td><code>step6-llm-evaluation/summary.json</code></td>
+<td>Modelle (Name, Digest), Bedrohungsmodell (Quelle, Bestätigung, SHA-256, Zeichen, gekürzt), Einstellungen aus <code>[llm]</code>, je Bereich: Status (<code>ok</code>, <code>partial</code>, <code>failed</code>, <code>skipped</code>), Einträge, Duplikate, Anfragen, Dauer, Tokens, Labels, Entscheidungen mit niedriger <code>confidence</code>, Hinweise</td>
+</tr>
+<tr class="even">
+<td><code>step6-llm-evaluation/&lt;Bereich&gt;/items.json</code></td>
+<td>die aufbereiteten Einträge: Kennungen, Fakten, Duplikate, Codeausschnitte; bei Gruppen der Codequalität alle Fundstellen</td>
+</tr>
+<tr class="odd">
+<td><code>step6-llm-evaluation/&lt;Bereich&gt;/decisions.json</code></td>
+<td>je Eintrag: Label, Wahrscheinlichkeiten, <code>confidence</code>, Prüfmarkierung, wer entschieden hat (Modell, Standard, Tool); Duplikate mit <code>duplicate_of</code></td>
+</tr>
+<tr class="even">
+<td><code>step6-llm-evaluation/&lt;Bereich&gt;/decisions_info.json</code></td>
+<td>seit 17.11.2026: die Auswertung, aus der die Entscheidungen stammen: Start, Entscheidungsmodell (Name, Digest), Einstellungen, Statistik; für <code>--resume</code></td>
+</tr>
+<tr class="odd">
+<td><code>step6-llm-evaluation/&lt;Bereich&gt;/report.json</code></td>
+<td>der Bericht des Bereichs: Struktur vom Tool, Texte vom Reasoning-Modell; im Bereich Sicherheit bei Gruppen jeder Befund mit eigener Entscheidung (<code>findings</code>)</td>
+</tr>
+<tr class="even">
+<td><code>step6-llm-evaluation/&lt;Bereich&gt;/requests/</code></td>
+<td>jede Anfrage und Antwort (<code>NNN-decision.json</code>, <code>NNN-report.json</code>), mit dem Denkweg des Reasoning-Modells</td>
+</tr>
+</tbody>
+</table>
+<p>Schritt 6 ist unvollständig (Exitcode 9), wenn <code>[llm]</code> ungültig ist, Ollama nicht erreichbar ist oder ein Modell fehlt, oder wenn ein Bereich keine Labels oder nicht alle Texte bekommen hat.</p>
+</section>
+<section id="sec-tests" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Testergebnisse</h1>
+<p><strong>Unit-Tests</strong> (18.11.2026, alle bestanden): 136 Tests mit einem nachgebildeten Ollama (<code>scheduler/tests/evaluation_data.py</code>), das <code>/v1/systemone</code>, <code>/api/chat</code>, <code>/api/tags</code>, <code>/api/ps</code> und das Entladen nachbildet. Ein kleiner Lauf mit Ergebnissen der Schritte 2 bis 5 dient als Testdaten: Duplikate über Werkzeuge hinweg (OpenGrep und SonarQube; OSV-Scanner und npm audit), Lint-Befunde mit exaktem Duplikat, fehlgeschlagene Tests, Abdeckung und Mutanten. Für die Aufteilung nach Kategorie kommen statische Befunde der Kategorien <code>maintainability</code>, <code>Best-Practice</code>, <code>reliability</code> und <code>Correctness</code> sowie einer ohne Kategorie hinzu (<code>add_quality_findings</code>). Für die Gruppen im Bereich Sicherheit kommen vier Befunde einer Regel in <code>src/</code> und <code>tests/</code>, ein einzelner REAL-Befund mit <code>error</code> und drei Advisories eines Pakets hinzu (<code>add_security_groups</code>). Die Testdaten nehmen die Modellnamen aus <code>code-analysis.toml</code>, damit ein Wechsel des Modells die Tests nicht bricht.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Datei</th>
+<th>Tests</th>
+<th>Geprüft</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>test_evaluation_items.py</code></td>
+<td>47</td>
+<td>Konfiguration und Fehlermeldungen (auch unbekannte Schlüssel und Bereiche, verschobene Schlüssel, <code>think</code> als Stufe, <code>min_p</code>, Einstellungen je Bereich), Prompts, Bereiche von Dateien, Kennungen und Duplikate, Lint-Gruppen, Zuordnung nach Kategorie (<code>security</code>, <code>correctness</code>, <code>reliability</code>, ohne Kategorie, Großschreibung), Gruppen aus Schritt 3, Codequalität nur mit Schritt 3, Test-Einträge</td>
+</tr>
+<tr class="even">
+<td><code>test_evaluation_decide.py</code></td>
+<td>8</td>
+<td>Grenzen je Anfrage, Fragen und Labels, <code>confidence</code> und Prüfmarkierung, Halbieren und Standard-Label, Abbruch nach 3 Fehlern in Folge, Zeitlimit, Wiederholungen und <code>keep_alive</code> des Entscheidungsmodells</td>
+</tr>
+<tr class="odd">
+<td><code>test_evaluation_report.py</code></td>
+<td>15</td>
+<td>jede Kennung in genau einem Eintrag, Zählung der verschobenen Befunde und Kategorie in den Gruppen, Fundstellen je Datei, Statistiken, Patch-Statistik und Beispiel, Prüfung der Texte, Stapel, Wiederholung mit neuem Seed, Halbieren, Kürzen der Fakten auf das Kontextfenster; seit 18.11.2026: Gruppen im Bereich Sicherheit (Einzeleinträge, Gruppen nach Regel bzw. Paket und Label, Gruppe aus einem Befund, alle Fundstellen und Entscheidungen erhalten, Beispiele mit und ohne Code), <code>security_single_severity</code> und seine Prüfung</td>
+</tr>
+<tr class="even">
+<td><code>test_evaluation_run.py</code></td>
+<td>32</td>
+<td>ganzer Ablauf, Fundstellen der Codequalität im Audit (Englisch und Deutsch), Aufteilung nach Kategorie bis ins Audit, <code>think</code> je Bereich und Grenzen aus <code>[llm.input]</code> bis ins Audit, nie zwei Modelle gleichzeitig, Reihenfolge, übersprungene Bereiche, fehlendes Modell, Ollama nicht erreichbar, Ausfall während der Berichte, Audit auf Deutsch und Englisch; seit 17.11.2026 <code>--resume</code>: Übernahme nach gescheiterten Berichten, Ergänzung aus <code>summary.json</code>, neu labeln bei geänderten Einstellungen, geänderten Fragen oder anderem Modell-Digest, ohne frühere Auswertung, Übernahme nach gescheiterter Fortsetzung, übersprungene Bereiche; seit 18.11.2026 Gruppen der Sicherheit im Audit und in der Anfrage an das Modell; Bedrohungsmodell nur in den Prompts der Sicherheit, in <code>summary.json</code> und im Audit, Hinweis ohne Bedrohungsmodell, neu labeln nach geändertem Bedrohungsmodell</td>
+</tr>
+<tr class="odd">
+<td><code>test_threat_model.py</code> (neu)</td>
+<td>16</td>
+<td>Projektdatei vor Ergebnisordner, bestätigtes Modell ohne Rückfrage, Abbruch ohne Terminal, nach der Bestätigung geändert, Fragen, Entwurf und Bestätigung (Anfrage an das Modell, Dokumentation, Entladen), neu erzeugen und abbrechen, vorhandener Entwurf, Ende der Eingabe, keine gültige Antwort des Modells, Warnung bei langem Text, Grenze für die Dokumentation, Bereiche der Ordner, Kopie im Lauf; <code>create = "manual"</code> mit Vorlage (leere Vorlage wird nicht bestätigt, kein Modell, kein „neu erzeugen“), leere Vorlage im Projekt zählt nicht, Prüfung von <code>create</code></td>
+</tr>
+<tr class="even">
+<td><code>test_cli.py</code></td>
+<td>18</td>
+<td>Exitcode 9, Vorrang früherer Schritte, <code>--evaluate</code> mit gültigen und ungültigen Ordnern, Hinweis auf fehlende Modelle; <code>--resume</code> nur mit <code>--evaluate</code>; Bedrohungsmodell vor Schritt 2 und Kopie in den Lauf, Exitcode 10, <code>--check-only</code> ohne Bedrohungsmodell, echte Prüfung ohne Terminal, <code>--evaluate</code> mit Bedrohungsmodell</td>
+</tr>
+</tbody>
+</table>
+<section id="sec-erster-lauf" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="sec-erster-lauf"><span class="header-section-number">12.1</span> Erster Lauf mit den echten Modellen (17.11.2026)</h2>
+<p>Projekt <code>ninakswebshopui</code>, Lauf <code>2026-11-17_170834Z</code>. Schritt 6 lief von 17:09:25 bis 17:23:54 UTC (14,5 min). Entscheidungsmodell <code>pplx-decider-flash:latest</code> (MLX), Reasoning-Modell <code>qwen3.8:latest</code> (MLX-Build, <a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>), Einstellungen wie in <code>code-analysis.toml</code> (<code>max_questions 8</code>, <code>max_input_kib 20</code>, <code>review_confidence 0.6</code>).</p>
+<div id="tbl-erster-lauf" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-erster-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;5: Entscheidungen im ersten Lauf (<code>step6-llm-evaluation/summary.json</code>)
+</figcaption>
+<div aria-describedby="tbl-erster-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Einträge</th>
+<th>Duplikate</th>
+<th>Anfragen</th>
+<th>Dauer</th>
+<th>Input-Tokens</th>
+<th>Labels</th>
+<th>Niedrige <code>confidence</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>614</td>
+<td>15</td>
+<td>103</td>
+<td>793 s</td>
+<td>297.819</td>
+<td>606 NOISE, 8 REAL</td>
+<td>10</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>21 Gruppen</td>
+<td>–</td>
+<td>4</td>
+<td>41 s</td>
+<td>13.158</td>
+<td>21 REAL</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>0 (keine Tests im Projekt)</td>
+<td>–</td>
+<td>0</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Entscheidungen:</strong> keine gescheiterte Anfrage, kein Standard-Label; im Mittel etwa 7,7 s und 2.900 Input-Tokens je Anfrage im Bereich Sicherheit. Die Verteilung der Labels (606 von 614 Sicherheitsbefunden NOISE, alle 21 Lint-Gruppen REAL) ist noch nicht von Hand geprüft.</li>
+<li><strong>Berichte:</strong> Ollama beantwortete jede Anfrage an <code>/api/chat</code> sofort mit <strong>HTTP 501: „structured output is unavailable“</strong>. Nach drei Fehlern in Folge brach Schritt 6 ab, wie vorgesehen. Die Meldung des Tools verwies dabei fälschlich auf zu wenig Speicher (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>). Die Berichte enthalten die Struktur, aber keine Texte; das Audit wurde ohne Texte geschrieben.</li>
+<li><strong>Ursache:</strong> der MLX-Build von qwen3.8 (<a href="#tbl-modelle" class="quarto-xref">Tabelle&nbsp;1</a>). Die Ollama-Dokumentation nennt diese Einschränkung nicht; sie ist aus der Fehlermeldung geschlossen. Das Entscheidungsmodell lief ebenfalls auf MLX, braucht aber kein Structured Output.</li>
+</ul>
+</section>
+<section id="sec-zweiter-lauf" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="sec-zweiter-lauf"><span class="header-section-number">12.2</span> Zweiter Lauf und Aufteilung nach Kategorie (17.11.2026)</h2>
+<p>Projekt <code>ninakswebshopui</code>, Lauf <code>2026-11-17_173733Z</code>. Reasoning-Modell <code>gpt-oss:20b</code>, Entscheidungsmodell <code>pplx-decider-flash:latest</code>, <code>max_questions 4</code>, sonst wie in <code>code-analysis.toml</code>. Die Schritte 2 bis 5 brauchten zusammen knapp 1 min (17:37:33 bis 17:38:30 UTC), Schritt 6 87 min (17:38:30 bis 19:05:31 UTC). Alle Bereiche <code>ok</code>, keine fehlenden Texte. Die Zahlen stammen aus <code>step6-llm-evaluation/summary.json</code>.</p>
+<div id="tbl-zweiter-lauf" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-zweiter-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;6: Zweiter Lauf, vor der Aufteilung nach Kategorie
+</figcaption>
+<div aria-describedby="tbl-zweiter-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Einträge</th>
+<th>Entscheidungen: Anfragen, Dauer</th>
+<th>Texte: Anfragen, Dauer</th>
+<th>Texte: Prompt- / Ausgabe-Tokens</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>614 (16 Duplikate)</td>
+<td>154, 566 s</td>
+<td>63, <strong>3.968 s</strong></td>
+<td>177.178 / 66.257</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>21 Gruppen</td>
+<td>6, 29 s</td>
+<td>5, 627 s</td>
+<td>16.874 / 12.418</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>0</td>
+<td>0</td>
+<td>1, 31 s</td>
+<td>848 / 724</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Wo die Zeit hinging.</strong> 66 der 87 min schrieb das Reasoning-Modell Texte für die 614 Sicherheitseinträge: für jeden einen Titel und, bei den 606 NOISE-Einträgen, eine Begründung. Eine Anfrage mit bis zu 10 Einträgen dauerte im Mittel 63 s, in der Codequalität 125 s.</p>
+<p><strong>Woher die Einträge im Bereich Sicherheit kamen</strong> (Kategorie laut Werkzeug, Einträge nach dem Zusammenführen der Duplikate, ermittelt aus <code>items.json</code> und <code>decisions.json</code>):</p>
+<div id="tbl-kategorien" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-kategorien-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;7: Einträge im Bereich Sicherheit nach Kategorie, zweiter Lauf
+</figcaption>
+<div aria-describedby="tbl-kategorien-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Werkzeug</th>
+<th>Kategorie</th>
+<th>Einträge</th>
+<th>Labels</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>OpenGrep</td>
+<td><code>portability</code>, davon 494 von der Regel <code>typescript.react.portability.i18next.i18next-key-format</code></td>
+<td>498</td>
+<td>498 NOISE</td>
+</tr>
+<tr class="even">
+<td>SonarQube</td>
+<td><code>maintainability</code></td>
+<td>74</td>
+<td>74 NOISE</td>
+</tr>
+<tr class="odd">
+<td>SonarQube</td>
+<td><code>reliability</code></td>
+<td>11</td>
+<td>11 NOISE</td>
+</tr>
+<tr class="even">
+<td>OpenGrep</td>
+<td><code>best-practice</code></td>
+<td>11</td>
+<td>10 NOISE, 1 REAL</td>
+</tr>
+<tr class="odd">
+<td>OpenGrep</td>
+<td><code>correctness</code></td>
+<td>5</td>
+<td>4 NOISE, 1 FALSE_POSITIVE</td>
+</tr>
+<tr class="even">
+<td>OpenGrep</td>
+<td><code>security</code></td>
+<td>6</td>
+<td>4 NOISE, 2 REAL</td>
+</tr>
+<tr class="odd">
+<td>SonarQube</td>
+<td><code>security</code></td>
+<td>6</td>
+<td>5 NOISE, 1 REAL</td>
+</tr>
+<tr class="even">
+<td>OSV-Scanner, npm audit</td>
+<td>–</td>
+<td>3</td>
+<td>3 REAL</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Nur 15 der 614 Einträge waren nach Einstufung ihres Werkzeugs Sicherheitsbefunde. Der Großteil kam nicht von SonarQube (91 Einträge), sondern von einer einzigen OpenGrep-Regel zur Portabilität. Die Frage des Nutzers war, ob SonarQube entfernt oder in die Codequalität verschoben werden soll. SonarQube zu entfernen hätte nur 91 Einträge gespart und 6 Sicherheitsbefunde gekostet, darunter einen REAL (<code>Web:S5725</code> in <code>index.html</code>).</p>
+<p><strong>Entscheidung des Nutzers (17.11.2026):</strong> Befunde aus Schritt 3, die ihr Werkzeug als <code>security</code> einstuft, kommen in den Bereich Sicherheit, alle anderen in die Codequalität. Befunde ohne Kategorie bleiben zur Sicherheit im Bereich Sicherheit. Am selben Tag ergänzt: Auch <code>correctness</code> (OpenGrep) und <code>reliability</code> (SonarQube) zählen als Sicherheit, weil Bugs Sicherheitsfolgen haben können (<a href="#sec-aufbereitung" class="quarto-xref">Kapitel&nbsp;3</a>).</p>
+<p><strong>Wirkung auf diesen Lauf.</strong> Die neue Aufbereitung, auf die Ergebnisdateien des Laufs angewendet (nur Teil 1, ohne Modell): - <strong>Sicherheit:</strong> 31 Einträge statt 614: 12 <code>security</code>, 11 <code>reliability</code>, 5 <code>correctness</code> (aus 7 Befunden, 2 als Duplikate zusammengeführt), 3 Abhängigkeiten. - <strong>Codequalität:</strong> 52 Gruppen statt 21: 21 aus Schritt 2 und 31 aus den 594 übrigen Befunden aus Schritt 3. Die 494 Befunde der i18n-Regel sind eine einzige Gruppe. - <strong>Dauer:</strong> vorab nach den Zeiten je Anfrage aus <a href="#tbl-zweiter-lauf" class="quarto-xref">Tabelle&nbsp;6</a> geschätzt: etwa 5 min für Sicherheit und 13–15 min für Codequalität, zusammen etwa 20 statt 87 min. Im dritten Lauf gemessen: 4,7 min, 14 min und zusammen 19 min (<a href="#sec-dritter-lauf" class="quarto-xref">Kapitel&nbsp;12.3</a>).</p>
+<p><strong>Was sich dadurch auch ändert:</strong> Der REAL-Befund der Kategorie <code>best-practice</code> (<code>typescript.react.best-practice.react-props-spreading</code>) wird künftig als Teil seiner Gruppe in der Codequalität bewertet, mit deren Prompt und Labels.</p>
+</section>
+<section id="sec-dritter-lauf" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="sec-dritter-lauf"><span class="header-section-number">12.3</span> Dritter Lauf mit der Aufteilung nach Kategorie (17.11.2026)</h2>
+<p>Projekt <code>ninakswebshopui</code>, Lauf <code>2026-11-17_195751Z</code>. Modelle und Einstellungen wie im zweiten Lauf:</p>
+<ul>
+<li><strong>Reasoning-Modell:</strong> <code>gpt-oss:20b</code> (Digest <code>f38aa0c53da5</code>) mit <code>think = true</code>, also <code>medium</code> (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>).</li>
+<li><strong>Entscheidungsmodell:</strong> <code>pplx-decider-flash:latest</code> mit <code>max_questions 4</code>.</li>
+<li><strong>Format der Einstellungen:</strong> noch das Format vor <a href="#sec-einstellungen" class="quarto-xref">Kapitel&nbsp;1.4</a>, mit einem Zeitlimit für beide Modelle.</li>
+</ul>
+<p>Die Schritte 2 bis 5 brauchten zusammen 50 s (19:57:51 bis 19:58:41 UTC), Schritt 6 19 min (19:58:41 bis 20:18:05 UTC). Alle Bereiche liefen mit <code>ok</code>, ohne fehlende Texte und ohne ungültige Antworten.</p>
+<div id="tbl-dritter-lauf" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dritter-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;8: Dritter Lauf, nach der Aufteilung nach Kategorie (<code>step6-llm-evaluation/summary.json</code>)
+</figcaption>
+<div aria-describedby="tbl-dritter-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Einträge</th>
+<th>Labels</th>
+<th>Entscheidungen: Anfragen, Dauer</th>
+<th>Texte: Anfragen, Dauer</th>
+<th>Texte: Prompt- / Ausgabe-Tokens</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>31 (5 Duplikate)</td>
+<td>24 NOISE, 6 REAL, 1 FALSE_POSITIVE</td>
+<td>8, 26 s</td>
+<td>5, 255 s</td>
+<td>11.073 / 5.737</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>52 Gruppen</td>
+<td>52 REAL</td>
+<td>13, 62 s</td>
+<td>7, 780 s</td>
+<td>26.679 / 13.354</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>0 (keine Tests im Projekt)</td>
+<td>–</td>
+<td>0</td>
+<td>1, 41 s</td>
+<td>848 / 724</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Vergleich mit dem zweiten Lauf</strong> (<a href="#tbl-zweiter-lauf" class="quarto-xref">Tabelle&nbsp;6</a>):</p>
+<ul>
+<li><strong>Schritt 6:</strong> 19 statt 87 min. Die Schätzung aus <a href="#sec-zweiter-lauf" class="quarto-xref">Kapitel&nbsp;12.2</a> (etwa 20 min) trifft zu.</li>
+<li><strong>Sicherheit:</strong> 31 statt 614 Einträge. Die Texte dauerten 255 statt 3.968 s, die Entscheidungen 26 statt 566 s.</li>
+<li><strong>Codequalität:</strong> 52 statt 21 Gruppen. Die Texte dauerten 780 statt 627 s. Die Codequalität ist jetzt mit 14 von 19 min der größte Posten.</li>
+</ul>
+<p><strong>Wo die Zeit für die Texte hingeht.</strong> Die Werte stammen aus den gespeicherten Antworten in <code>requests/</code>: <code>prompt_eval_count</code>, <code>prompt_eval_duration</code>, <code>eval_count</code>, <code>eval_duration</code> und die Länge von <code>message.thinking</code> und <code>message.content</code>.</p>
+<div id="tbl-dritter-lauf-tokens" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dritter-lauf-tokens-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;9: Prompt und Ausgabe des Reasoning-Modells im dritten Lauf (<code>requests/*-report.json</code>)
+</figcaption>
+<div aria-describedby="tbl-dritter-lauf-tokens-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Prompt: Tokens, Dauer</th>
+<th>Ausgabe: Tokens, Dauer, Tokens/s</th>
+<th>Anteil des Denkwegs an den erzeugten Zeichen</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>11.073, 18 s</td>
+<td>5.737, 233 s, 24,6</td>
+<td>59 % (14.375 von 24.352)</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>26.679, 58 s</td>
+<td>13.354, 721 s, 18,5</td>
+<td>57 % (33.374 von 58.556)</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>848, 2 s</td>
+<td>724, 39 s, 18,8</td>
+<td>73 % (2.421 von 3.336)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Die Ausgabe bestimmt die Dauer:</strong> Von 1.076 s für die Texte entfielen 993 s (92 %) auf das Erzeugen der Ausgabe und 78 s auf das Lesen der Prompts.</li>
+<li><strong>Der Denkweg ist mehr als die Hälfte:</strong> In Sicherheit und Codequalität waren 57 bis 59 % der erzeugten Zeichen Denkweg.</li>
+<li><strong>Keine Gruppe herausgefiltert:</strong> In der Codequalität bekamen alle 52 Gruppen REAL, eine davon mit niedriger <code>confidence</code>. Das gilt auch für die Gruppe der 494 Befunde der i18n-Regel. Sie war im zweiten Lauf mit dem Sicherheits-Prompt NOISE, weil sie kein Sicherheitsproblem ist. Schon im ersten Lauf waren alle 21 Lint-Gruppen REAL (<a href="#tbl-erster-lauf" class="quarto-xref">Tabelle&nbsp;5</a>). Ob alle Gruppen wirklich REAL sind, ist nicht von Hand geprüft.</li>
+</ul>
+<p><strong>Folgerungen für die Wahl des Reasoning-Modells.</strong> Der Nutzer fragte am 17.11.2026, ob für die Texte ein sehr kleines Modell reicht. Aus den Zahlen geschlossen, nicht gemessen:</p>
+<ul>
+<li><strong>Ein sehr kleines Modell spart wenig Zeit:</strong>
+<ul>
+<li>Die Dauer hängt an der Zahl der erzeugten Tokens und an der Rechenarbeit je Token.</li>
+<li>Die Rechenarbeit je Token richtet sich nach den aktiven Parametern. Bei <code>gpt-oss:20b</code> sind es 3,6B [gpt-oss-card]. Ein dichtes Modell mit 3 bis 4B Parametern rechnet je Token etwa gleich viel.</li>
+<li>Spürbar schneller wären nur deutlich kleinere Modelle.</li>
+</ul></li>
+<li><strong>Die Texte müssen stimmen:</strong> Sie gehen unverändert ins Audit (<a href="#sec-audit" class="quarto-xref">Kapitel&nbsp;6</a>). Das Reasoning-Modell schreibt:
+<ul>
+<li>Empfehlungen zur Behebung,</li>
+<li>eine Zusammenfassung aus den Zahlen des Tools,</li>
+<li>Prüfhinweise, wenn es ein Label für falsch hält. Als zweite Meinung zum Entscheidungsmodell (4B) taugen sie nur, wenn das Reasoning-Modell stärker ist.</li>
+</ul></li>
+<li><strong>Nächster Versuch:</strong> eine niedrigere <code>think</code>-Stufe für gpt-oss. Zuerst nur für die Codequalität, mit <code>think = "low"</code> in <code>[llm.report.code_quality]</code>, auf denselben Ordner des Laufs (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>, Punkt 5). Ein kleines Modell lässt sich im Modellvergleich an denselben 52 Gruppen prüfen (<a href="#sec-kandidaten" class="quarto-xref">Kapitel&nbsp;9</a>).</li>
+</ul>
+</section>
+<section id="sec-vierter-lauf" class="level2" data-number="12.4">
+<h2 data-number="12.4" class="anchored" data-anchor-id="sec-vierter-lauf"><span class="header-section-number">12.4</span> Vierter Lauf: libgdx (17. und 18.11.2026)</h2>
+<p>Projekt <code>libgdx</code> (Commit <code>2cab114</code>), Lauf <code>2026-11-17_210624Z</code>. - <strong>Entscheidungsmodell:</strong> <code>pplx-decider-flash:latest</code> (Digest <code>4b41cf615edc</code>) mit <code>max_questions 4</code>, <code>max_input_kib 20</code>, <code>review_confidence 0.6</code>. - <strong>Reasoning-Modell:</strong> zuerst <code>nemotron-3.5-lightning:30b</code> (Digest <code>29a422b3cf50</code>), danach <code>qwen3.8:27b-q4_K_M</code>.</p>
+<p><strong>Entscheidungen.</strong> Schritt 6 lief von 21:19:05 bis 22:06:10 UTC. Die Zahlen stammen aus <code>summary.json</code> bzw. <code>decisions_info.json</code>:</p>
+<div id="tbl-vierter-lauf" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vierter-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;10: Entscheidungen im vierten Lauf
+</figcaption>
+<div aria-describedby="tbl-vierter-lauf-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Einträge</th>
+<th>Duplikate</th>
+<th>Anfragen</th>
+<th>Dauer</th>
+<th>Input-Tokens</th>
+<th>Labels</th>
+<th>Niedrige <code>confidence</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>2.527</td>
+<td>112</td>
+<td>632</td>
+<td>2.036 s</td>
+<td>1.443.329</td>
+<td>1.791 NOISE, 730 REAL, 6 FALSE_POSITIVE</td>
+<td>1.512</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>359 Gruppen</td>
+<td>–</td>
+<td>90</td>
+<td>737 s</td>
+<td>290.097</td>
+<td>348 REAL, 11 NOISE</td>
+<td>48</td>
+</tr>
+<tr class="odd">
+<td>Testqualität</td>
+<td>0</td>
+<td>–</td>
+<td>0</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Keine Fehler:</strong> keine gescheiterte Anfrage, kein Standard-Label.</li>
+<li><strong>REAL nach Schweregrad (je Befund):</strong> 8 <code>critical</code>, 7 <code>error</code>, 38 <code>high</code>, 11 <code>medium</code>, 583 <code>warning</code>, 5 <code>low</code>, 78 <code>note</code>.</li>
+<li><strong>Niedrige <code>confidence</code>:</strong> 1.512 der 2.527 Sicherheitsentscheidungen (60 %), darunter 544 der 730 REAL-Befunde. Das ist nicht von Hand geprüft (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>).</li>
+</ul>
+<p><strong>Berichte mit <code>nemotron-3.5-lightning:30b</code>.</strong> Die Anfragen an <code>/api/chat</code> scheiterten wie im ersten Lauf mit <strong>HTTP 501: „structured output is unavailable“</strong>. Nach drei Fehlern in Folge brach Schritt 6 nach 36 s Berichtszeit ab. Die Fehlermeldung des Tools nannte wieder fälschlich den Speicher (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>, Punkt 2).</p>
+<p><strong>Ursache, aus folgenden Befunden geschlossen:</strong> - <strong>Format:</strong> <code>ollama show</code> nennt für das Modell die Quantisierung <code>nvfp4</code>. Sein Manifest besteht aus 6.527 einzelnen Tensor-Dateien statt einer GGUF-Modelldatei. Daran ist zu erkennen, dass Ollama es auf MLX ausführt. - <strong>Fehlende Bibliothek:</strong> Im Homebrew-Paket von Ollama 0.40.16 fehlt <code>libollama_xgrammar.dylib</code> im Ordner <code>mlx_metal_v3</code>. Am 04.11.2026 (Version 0.40.13) meldete das Server-Log beim Start des MLX-Runners „Structured output is unavailable“ mit „xgrammar library not found“. - <strong>Kein Log des Laufs:</strong> Für den 17.11.2026 gibt es kein Log, weil Ollama in einem Terminal lief. - <strong>Andere Modelle:</strong> <code>gemma4:26b</code> ist ebenfalls <code>nvfp4</code>. <code>qwen3.8:27b-q4_K_M</code> und <code>gpt-oss:20b</code> sind GGUF.</p>
+<p><strong>Fortsetzung mit <code>--resume</code> und <code>qwen3.8:27b-q4_K_M</code>.</strong> Sie lief am 17.11.2026 ab 22:25 UTC mit <code>think = true</code>, <code>temperature = 0</code>, <code>num_ctx 16384</code>, <code>num_predict 6144</code> und <code>entries_per_request 10</code>. - <strong>Übernahme:</strong> Die Entscheidungen wurden übernommen. - <strong>Fortschritt:</strong> Bis 07:25 UTC am 18.11. schrieb das Reasoning-Modell 46 Anfragen im Bereich Sicherheit. Die letzten drei kamen um 07:02, 07:13 und 07:25 UTC. Das sind im Mittel etwa 11,7 min je Anfrage mit bis zu 10 Einträgen, gut 1 min je Text. - <strong>Hochrechnung:</strong> etwa 253 Anfragen für die 2.527 Sicherheitseinträge und 36 für die Codequalität, also mehr als zwei Tage. - <strong>Nicht fertig:</strong> Am Morgen war der Lauf nicht fertig. - <strong>Nicht gemessen:</strong> Beim erneuten Start mit <code>--resume</code> um 07:32 UTC wurden die Report-Anfragen der Nacht ersetzt. Wie viel davon Denkweg war und ob Antworten an <code>num_predict</code> stießen, ist deshalb nicht gemessen.</p>
+<p><strong>Woher die Sicherheitseinträge kamen.</strong> Ermittelt aus <code>items.json</code> und <code>decisions.json</code>, 18.11.2026: - <strong>Gefiltert:</strong> Die 1.797 NOISE- und FALSE_POSITIVE-Befunde verteilen sich auf 73 Gruppen aus Werkzeug, Regel und Label. Die größten sind: - <code>rules.c.raptor-missing-return</code> (489 NOISE), - <code>rules.c.raptor-typos</code> (413 NOISE), - <code>rules.c.raptor-interesting-api-calls</code> (187 NOISE), - <code>java.lang.correctness.hardcoded-conditional</code> (120 NOISE). - <strong>REAL:</strong> Die 730 REAL-Befunde verteilen sich auf 31 Regeln bzw. Abhängigkeiten. Die größten sind <code>rules.c.raptor-suspicious-assert</code> (298) und <code>rules.c.raptor-interesting-api-calls</code> (152). - <strong>Gemischte Regeln:</strong> Eine Regel kann in beiden Labels vorkommen und bildet dann zwei Gruppen.</p>
+<p><strong>Wirkung der Gruppen.</strong> Auf die Ergebnisdateien dieses Laufs angewendet, ohne Modell, 18.11.2026:</p>
+<div id="tbl-vierter-lauf-gruppen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-vierter-lauf-gruppen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;11: Einträge und Anfragen mit Gruppen im Bereich Sicherheit, vierter Lauf
+</figcaption>
+<div aria-describedby="tbl-vierter-lauf-gruppen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Bereich</th>
+<th>Einträge vorher</th>
+<th>Einträge mit Gruppen</th>
+<th>Anfragen für Texte</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Sicherheit</td>
+<td>2.527</td>
+<td>160: 53 REAL einzeln (<code>critical</code>, <code>high</code>, <code>error</code>), 30 Gruppen aus einem Befund, 77 Gruppen</td>
+<td>16 + 1 Zusammenfassung</td>
+</tr>
+<tr class="even">
+<td>Codequalität</td>
+<td>359 Gruppen</td>
+<td>359 Gruppen (unverändert)</td>
+<td>36 + 1 Zusammenfassung</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Alle Befunde erhalten:</strong> Alle 2.639 Befunde, Duplikate eingeschlossen, stehen im Bericht.</li>
+<li><strong>Entscheidungen weiter gültig:</strong> Die Prüfung für <code>--resume</code> übernimmt die Entscheidungen weiterhin.</li>
+<li><strong>Geschätzte Dauer:</strong> Bei 11,7 min je Anfrage wären es etwa 55 Anfragen, also rund 10 Stunden. Das ist geschätzt, nicht gemessen.</li>
+<li><strong>Größter Posten:</strong> Danach ist die Codequalität am größten. Als Nächstes ist eine niedrigere <code>think</code>-Stufe zu prüfen (<a href="#sec-offen" class="quarto-xref">Kapitel&nbsp;13</a>, Punkt 5).</li>
+</ul>
+</section>
+</section>
+<section id="sec-offen" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Offene Punkte</h1>
+<ol type="1">
+<li><strong>Modellvergleich</strong> (<a href="#sec-kandidaten" class="quarto-xref">Kapitel&nbsp;9</a>): Reasoning-Modell mit funktionierendem Structured Output wählen, Entscheidungsmodelle vergleichen, Labels des ersten Laufs an einer Stichprobe von Hand prüfen (<a href="#tbl-erster-lauf" class="quarto-xref">Tabelle&nbsp;5</a>).</li>
+<li><strong>HTTP 501 im Tool:</strong> Das Tool behandelt eine 501-Antwort wie einen Ausfall von Ollama. Es versucht dreimal, mit Pausen, und meldet dann „Check that Ollama runs and has enough memory“. Richtig wäre ein sofortiger Abbruch mit der Ursache und dem Hinweis auf eine GGUF-Variante. Besser noch wäre eine Prüfung vor den Entscheidungen, ob das Reasoning-Modell Structured Output kann: Im vierten Lauf zeigte sich der Fehler erst nach 47 min Entscheidungen (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>).</li>
+<li><strong>Entscheidungen wiederverwenden:</strong> seit dem 17.11.2026 umgesetzt (<code>--resume</code>, <a href="#sec-ergebnisse" class="quarto-xref">Kapitel&nbsp;11</a>). Offen ist eine Option nur für Entscheidungen, für den Vergleich der Entscheidungsmodelle. Auch fertige Berichte einzelner Bereiche übernimmt <code>--resume</code> noch nicht: Bricht ein Lauf in den Berichten der Codequalität ab, wird der Bericht der Sicherheit neu geschrieben.</li>
+<li><strong><code>temperature = 0.6</code>:</strong> Qwen empfiehlt im Thinking-Modus 1,0, und Ollama setzt 1 als Voreinstellung (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>). Für 0,6 gibt es in den gelesenen Quellen keinen Beleg. Die Ollama-Dokumentation rät für Structured Output allgemein zu niedrigen Werten: „Lower the temperature (e.g., set it to <code>0</code>) for more deterministic completions.“ [ollama-structured]. Zu entscheiden, je nach gewähltem Modell.</li>
+<li><strong>Stufen für <code>think</code>:</strong> seit dem 17.11.2026 einstellbar (<a href="#sec-einstellungen" class="quarto-xref">Kapitel&nbsp;1.4</a>). Bei <code>gpt-oss:20b</code> bedeutet <code>true</code> „medium“, belegt im Quellcode von Ollama (<a href="#sec-berichte" class="quarto-xref">Kapitel&nbsp;5</a>). Offen ist, ob eine niedrigere Stufe die Dauer der Berichte senkt, ohne die Texte zu verschlechtern. Zuerst zu testen: <code>think = "low"</code> für gpt-oss in <code>[llm.report.code_quality]</code>. Im dritten Lauf waren 57 bis 59 % der erzeugten Zeichen Denkweg (<a href="#tbl-dritter-lauf-tokens" class="quarto-xref">Tabelle&nbsp;9</a>).</li>
+<li><strong>Zählt der Denkweg zu <code>num_predict</code>?</strong> In den Quellen nicht belegt. Prüfen anhand der gespeicherten Anfragen des ersten Laufs (<code>eval_count</code>, <code>done_reason: "length"</code>).</li>
+<li><strong>Schätzung des Kontexts</strong> (<code>chars_per_token</code>, 2,5 Zeichen je Token): prüfen mit <code>prompt_eval_count</code> der gespeicherten Anfragen und den Wert in <code>code-analysis.toml</code> anpassen.</li>
+<li><strong>Schema als Text im Prompt:</strong> von Ollama empfohlen [ollama-structured], im Tool noch nicht umgesetzt.</li>
+<li><strong>Fragen je Anfrage:</strong> 8 Fragen sparen Anfragen; nach Herstellerangabe ist eine Frage je Anfrage etwas genauer (60,05 statt 58,88). Abwägen nach dem ersten Lauf.</li>
+<li><strong>Dauer:</strong> Für <code>ninakswebshopui</code> gemessen: 19 statt 87 min (<a href="#sec-dritter-lauf" class="quarto-xref">Kapitel&nbsp;12.3</a>). Bei libgdx mit <code>qwen3.8:27b-q4_K_M</code> etwa 11,7 min je Anfrage (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). Die Gruppen im Bereich Sicherheit senken dort die Zahl der Einträge von 2.527 auf 160 (seit 18.11.2026). Die Dauer mit Gruppen ist noch nicht gemessen. Die Codequalität (359 Gruppen, 348 REAL) bleibt mit 36 Anfragen der größte Posten; als Nächstes eine niedrigere <code>think</code>-Stufe (Punkt 5) oder ein schnelleres Modell.</li>
+<li><strong>Niedrige <code>confidence</code> bei libgdx:</strong> 1.512 von 2.527 Sicherheitsentscheidungen, darunter 544 der 730 REAL-Befunde (<a href="#sec-vierter-lauf" class="quarto-xref">Kapitel&nbsp;12.4</a>). An einer Stichprobe von Hand prüfen, besonders die großen Gruppen (z. B. <code>rules.c.raptor-suspicious-assert</code>, 298 REAL).
+<ul>
+<li><strong>Ursachen nach Regeln:</strong> Die Unsicherheit liegt bei bestimmten Regeln. 84 % der unsicheren Entscheidungen stammen aus <code>0xdea-semgrep-rules</code>, und sechs Regeln daraus liefern 997 der 1.512 Fälle, jede zu 94–100 % unsicher: <code>raptor-typos</code>, <code>interesting-api-calls</code>, <code>signed-unsigned-conversion</code>, <code>mismatched-memory-management-cpp</code>, <code>integer-truncation</code>, <code>insecure-api-rand-srand</code>. Fast immer ist es ein Patt zwischen NOISE und REAL. <code>interesting-api-calls</code> beschreibt sich selbst als Startpunkt für eine manuelle Prüfung („candidate points. The auditor can backtrace from these candidate points …“).</li>
+<li><strong>Lücke im Prompt bei Abhängigkeiten:</strong> Der Entscheidungs-Prompt definiert den Scope <code>tooling</code> nicht (199 Funde, 63 % unsicher).</li>
+<li><strong>Stichprobe (18.11.2026):</strong> <code>Stichproben/libgdx_2026-11-17_210624Z/</code> in diesem Projekt.
+<ul>
+<li><strong>Umfang:</strong> 104 Funde aus 24 Schichten (Regelgruppe × Konfidenzbereich, dazu REAL <code>critical</code>/<code>high</code>/<code>error</code>, Abhängigkeiten und übrige Regeln), gezogen mit Seed 42 vom Skript <code>stichprobe_ziehen.py</code>.</li>
+<li><strong>Labeln:</strong> Gelabelt wird blind in <code>stichprobe_security.xlsx</code>; die Entscheidungen des Modells stehen getrennt in <code>modell_entscheidungen.csv</code>. Die Labels entsprechen <code>security_decision.md</code>, dazu kommt UNKLAR für Fälle, die auch mit dem ganzen Code nicht entscheidbar sind.</li>
+<li><strong>Auswertung:</strong> Die Schichten sind nicht proportional besetzt. Für Aussagen über alle Funde gelten die Gewichte im Blatt „Schichten“.</li>
+</ul></li>
+<li><strong>Stand 18.11.2026:</strong> Die Stichprobe wird vorerst nicht gelabelt (<a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;10</a>). Stattdessen bekommt das Entscheidungsmodell ein bestätigtes Bedrohungsmodell (<a href="#sec-bedrohungsmodell" class="quarto-xref">Kapitel&nbsp;7</a>). Offen: <code>--evaluate --resume</code> auf dem libgdx-Lauf mit Bedrohungsmodell wiederholen und vergleichen, wie viele Entscheidungen danach eine niedrige <code>confidence</code> haben.</li>
+</ul></li>
+<li><strong>Aufteilung prüfen:</strong> an einem großen Projekt (z. B. libgdx) messen, wie viele SonarQube-Befunde mit <code>reliability</code> in den Bereich Sicherheit kommen, und an einer Stichprobe prüfen, ob unter den Befunden in der Codequalität sicherheitsrelevante sind. <code>semgrep-rules</code> ist noch nicht ausgewertet.</li>
+<li><strong>Literatur:</strong> Ob Einträge aus <code>references.bib</code> die Aufteilung in Entscheiden und Formulieren oder das Filtern von False Positives durch Sprachmodelle stützen, ist noch nicht geprüft (Skill <code>rag-retrieval</code>).</li>
+</ol>
+</section>
+<section id="sec-quellen" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Quellen (noch nicht in <code>references.bib</code>)</h1>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Wichtig
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in <code>references.bib</code>. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 17.11.2026.</p>
+</div>
+</div>
+<p><strong>Ollama-Dokumentation</strong></p>
+<ul>
+<li><strong>[ollama-decision]</strong> Ollama: <em>Decision</em> (Abschnitte „Choose a label“, „Question types“). <a href="https://docs.ollama.com/capabilities/decision" class="uri">https://docs.ollama.com/capabilities/decision</a></li>
+<li><strong>[ollama-systemone]</strong> Ollama API: <em>System One</em>, <code>POST /v1/systemone</code> (Beschreibung und OpenAPI-Schema). <a href="https://docs.ollama.com/api/systemone" class="uri">https://docs.ollama.com/api/systemone</a></li>
+<li><strong>[ollama-chat]</strong> Ollama API: <em>Chat</em>, <code>POST /api/chat</code> (OpenAPI-Schema: <code>format</code>, <code>think</code>, <code>keep_alive</code>, <code>ModelOptions</code>). <a href="https://docs.ollama.com/api/chat" class="uri">https://docs.ollama.com/api/chat</a></li>
+<li><strong>[ollama-structured]</strong> Ollama: <em>Structured Outputs</em>. <a href="https://docs.ollama.com/capabilities/structured-outputs" class="uri">https://docs.ollama.com/capabilities/structured-outputs</a></li>
+<li><strong>[ollama-thinking]</strong> Ollama: <em>Thinking</em>. <a href="https://docs.ollama.com/capabilities/thinking" class="uri">https://docs.ollama.com/capabilities/thinking</a></li>
+<li><strong>[ollama-faq]</strong> Ollama: <em>FAQ</em>, Abschnitte „How can I specify the context window size?“, „How do I keep a model loaded in memory or make it unload immediately?“, „How does Ollama handle concurrent requests?“. <a href="https://docs.ollama.com/faq" class="uri">https://docs.ollama.com/faq</a></li>
+<li><strong>[ollama-context]</strong> Ollama: <em>Context length</em>. <a href="https://docs.ollama.com/context-length" class="uri">https://docs.ollama.com/context-length</a></li>
+</ul>
+<p><strong>Ollama-Quellcode und Template</strong></p>
+<ul>
+<li><strong>[ollama-src-thinking]</strong> Ollama: <code>types/model/thinking.go</code>, Version 0.40.16, Methode <code>ThinkValue.String()</code> (Zeilen 118–134). <a href="https://github.com/ollama/ollama/blob/v0.40.16/types/model/thinking.go#L118-L134" class="uri">https://github.com/ollama/ollama/blob/v0.40.16/types/model/thinking.go#L118-L134</a></li>
+<li><strong>[ollama-src-prompt]</strong> Ollama: <code>server/prompt.go</code>, Version 0.40.16, Funktion <code>renderPrompt</code> (ab Zeile 135). <a href="https://github.com/ollama/ollama/blob/v0.40.16/server/prompt.go#L135-L156" class="uri">https://github.com/ollama/ollama/blob/v0.40.16/server/prompt.go#L135-L156</a></li>
+<li><strong>[gpt-oss-template]</strong> Ollama-Bibliothek: Template von <code>gpt-oss:20b</code>, Blob <code>fa6710a93d78</code> (Tag-Digest <code>f38aa0c53da5</code>). <a href="https://ollama.com/library/gpt-oss:20b/blobs/fa6710a93d78" class="uri">https://ollama.com/library/gpt-oss:20b/blobs/fa6710a93d78</a></li>
+<li>Primärquelle ohne Webseite: die Konfiguration von <code>gpt-oss:20b</code> in der Ollama-Registry (<code>registry.ollama.ai</code>, Manifest des Tags <code>20b</code>, Config-Blob <code>e103573196b6</code>), ohne Angabe eines Renderers.</li>
+</ul>
+<p><strong>Regelsammlungen</strong></p>
+<ul>
+<li><strong>[opengrep-rules]</strong> OpenGrep: <em>opengrep-rules</em>, Commit <code>f1d2b562b414783763fd02a6ed2736eaed622efa</code> (Dateien <code>metadata-schema.yaml.schm</code>, <code>c/lang/correctness/goto-fail.yaml</code>, <code>python/lang/correctness/tempfile/mktemp.yaml</code>, <code>csharp/lang/best-practice/structured-logging.yaml</code>, <code>csharp/lang/correctness/sslcertificatetrust/sslcertificatetrust-handshake-no-trust.yaml</code>). <a href="https://github.com/opengrep/opengrep-rules/tree/f1d2b562b414783763fd02a6ed2736eaed622efa" class="uri">https://github.com/opengrep/opengrep-rules/tree/f1d2b562b414783763fd02a6ed2736eaed622efa</a></li>
+<li><strong>[0xdea-semgrep-rules]</strong> Marco Ivaldi: <em>semgrep-rules</em>, Commit <code>b9942606d3543e3145a95332e6543fb79a01af00</code>, Ordner <code>rules/c</code>. <a href="https://github.com/0xdea/semgrep-rules/tree/b9942606d3543e3145a95332e6543fb79a01af00" class="uri">https://github.com/0xdea/semgrep-rules/tree/b9942606d3543e3145a95332e6543fb79a01af00</a></li>
+</ul>
+<p><strong>Modelle</strong></p>
+<ul>
+<li><strong>[pplx-decider-flash]</strong> Ollama-Bibliothek: <em>pplx-decider-flash</em> (Readme). <a href="https://ollama.com/library/pplx-decider-flash" class="uri">https://ollama.com/library/pplx-decider-flash</a></li>
+<li><strong>[qwen3.8-ollama]</strong> Ollama-Bibliothek: <em>qwen3.8</em>. <a href="https://ollama.com/library/qwen3.8" class="uri">https://ollama.com/library/qwen3.8</a></li>
+<li><strong>[qwen3.8-card]</strong> Qwen: <em>Qwen3.8-27B</em>, Modellkarte auf Hugging Face (README.md, Abschnitt zu den Sampling-Parametern). <a href="https://huggingface.co/Qwen/Qwen3.8-27B" class="uri">https://huggingface.co/Qwen/Qwen3.8-27B</a></li>
+<li><strong>[qwen3.8-latest]</strong> Ollama-Bibliothek: <em>qwen3.8:latest</em>, Abschnitt „Details“ mit den Builds <code>mlx</code> und <code>llamacpp</code>. <a href="https://ollama.com/library/qwen3.8:latest" class="uri">https://ollama.com/library/qwen3.8:latest</a></li>
+<li><strong>[qwen3.8-tags]</strong> Ollama-Bibliothek: <em>qwen3.8</em>, Liste der Tags. <a href="https://ollama.com/library/qwen3.8/tags" class="uri">https://ollama.com/library/qwen3.8/tags</a></li>
+<li><strong>[gpt-oss-card]</strong> OpenAI: <em>gpt-oss-20b</em>, Modellkarte auf Hugging Face (README.md, Einleitung: „21B parameters with 3.6B active parameters“). <a href="https://huggingface.co/openai/gpt-oss-20b" class="uri">https://huggingface.co/openai/gpt-oss-20b</a></li>
+<li><strong>[phi4-reasoning-card]</strong> Microsoft: <em>Phi-4-reasoning</em>, Modellkarte auf Hugging Face (README.md, Abschnitt „Model Summary“: Architektur, Kontextlänge; Lizenz MIT). <a href="https://huggingface.co/microsoft/Phi-4-reasoning" class="uri">https://huggingface.co/microsoft/Phi-4-reasoning</a></li>
+<li>Primärquellen ohne Webseite: Antworten von <code>POST /api/show</code> für <code>pplx-decider-flash:latest</code> und <code>qwen3.8:latest</code>, Ollama 0.40.16, 17.11.2026 (Fähigkeiten, Thinking-Werte, Voreinstellungen, Parameterzahl, Format, Kontextlänge); <code>summary.json</code> und <code>requests/</code> des ersten, zweiten und dritten Laufs (<code>ninakswebshopui/2026-11-17_170834Z</code>, <code>2026-11-17_173733Z</code>, <code>2026-11-17_195751Z</code>); das lokale Manifest <code>~/.ollama/models/manifests/registry.ollama.ai/library/qwen3.8/latest</code> (Stand 23.10.2026, inzwischen gelöscht).</li>
+<li>Primärquellen ohne Webseite zum vierten Lauf: <code>ollama show</code> und die lokalen Manifeste von <code>nemotron-3.5-lightning:30b</code>, <code>gemma4:26b</code>, <code>qwen3.8:27b-q4_K_M</code> und <code>gpt-oss:20b</code> (17.11.2026); das Server-Log <code>/opt/homebrew/var/log/ollama.log</code> (Einträge vom 04.11.2026 zu <code>xgrammar</code>); der Inhalt von <code>/opt/homebrew/Cellar/ollama/0.40.16/libexec/lib/ollama/</code> (ohne <code>libollama_xgrammar.dylib</code>); <code>summary.json</code>, <code>decisions_info.json</code>, <code>items.json</code>, <code>decisions.json</code> und <code>requests/</code> des Laufs <code>libgdx/2026-11-17_210624Z</code>; die Zeitstempel der Report-Anfragen vom 18.11.2026 (inzwischen ersetzt).</li>
+</ul>
+<p><strong>Kandidaten für den Modellvergleich</strong></p>
+<ul>
+<li><strong>[ollama-search-decision]</strong> Ollama-Bibliothek: <em>Decision models</em>. <a href="https://ollama.com/search?c=decision" class="uri">https://ollama.com/search?c=decision</a></li>
+<li><strong>[ollama-search-thinking]</strong> Ollama-Bibliothek: <em>Thinking models</em>. <a href="https://ollama.com/search?c=thinking" class="uri">https://ollama.com/search?c=thinking</a></li>
+<li><strong>[pplx-decider]</strong> Ollama-Bibliothek: <em>pplx-decider</em>. <a href="https://ollama.com/library/pplx-decider" class="uri">https://ollama.com/library/pplx-decider</a></li>
+<li><strong>[clef]</strong> Ollama-Bibliothek: <em>clef</em>. <a href="https://ollama.com/library/clef" class="uri">https://ollama.com/library/clef</a></li>
+<li><strong>[clef-flash]</strong> Ollama-Bibliothek: <em>clef-flash</em>. <a href="https://ollama.com/library/clef-flash" class="uri">https://ollama.com/library/clef-flash</a></li>
+<li><strong>[nimble]</strong> Ollama-Bibliothek: <em>nimble</em>. <a href="https://ollama.com/library/nimble" class="uri">https://ollama.com/library/nimble</a></li>
+<li><strong>[nimble-v3]</strong> Ollama-Bibliothek: <em>nimble-v3</em>. <a href="https://ollama.com/library/nimble-v3" class="uri">https://ollama.com/library/nimble-v3</a></li>
+<li><strong>[autotrust-jev]</strong> Ollama-Bibliothek: <em>autotrust-jev</em>. <a href="https://ollama.com/library/autotrust-jev" class="uri">https://ollama.com/library/autotrust-jev</a></li>
+<li><strong>[kev]</strong> Ollama-Bibliothek: <em>kev</em>. <a href="https://ollama.com/library/kev" class="uri">https://ollama.com/library/kev</a></li>
+<li><strong>[d1]</strong> Ollama-Bibliothek: <em>d1</em>. <a href="https://ollama.com/library/d1" class="uri">https://ollama.com/library/d1</a></li>
+<li><strong>[tev1]</strong> Ollama-Bibliothek: <em>tev1</em>. <a href="https://ollama.com/library/tev1" class="uri">https://ollama.com/library/tev1</a></li>
+<li><strong>[d3]</strong> Ollama-Bibliothek: <em>d3</em>. <a href="https://ollama.com/library/d3" class="uri">https://ollama.com/library/d3</a></li>
+<li><strong>[strands-decider]</strong> Ollama-Bibliothek: <em>strands-decider</em>. <a href="https://ollama.com/library/strands-decider" class="uri">https://ollama.com/library/strands-decider</a></li>
+<li><strong>[gpt-oss]</strong> Ollama-Bibliothek: <em>gpt-oss</em>. <a href="https://ollama.com/library/gpt-oss" class="uri">https://ollama.com/library/gpt-oss</a></li>
+<li><strong>[nemotron-3.5-lightning]</strong> Ollama-Bibliothek: <em>nemotron-3.5-lightning</em>. <a href="https://ollama.com/library/nemotron-3.5-lightning" class="uri">https://ollama.com/library/nemotron-3.5-lightning</a></li>
+<li><strong>[gemma4]</strong> Ollama-Bibliothek: <em>gemma4</em>. <a href="https://ollama.com/library/gemma4" class="uri">https://ollama.com/library/gemma4</a></li>
+<li><strong>[muse-glimmer]</strong> Ollama-Bibliothek: <em>muse-glimmer</em>. <a href="https://ollama.com/library/muse-glimmer" class="uri">https://ollama.com/library/muse-glimmer</a></li>
+<li><strong>[mistral-small3.2]</strong> Ollama-Bibliothek: <em>mistral-small3.2</em>. <a href="https://ollama.com/library/mistral-small3.2" class="uri">https://ollama.com/library/mistral-small3.2</a></li>
+<li><strong>[magistral]</strong> Ollama-Bibliothek: <em>magistral</em>. <a href="https://ollama.com/library/magistral" class="uri">https://ollama.com/library/magistral</a></li>
+<li><strong>[phi4-reasoning]</strong> Ollama-Bibliothek: <em>phi4-reasoning</em>. <a href="https://ollama.com/library/phi4-reasoning" class="uri">https://ollama.com/library/phi4-reasoning</a></li>
+<li>Größen der zu großen Modelle: <a href="https://ollama.com/library/qwen3.6" class="uri">https://ollama.com/library/qwen3.6</a>, <a href="https://ollama.com/library/ornith-1.5" class="uri">https://ollama.com/library/ornith-1.5</a>, <a href="https://ollama.com/library/qwen3.8-flash-next" class="uri">https://ollama.com/library/qwen3.8-flash-next</a>.</li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Kopiert");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Kopiert");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollbarer Code","output":"Scrollbare Ausgabe"};
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

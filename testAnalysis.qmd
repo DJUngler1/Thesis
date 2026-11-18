@@ -1,0 +1,773 @@
+---
+title: "Prüfung der Tests"
+subtitle: "Dokumentation der Werkzeugauswahl für Schritt 5 des Code-Analysis-Tools"
+lang: de
+author: "Felix Krauß"
+date: 2026-11-13
+date-format: "D. MMMM YYYY"
+toc: true
+number-sections: true
+format:
+  html:
+    theme: darkly
+  pdf:
+    geometry:
+      - top=30mm
+      - left=20mm
+---
+
+# Zweck und Vorgehen
+
+Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 5 („Tests“) die Tests eines Projekts prüft. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter `Code-Analysis-Tool/docs/testAnalysis/README.md`.
+
+Schritt 5 hat laut Ablaufplan vier Teile. Sie werden nacheinander umgesetzt:
+
+1. **Tests erkennen** („Tests present?“): umgesetzt (@sec-erkennen).
+2. **Tests ausführen** („Document results, including failures“): umgesetzt (@sec-ausfuehren).
+3. **Testabdeckung messen** („no minimum coverage“): umgesetzt (@sec-abdeckung).
+4. **Mutation Testing:** umgesetzt (@sec-mutation).
+
+Die Entscheidungen vom 13.11.2026, die die Teile 2 bis 4 bestimmen, stehen in @sec-entscheidungen.
+
+## Grundsatz der Festlegung
+
+- **Konventionen der Frameworks statt eigener Regeln:** Ob ein Projekt Tests hat, entscheidet das Tool nach den Standardkonventionen der Test-Frameworks der jeweiligen Sprache, wie sie deren Dokumentation beschreibt. Projektspezifische Konfiguration wird nur gelesen, wo das Framework sie selbst als Ort für die Testerkennung vorsieht (pytest: `python_files`).
+- **Nichts ausführen:** Teil 1 liest nur Dateien. Er führt keinen Code des Projekts aus und verändert nichts. Wie viele Tests es genau gibt und ob sie bestehen, ergibt erst Teil 2.
+- **Ohne Tests im Bericht vermerken:** Hat eine Sprache keine Tests, steht das in der Ausgabe und im Ergebnis, wie im Ablaufplan vorgesehen („no → Note in report“).
+- **Werkzeug des Projekts, Optionen vom Tool:** Die Tests laufen mit dem Framework bzw. Build-Werkzeug des Projekts. Das Tool legt nur die Optionen fest, die einen maschinenlesbaren Bericht erzeugen. So bleibt das Ergebnis das der Tests des Projekts, und die Berichte sind trotzdem einheitlich auswertbar („Project tool or defined per language“ im Ablaufplan).
+- **Tests ohne Netzwerk:** Tests führen Code des Projekts aus. Sie laufen deshalb ohne Netzwerk; nur das Herunterladen der Abhängigkeiten davor hat Netzwerk. Das Netzwerk für die Tests lässt sich in `code-analysis.toml` (`[tests] network`) einschalten, nur für Code, dem man vertraut (Entscheidung vom 13.11.2026).
+- **Fehlschlagende Tests sind Ergebnisse:** Ein fehlschlagender Test ist ein Befund über das Projekt, kein Fehler des Tools. Schritt 5 gilt nur dann als unvollständig, wenn Tests gar nicht laufen konnten.
+
+## Prüfmethode
+
+1. **Dokumentation im Original:** Jede Konvention wurde in der offiziellen Dokumentation des Frameworks nachgelesen. Zitate sind wörtlich und stehen in der Originalsprache (Englisch).
+2. **Eigene Tests:**
+   - Die Erkennung wurde am 13.11.2026 mit Unit-Tests auf kleinen Beispielprojekten je Sprache geprüft (`scheduler/tests/test_testing_detect.py`, 16 Tests). Jeder Test enthält auch Gegenbeispiele, die nicht als Test gelten dürfen.
+   - Das Ausführen wurde am 13.11.2026 in Docker mit festen Versionen (@tbl-versionen) auf einem Mac mit Apple Silicon (arm64) getestet (Colima, Docker 29.5.2): je Sprache ein kleines Projekt mit einem bestandenen, einem fehlschlagenden und einem übersprungenen Test (`scheduler/tests/test_testing_docker.py`, 10 Tests). Die Berichte dieser Läufe sind die Testdaten der Parser (`scheduler/tests/fixtures/testing/`).
+3. **Echte Projekte:** die Spiele-Engine libgdx (Commit `464116b74`) und das Repository des Tools selbst (@sec-erkennen-tests, @sec-ausfuehren-tests).
+
+## Testumgebung
+
+Teil 1 braucht keine Container und keine Werkzeuge. Er läuft im Scheduler (Python 3.13) und liest die Dateien, die git kennt. Wie in den Schritten 2 bis 4 werden die Ordner übersprungen, die Schritt 1 überspringt (u. a. `node_modules/`, `build/`, `target/`, `vendor/`, `third_party/`, versteckte Ordner).
+
+Teil 2 läuft in einem Test-Image je Sprache:
+
+| Image | Basis | Werkzeuge |
+|---|---|---|
+| `code-analysis/test-python` | `python:3.13.18` (volles Image mit C-Compiler) | Python 3.13.18, uv 0.13.7, Poetry 2.5.1, PDM 2.29.7, Pipenv 2026.11.0; pytest 9.2.0, wenn das Projekt kein pytest installiert |
+| `code-analysis/test-node` | `node:22.23.4` (volles Image) | Node.js 22.23.4, npm 10.9.9, corepack 0.36.0 (Yarn, pnpm), Bun 1.4.4, c8 12.0.0 |
+| `code-analysis/test-java` | `eclipse-temurin:21-jdk-noble` | OpenJDK 21.0.13, Maven 3.9.16, Gradle 9.9.1 |
+| `code-analysis/test-dotnet` | `mcr.microsoft.com/dotnet/sdk:10.0.403` | .NET SDK 10.0.403, Runtimes .NET und ASP.NET Core 8.0.34, 9.0.23, 10.0.14, Stryker.NET 5.1.0 |
+| `code-analysis/test-rust` | `rust:1.99.1` (volles Image) | cargo 1.99.1, rustc 1.99.1, cargo-llvm-cov 0.9.1 mit `llvm-tools`, cargo-mutants 27.1.0 |
+| `code-analysis/test-cpp` | `debian:trixie-slim` | clang 22.1.8, CMake/CTest 3.31.6, Ninja, Conan 2.34.0, vcpkg 2026.10.16, llvm-cov 22.1.8 mit compiler-rt, gcovr 8.8 |
+
+: Werkzeugversionen der Tests und des Tools {#tbl-versionen}
+
+- **Eigene Images:** Die Test-Images sind eigene Images und keine Erweiterung der Images aus den Schritten 2 bis 4. Die Werkzeuge dieser Schritte behalten so ihre Versionen.
+- **Volle Basis-Images:** Python, Node.js und Rust nutzen die vollen Basis-Images statt `-slim`. Viele Pakete bauen bei der Installation nativen Code (Python-sdists, node-gyp, `build.rs`) und brauchen dafür einen Compiler.
+- **Zur Laufzeit geladen (Teile 3 und 4):** coverage.py 7.17.3 (in die Umgebung des Projekts, falls es keines hat), `@vitest/coverage-v8` in der Version des Vitest im Projekt, JaCoCo 0.8.16 (über Maven bzw. Gradle), coverlet.collector 10.1.0 (in die Kopie des Testprojekts), mutmut 3.8.1, StrykerJS 10.1.1 mit Runner, PIT 1.30.2 mit pitest-junit5-plugin 1.2.3 und gradle-pitest-plugin 1.19.0. Sie gehören in die Umgebung bzw. den Build des Projekts und werden im Vorlauf mit Netzwerk geladen.
+- **Ältere .NET-Runtimes:** Das .NET-Image enthält zusätzlich die Runtimes 8 und 9. Ein Testprojekt läuft auf der Runtime seines Zielframeworks; ohne sie würde ein `net8.0`-Testprojekt nicht starten.
+
+# Übersicht der Festlegungen
+
+| Sprache | Testeinheit | Test erkannt an |
+|---|---|---|
+| Python | oberster Ordner mit Python-Manifest | pytest-Dateinamen (`python_files`, Standard `test_*.py`, `*_test.py`) mit Testfunktionen; unittest-Dateinamen (`test*.py`) mit `unittest.TestCase`-Klassen |
+| JavaScript, TypeScript | jede `package.json` | Dateinamen und Ordner nach Jest, Vitest, Node.js-Test-Runner, Mocha und Cypress, mit Aufrufen von `describe`/`it`/`test`/`suite`; Testskript mit bekanntem Framework |
+| Java | oberster Maven- oder Gradle-Build | Import von JUnit oder TestNG und eine Testannotation (`@Test` u. a.) oder `extends TestCase` |
+| C# | Testprojekt (`IsTestProject`, `Microsoft.NET.Test.Sdk`, MSTest.Sdk, xUnit, NUnit, MSTest, TUnit) | Testattribute (`[Fact]`, `[Test]`, `[TestMethod]`, …) |
+| Rust | oberstes `Cargo.toml` (Workspace) | `#[test]` und Varianten; Ordner `tests/`; Codebeispiele in Doc-Kommentaren von Bibliotheken |
+| C, C++ | `CMakeLists.txt` im Projektordner | bei CTest registrierte Tests (`add_test`, `gtest_discover_tests`, …) bei aktiviertem Testen |
+
+: Teil 1: Testeinheiten und Erkennung {#tbl-erkennen}
+
+| Sprache | Vorlauf (mit Netzwerk) | Testlauf (ohne Netzwerk) | Bericht |
+|---|---|---|---|
+| Python | Installation in `.venv` mit uv, Poetry, PDM, Pipenv bzw. `uv pip` (pip-Projekte), dazu pytest | `python -m pytest` | JUnit-XML |
+| JavaScript, TypeScript | Installation ohne Lifecycle-Skripte (`--ignore-scripts`) | Install-Skripte der Pakete, dann Vitest, Jest, Mocha, `node:test` oder Bun | Jest-JSON, JUnit-XML |
+| Java | Maven: Surefire-Lauf, der keinen Test auswählt; Gradle: Init-Skript lädt alle Konfigurationen | `mvn -o test` bzw. `gradle --offline test` | JUnit-XML |
+| C# | `dotnet restore` | `dotnet test --logger trx` | TRX |
+| Rust | `cargo fetch` | `cargo test --offline` | Textausgabe von libtest |
+| C, C++ | CMake konfigurieren (Debug), Conan/vcpkg laden und bauen die Abhängigkeiten | `cmake --build`, `ctest --output-junit` | JUnit-XML |
+
+: Teil 2: Ablauf je Sprache {#tbl-ausfuehren}
+
+# Teil 1: Tests erkennen {#sec-erkennen}
+
+## Festlegung
+
+**Testeinheiten.** Eine Testeinheit („Suite“) umfasst die Tests einer Build-Einheit. Die Einheiten ergeben sich aus den Paketmanagern, die Schritt 1 gefunden hat:
+
+- Python: der oberste Ordner mit einem Manifest. Ein Manifest in `requirements/` zählt für den Ordner darüber.
+- JavaScript und TypeScript: jede `package.json`. Eine Datei gehört zur nächsten `package.json` darüber.
+- Java: der oberste Maven- oder Gradle-Build. Es ist dieselbe Regel wie beim Bauen für SonarQube in Schritt 3.
+- C#: jedes Testprojekt.
+- Rust: das oberste `Cargo.toml`, also der Workspace.
+- C/C++: das `CMakeLists.txt` im Projektordner. Das ist dieselbe Voraussetzung wie für die Kompilierungsdatenbank in Schritt 2.
+
+Eine Sprache ohne Paketmanager wird nicht geprüft, ebenso C/C++ ohne `CMakeLists.txt` im Projektordner. Beides steht mit Grund im Ergebnis.
+
+**Erkennung je Sprache:**
+
+- **Python:**
+  - Testdateien sind Dateien, deren Name zu pytests `python_files` passt (Standard `test_*.py` und `*_test.py`) und die Testfunktionen, einfache `Test…`-Klassen oder `import pytest` enthalten.
+  - Dazu kommen Dateien nach unittests Muster `test*.py` mit `unittest.TestCase`-Klassen, die `test…`-Methoden haben.
+  - Die pytest-Konfiguration wird in pytests eigener Reihenfolge gesucht: `pytest.toml`, `.pytest.toml`, `pytest.ini`, `.pytest.ini`, `pyproject.toml`, `tox.ini`, `setup.cfg`. Ihr `python_files` ersetzt die Standardmuster.
+- **JavaScript/TypeScript:**
+  - Testdateien heißen `*.test.*`, `*.spec.*`, `*-test.*`, `*_test.*`, `test-*.*`, `test.*`, `spec.*` oder `*.cy.*`, oder sie liegen in einem Ordner `__tests__/` oder `test/`.
+  - Sie müssen `describe(`, `it(`, `test(` oder `suite(` aufrufen. So zählen etwa Testdaten in `test/fixtures/` nicht.
+  - Die Frameworks ergeben sich aus dem Testskript und den Abhängigkeiten in der `package.json`. Das Platzhalter-Skript von `npm init` zählt nicht als Test.
+- **Java:**
+  - Testdateien importieren JUnit (`org.junit…`, `junit.framework…`) oder TestNG (`org.testng…`).
+  - Sie enthalten eine Testannotation (`@Test`, `@ParameterizedTest`, `@RepeatedTest`, `@TestFactory`, `@TestTemplate`) oder erben von `TestCase`.
+  - Der Ordner spielt keine Rolle.
+- **C#:**
+  - Ein Testprojekt ist eine `.csproj` mit `<IsTestProject>true</IsTestProject>`, mit `Sdk="MSTest.Sdk"` oder mit einer Paketreferenz auf `Microsoft.NET.Test.Sdk`, xUnit, NUnit, MSTest oder TUnit. `<IsTestProject>false</IsTestProject>` schließt ein Projekt aus.
+  - Testdateien sind `.cs`-Dateien des Testprojekts mit Testattributen wie `[Fact]`, `[Theory]`, `[Test]`, `[TestCase]`, `[TestMethod]`, `[TestClass]` oder `[TestFixture]`.
+- **Rust:**
+  - Integrationstests sind Dateien im Ordner `tests/` einer Crate mit `#[test]`; Varianten wie `#[tokio::test]`, `#[rstest]` und `#[test_case]` zählen mit.
+  - Unit-Tests sind Quelldateien mit solchen Tests.
+  - Doctests sind Rust-Codeblöcke in Doc-Kommentaren (`///`, `//!`) von Bibliotheks-Crates. Ein Codeblock gilt als Rust, wenn er keine Sprache oder nur rustdoc-Attribute angibt.
+- **C/C++:**
+  - Tests sind vorhanden, wenn ein `CMakeLists.txt` oder eine `*.cmake`-Datei Tests bei CTest registriert (`add_test`, `gtest_discover_tests`, `gtest_add_tests`, `catch_discover_tests`, `doctest_discover_tests`) und das Testen mit `enable_testing()` oder `include(CTest)` eingeschaltet ist.
+  - Testdateien binden den Header eines Test-Frameworks ein oder liegen in einem Ordner `test/`, `tests/`, `unittest/` oder `unittests/`.
+
+**Testdateien und Quelldateien.**
+- `test_files` enthält Dateien, die nur Tests sind. Teil 3 lässt sie aus der Testabdeckung heraus.
+- Rusts Unit-Tests und Doctests stehen in Quelldateien. Diese Dateien werden getrennt geführt (`inline_test_files`) und bleiben in der Abdeckung.
+
+## Begründung und Belege
+
+**Python.**
+- pytest sucht „In those directories, search for test_\*.py or \*_test.py files“ und sammelt daraus „test prefixed test functions or methods outside of class“ sowie Methoden in „Test prefixed test classes (without an \_\_init\_\_ method)“ [pytest-discovery].
+- Zusätzlich gilt: „Within Python modules, pytest also discovers tests using the standard unittest.TestCase subclassing technique.“ [pytest-discovery]
+- Deshalb ist pytest der Maßstab. pytest führt auch unittest-Tests aus, umgekehrt gilt das nicht.
+- Die Muster sind einstellbar: „You can configure different naming conventions by setting the python_files, python_classes and python_functions in your configuration file.“ [pytest-naming]
+- Für die Konfigurationsdatei gilt pytests Reihenfolge: „Look for `pytest.toml`, `.pytest.toml`, `pytest.ini`, `.pytest.ini`, `pyproject.toml`, `tox.ini`, and `setup.cfg` files“, „The files are considered in the order above.“ und „Options from multiple `configfiles` candidates are never merged - the first match wins.“ [pytest-config]
+- `pytest.toml` und `pytest.ini` zählen auch leer („will always match and take highest precedence, even if empty“). `pyproject.toml` zählt nur, wenn es „a `[tool.pytest]` or `[tool.pytest.ini_options]` table“ enthält; `tox.ini` und `setup.cfg` nur mit „a `[pytest]` section“ bzw. „a `[tool:pytest]` section“ [pytest-config].
+- unittest erkennt Testdateien am Muster „**-p, --pattern pattern**: Pattern to match test files (`test*.py` default)“ und Tests an der Namenskonvention: „A test case is created by subclassing unittest.TestCase. The three individual tests are defined with methods whose names start with the letters `test`.“ [py-unittest]
+
+**JavaScript und TypeScript.** Die Dateimuster sind die Vereinigung der Standardmuster der verbreiteten Test-Runner:
+
+- **Jest:** Standard ist `[ "**/__tests__/**/*.?([mc])[jt]s?(x)", "**/?(*.)+(spec|test).?([mc])[jt]s?(x)" ]`, also „`.js`, `.jsx`, `.ts` and `.tsx` files inside of `__tests__` folders, as well as any files with a suffix of `.test` or `.spec` […] It will also find files called `test.js` or `spec.js`.“ [jest-testmatch]
+- **Vitest:** Standard ist `['**/*.{test,spec}.?(c|m)[jt]s?(x)']` [vitest-include].
+- **Node.js-Test-Runner:**
+  - Er sucht „By default“ nach `**/*.test.{cjs,mjs,js}`, `**/*-test.{cjs,mjs,js}`, `**/*_test.{cjs,mjs,js}`, `**/test-*.{cjs,mjs,js}`, `**/test.{cjs,mjs,js}` und `**/test/**/*.{cjs,mjs,js}` [node-test].
+  - Ohne `--no-experimental-strip-types` gelten dieselben Muster auch für `.ts`, `.cts` und `.mts` [node-test].
+- **Mocha:** „By default, `mocha` looks for the glob `"./test/*.{js,cjs,mjs}"`“ [mocha-globs].
+- **Cypress:** Die Option `specPattern` hat den Standard `cypress/e2e/**/*.cy.{js,jsx,ts,tsx}`: „A String or Array of glob patterns of the test files to load.“ [cypress-config]
+- **npm-Platzhalter:** `npm init` schreibt `"test": "echo \"Error: no test specified\" && exit 1"` [npm-init]. Das ist kein Test und wird ignoriert.
+
+Weil Ordner wie `test/` auch Testdaten und Hilfsdateien enthalten, zählt eine Datei nur, wenn sie eine der Testfunktionen aufruft. Die Muster sind eine Obermenge der Standardmuster: Ein Projekt, das seinen Runner anders konfiguriert, kann Dateien haben, die hier zählen, die der Runner aber nicht ausführt. Die genaue Zahl liefert Teil 2.
+
+**Java.**
+- Die Erkennung richtet sich nach dem Inhalt der Dateien statt nach dem Ordner `src/test/java`, wie es auch Gradle tut: „By default, Gradle will run all tests that it detects, which it does by inspecting the compiled test classes.“ [gradle-testing]
+- Für JUnit 3 und 4 gilt eine Klasse dort als Test, wenn sie „Ultimately inherits from `TestCase` or `GroovyTestCase`“, „Is annotated with `@RunWith`“ oder „Contains a method annotated with `@Test` or a super class does“ [gradle-testing].
+- Für TestNG gilt: „For *TestNG*, Gradle scans for methods annotated with `@Test`.“ [gradle-testing]
+- Die Annotationen bedeuten in JUnit Jupiter „`@Test` is used to signal that the annotated method is a *test* method.“ (Paket `org.junit.jupiter.api`) [junit5-test] und in JUnit 4 „The Test annotation tells JUnit that the public void method to which it is attached can be run as a test case.“ [junit4-test].
+- Dass zusätzlich ein Import von JUnit oder TestNG nötig ist, schließt eigene Annotationen gleichen Namens aus (siehe libgdx, @sec-erkennen-tests).
+- Das Framework wird aus dem Import abgeleitet: `org.junit.jupiter` steht für JUnit Jupiter, sonstiges `org.junit.` für JUnit 4, `junit.framework` für JUnit 3. Laut JUnit gilt „JUnit Vintage provides a TestEngine for running JUnit 3 and JUnit 4 based tests on the platform.“ [junit-guide]
+
+**C#.**
+- „The `IsTestProject` property is set to `true` by the Microsoft.NET.Test.Sdk NuGet package. It signifies whether a project is a VSTest test project so that it's recognized by `dotnet test`.“ [ms-props]
+- MSTest.Sdk referenziert dieses Paket selbst („MSTest.Sdk references the Microsoft.NET.Test.Sdk NuGet package“) [ms-props].
+- Im Beispiel der Dokumentation von `dotnet test` steht: „`Microsoft.NET.Test.Sdk` is the test host, `xunit` is the test framework.“ [ms-dotnet-test]
+- Das Framework ergibt sich deshalb aus den Paketreferenzen.
+
+**Rust.**
+- Unit-Tests: „You’ll put unit tests in the *src* directory in each file with the code that they’re testing. The convention is to create a module named `tests` in each file to contain the test functions and to annotate the module with `cfg(test)`.“ [rust-book-org]
+- Integrationstests: „We create a *tests* directory at the top level of our project directory, next to *src*. Cargo knows to look for integration test files in this directory.“ [rust-book-org]
+- Hilfsdateien in Unterordnern zählen nicht: „Naming the file this way tells Rust not to treat the `common` module as an integration test file.“ [rust-book-org]
+- `cargo test` führt alle drei Arten aus: „Compile and execute unit, integration, and documentation tests.“ [cargo-test]
+- Doctests kommen nur aus Bibliotheken: „It extracts code samples from documentation comments of the library target, and then executes them.“ [cargo-test]
+- Welche Codeblöcke Rust sind: „by default, if no language is set for the block code, rustdoc assumes it is Rust code“ und „unless you specify `rust` or something that isn't an attribute (except for `custom`), the code block is assumed to be Rust source code“ [rustdoc-doctests].
+- Die rustdoc-Attribute (`ignore`, `should_panic`, `no_run`, `compile_fail`, `edition…`, `standalone_crate`, `test_harness`) stehen ebenda [rustdoc-doctests].
+
+**C/C++.**
+- Es gibt keinen Standard-Testrunner der Sprache. Die Projekte, die Schritt 1 annimmt (Conan, vcpkg), bauen typischerweise mit CMake, dessen Testrunner CTest ist: `add_test` „Add a test to the project to be run by ctest(1).“ [cmake-add-test]
+- Registrierung allein genügt nicht: „CMake only generates tests if the enable_testing() command has been invoked.“ [cmake-add-test]
+- `include(CTest)` schaltet das Testen ein; die Option `BUILD_TESTING` wählt aus, „whether `include(CTest)` calls enable_testing(). The option is ON by default when created by the module.“ [cmake-ctest]
+- GoogleTest-Tests werden über das Modul GoogleTest registriert: `gtest_add_tests` „Automatically add tests with CTest by scanning source code for Google Test macros“, `gtest_discover_tests` „Automatically add tests with CTest by querying the compiled test executable for available tests“ [cmake-gtest].
+
+## Testergebnisse {#sec-erkennen-tests}
+
+**Unit-Tests** (`scheduler/tests/test_testing_detect.py`): 16 Tests, alle bestanden. Geprüft werden unter anderem:
+
+- **Python:**
+  - Eine Datei `tests/test_helpers.py` ohne Tests zählt nicht.
+  - Eine Django-artige `app/tests.py` mit `unittest.TestCase` zählt.
+  - `python_files` aus `pytest.ini` ersetzt die Standardmuster.
+  - `pytest.toml` hat Vorrang vor `pyproject.toml`.
+- **JavaScript/TypeScript:**
+  - `test/fixtures/data.js` ohne Testaufrufe zählt nicht.
+  - Das npm-Platzhalterskript ergibt „keine Tests“.
+  - Ein Testskript ohne bekanntes Framework (`eslint .`) wird vermerkt.
+- **Java:**
+  - Eine Hilfsklasse in `src/main` mit JUnit-Import, aber ohne Test, zählt nicht.
+  - Tests in einem eigenen Ordner `test/` (nicht `src/test/java`) zählen.
+  - Android-Instrumentierungstests werden vermerkt.
+- **C#:**
+  - Ein Projekt mit `<IsTestProject>false</IsTestProject>` wird ausgeschlossen.
+  - MSTest.Sdk wird erkannt.
+  - Ohne Testprojekt gibt es einen Eintrag „keine Tests“.
+- **Rust:**
+  - `tests/common/mod.rs` zählt nicht.
+  - Ein ```` ```text ````-Block zählt nicht als Doctest, ebenso wenig ein Codeblock in einer Binär-Crate.
+- **C/C++:**
+  - Ein `add_test` in `third_party/` zählt nicht.
+  - `add_test` ohne `enable_testing()` wird vermerkt.
+
+**libgdx** (Commit `464116b74`, Gradle, 2448 Java-Dateien):
+- Das Tool findet eine Suite (Gradle, `settings.gradle`) mit 32 Testklassen, Framework JUnit 4.
+- Die Tests liegen in `gdx/test/`, einem in Gradle eigens eingestellten Ordner (nicht `src/test/java`). Die Erkennung über den Inhalt findet sie trotzdem.
+- `git grep` findet 33 Java-Dateien mit `@Test`. Die 33. ist `tests/gdx-tests/src/com/badlogic/gdx/tests/AnnotationTest.java`, eine Demo der Engine ohne JUnit-Import. Sie wird zu Recht nicht gezählt.
+- Die übrigen Klassen unter `tests/` sind Demo-Anwendungen der Engine, keine automatisierten Tests, und zählen ebenfalls nicht.
+- C/C++ (vorhanden, aber ohne Conan/vcpkg) wird als „nicht geprüft: kein Paketmanager“ ausgewiesen.
+
+**Repository des Tools:** eine Python-Suite (`scheduler/pyproject.toml`) mit pytest-Konfiguration, pytest als Abhängigkeit und 22 Testdateien. Das entspricht den Dateien `scheduler/tests/test_*.py`.
+
+## Grenzen
+
+- **Statisch:** Teil 1 zählt Dateien, keine Tests. Projektkonfigurationen der Runner (z. B. `testMatch` in Jest, `testDir` in Gradle, eigene Mocha-`spec`-Muster) werden außer bei pytest nicht ausgewertet. Die genauen Zahlen liefert Teil 2.
+- **Vereinigte Muster bei JavaScript:** Eine Datei kann als Testdatei zählen, die der konfigurierte Runner nicht ausführt, etwa unter Mochas Standard `./test/*` ohne `--recursive`.
+- **C/C++:** Nur CMake mit `CMakeLists.txt` im Projektordner. Andere Build-Systeme (Make, Meson, Bazel) werden nicht geprüft. Projektoptionen, die Tests standardmäßig ausschalten (z. B. `option(… TESTS OFF)`), erkennt Teil 1 nicht.
+- **Sprachen ohne Paketmanager** werden nicht geprüft, wie in Schritt 4.
+
+# Teil 2: Tests ausführen {#sec-ausfuehren}
+
+## Festlegung
+
+**Ablauf je Testeinheit.**
+- Jede Suite mit Tests läuft in frischen Containern des Test-Images ihrer Sprache, auf einer Kopie des Projekts.
+- Die Suites laufen nacheinander, nicht parallel. Die Testwerkzeuge nutzen selbst alle Prozessorkerne, und parallele Läufe könnten zeitkritische Tests scheitern lassen.
+- Jede Suite durchläuft zwei Phasen:
+  1. **Vorlauf mit Netzwerk:** Der Paketmanager lädt die Abhängigkeiten in einen Cache im Ausgabeordner. Wo er das kann, ohne Code des Projekts oder seiner Pakete auszuführen, tut er es (@tbl-ausfuehren).
+  2. **Testlauf ohne Netzwerk** (`--network none`): Build und Tests verwenden nur, was der Vorlauf geladen hat. Mit `network = true` unter `[tests]` in `code-analysis.toml` hat auch der Testlauf Netzwerk; das Tool warnt dann.
+
+**Befehle:**
+- **Python:**
+  - Installation in `.venv` der Kopie mit dem Paketmanager des Projekts: `uv sync --frozen --all-extras --all-groups`, `poetry install --all-extras --all-groups`, `pdm install -G :all` bzw. `pipenv sync --dev`.
+  - pip-Projekte installiert `uv pip install`: das Projekt editierbar mit den Extras `test`, `tests`, `testing` oder `dev`, die gleichnamigen Abhängigkeitsgruppen, `requirements.txt` und Requirements-Dateien für Tests und Entwicklung.
+  - Fehlt pytest danach, wird pytest 9.2.0 ergänzt.
+  - Test: `.venv/bin/python -m pytest --junitxml=<Bericht> --continue-on-collection-errors -p no:cacheprovider`.
+- **JavaScript/TypeScript:**
+  - Installation ohne Lifecycle-Skripte (`npm ci --ignore-scripts`, entsprechend Yarn, pnpm, Bun) im Ordner mit dem Lockfile.
+  - Offline laufen dann die Install-Skripte der Pakete (`npm rebuild`, `pnpm rebuild`, `yarn rebuild`) und das Framework mit einem zusätzlichen Reporter:
+    - Vitest `--reporter=junit`,
+    - Jest `--ci --json --outputFile`,
+    - Mocha `--reporter xunit`,
+    - `node --test` mit `--test-reporter=junit`,
+    - `bun test --reporter=junit`.
+  - Ist das Testskript ein einzelner Aufruf des Frameworks, werden dessen Argumente übernommen.
+- **Java:**
+  - Maven: `mvn -fae test -Dtest='*#codeAnalysisSelectsNoTest'` im Vorlauf, dann `mvn -o -fae test -Dmaven.test.failure.ignore=true`.
+  - Gradle: Ein Init-Skript lädt im Vorlauf die externen Abhängigkeiten aller Konfigurationen und listet die `test`-Tasks der Java-Projekte. Dann `gradle --offline --continue <diese Tasks>`.
+  - Ein Wrapper (`mvnw`, `gradlew`) des Projekts hat Vorrang.
+- **C#:** `dotnet restore`, dann `dotnet test <Testprojekt> --no-restore --logger "trx;LogFilePrefix=results"`.
+- **Rust:** `cargo fetch`, dann `cargo test --workspace --no-fail-fast --offline`.
+- **C/C++:**
+  - Konfigurieren mit demselben Skript wie in Schritt 2 (Conan oder vcpkg, CMake), aber mit `CMAKE_BUILD_TYPE=Debug`.
+  - Dann offline `cmake --build` und `ctest --output-junit <Bericht> --output-on-failure`.
+
+**Zeitlimit:** `time_limit_minutes` unter `[tests]` in `code-analysis.toml` gilt je Testbefehl (Standard 60 Minuten, `0` = kein Limit). Der Vorlauf hat 60 Minuten.
+
+**Ergebnis je Test:**
+- Eine Kennung, die in beiden Ständen gleich ist.
+- Das Ergebnis (`passed`, `failed`, `error`, `skipped`), die Dauer und die gekürzte Fehlermeldung.
+- Doctests in Rust bekommen eine Kennung ohne Zeilennummer, weil die Formatierung in Schritt 2 Zeilen verschiebt.
+
+**Status eines Laufs:**
+- `ok`: Die Tests liefen und ihr Bericht wurde gelesen; fehlschlagende Tests eingeschlossen.
+- `partial`: Ein Teil der Tests lief, oder nur der Exitcode ist bekannt.
+- `failed`: Es gibt kein Testergebnis.
+- `skipped`: Conda, oder JavaScript-Tests, die einen Browser brauchen.
+
+**Zwei Stände (@sec-entscheidungen):**
+- Hat Schritt 2 das Projekt verändert (`git status` nicht leer), laufen dieselben Suites zusätzlich auf dem Commit-Stand (HEAD).
+- Die HEAD-Kopie entsteht über einen temporären Git-Index (`read-tree`, `checkout-index`). Das Repository des Projekts bleibt unverändert, und anders als bei `git archive` fehlen keine mit `export-ignore` markierten Dateien.
+- Tests mit unterschiedlichem Ergebnis, oder die nur in einem Stand liefen, werden mit dem Hinweis auf mögliche „flaky“ Tests ausgegeben. Ohne Unterschiede wird der Vergleich nicht erwähnt.
+
+## Begründung und Belege
+
+**Offline-Testlauf.**
+- **Cargo:** `cargo fetch` lädt nur, und danach kann Cargo offline arbeiten: „this command will ensure that all of the git dependencies and/or registry dependencies are downloaded and locally available. Subsequent Cargo commands will be able to run offline after a `cargo fetch` unless the lock file changes.“ [cargo-fetch]
+- **Gradle:**
+  - `--offline` „Specifies that the build should operate without accessing network resources.“ [gradle-cli]
+  - `--continue` „Continue task execution after a task failure.“ [gradle-cli]. Ohne diese Option würde der erste fehlschlagende Test-Task die übrigen Module ungeprüft lassen.
+- **npm:**
+  - `npm ci` setzt ein Lockfile voraus: „The project **must** have an existing `package-lock.json` or `npm-shrinkwrap.json`.“ [npm-ci]
+  - Mit `ignore-scripts` gilt: „If true, npm does not run scripts specified in package.json files.“ [npm-ci]
+- **Maven:**
+  - Surefire lädt seinen Test-Provider erst, wenn es Tests startet. Ein erster Versuch mit `-Dtest=<keine passende Klasse>` lud ihn nicht; der Offline-Lauf scheiterte mit „The following artifacts could not be resolved: org.apache.maven.surefire:surefire-junit-platform:jar:3.6.1“ (eigener Test, @sec-ausfuehren-tests).
+  - Der Filter `*#codeAnalysisSelectsNoTest` trifft alle Testklassen, aber keine Methode. Surefire startet dadurch den Provider, ohne einen Test auszuführen. Die Syntax ist dokumentiert: „you can execute a limited number of methods in the test by adding *#myMethod* or *#my\*ethod*“ [surefire-test].
+  - Ohne passenden Test bricht Surefire normalerweise ab: „Set this to "true" to cause a failure if none of the tests specified in -Dtest=... are run. Defaults to "true".“ [surefire-test]. Deshalb wird `surefire.failIfNoSpecifiedTests=false` gesetzt.
+
+**Fehlschlagende Tests sind Ergebnisse.**
+- **Maven:** `testFailureIgnore` („Set this to "true" to ignore a failure during testing.“ [surefire-test]) lässt Maven trotz fehlschlagender Tests weiterlaufen. Ein Exitcode ungleich 0 bedeutet dann, dass etwas anderes scheiterte, etwa die Kompilierung.
+- **pytest:** Die Exitcodes trennen beides: 0 „All tests were collected and passed successfully“, 1 „Tests were collected and run but some of the tests failed“, 5 „No tests were collected“, dagegen 3 „Internal error happened while executing tests, or a plugin raised while importing“ und 4 „pytest command line usage error, including a plugin that cannot be found or a conftest.py that fails to import“ [pytest-exit].
+- **`--continue-on-collection-errors`** („Force test execution even if collection errors occur.“ [pytest-ref]) verhindert, dass eine einzige nicht importierbare Testdatei den ganzen Lauf abbricht.
+- **dotnet test (VSTest):** „If all tests are successful, the test runner returns 0 as an exit code; otherwise if any test fails, it returns 1.“ [ms-dotnet-test]
+
+**Maschinenlesbare Berichte.**
+- **pytest:** `--junit-xml=PATH` „Create junit-xml style report file at given path.“ [pytest-ref]
+- **dotnet test:** schreibt TRX mit `--logger trx`, mit `LogFilePrefix` eine Datei je Zielframework: „log with the trx logger to files in the *TestResults* folder, with file names that are unique for each target framework“ [ms-dotnet-test].
+- **Jest:**
+  - `--json` „Prints the test results in JSON.“
+  - `--outputFile` „Write test results to a file when the `--json` option is also specified.“
+  - `--ci` lässt neue Snapshots fehlschlagen statt sie zu speichern [jest-cli].
+- **Vitest:**
+  - „Outputs a report of the test results in JUnit XML format.“
+  - „You can use multiple reporters simultaneously to print your test results in different formats.“ [vitest-reporters]
+- **Node.js:**
+  - „The `junit` reporter outputs test results in a jUnit XML format“.
+  - Mehrere Reporter brauchen je ein Ziel: „In this situation it is required to specify a destination for each reporter using `--test-reporter-destination`.“ [node-test]
+- **CTest:** `--output-junit` „Write test results in JUnit format.“ (seit CMake 3.21) [ctest].
+- **Rust:** `cargo test` hat auf dem stabilen Kanal kein Berichtsformat. Ausgewertet wird die Textausgabe von libtest (`test <Name> ... ok|FAILED|ignored`, `test result: …`).
+
+**Python-Installation.**
+- uv: `--all-extras` „Include all optional dependencies.“, `--all-groups` „Include dependencies from all dependency groups.“, `--frozen` „Instead of checking if the lockfile is up-to-date, uses the versions in the lockfile as the source of truth.“ [uv-cli]
+- Poetry: `--all-extras` „Install all extra features“, `--all-groups` „Install dependencies from all groups“ [poetry-cli].
+- PDM: `-G` „use `:all` to include all groups under the same species.“ [pdm-cli]
+- Pipenv: `sync --dev` „Install both development and default packages“ aus `Pipfile.lock` [pipenv-cli].
+- Alle Gruppen werden installiert, weil die Testabhängigkeiten je nach Projekt in einer Gruppe `test`, `dev` oder einem Extra stehen.
+
+**C/C++ im Debug-Build.**
+- „If the preprocessor macro NDEBUG is defined before assert.h is included, the assert macro is defined to do absolutely nothing.“ [glibc-assert]
+- Im eigenen Test setzt CMake für `CMAKE_BUILD_TYPE=Release` die Optionen `-O3 -DNDEBUG`, für `Debug` nur `-g` (clang 22, CMake 3.31.6, aus `compile_commands.json`).
+- Im Release-Build würde ein Test, der mit `assert()` prüft, also immer bestehen.
+
+## Testergebnisse {#sec-ausfuehren-tests}
+
+**Beispielprojekte** (`scheduler/tests/test_testing_docker.py`, 10 Tests, alle bestanden). Jedes Projekt hat einen bestandenen, einen fehlschlagenden und einen übersprungenen Test. Das Tool liest bei allen genau diese Ergebnisse, mit Status `ok`:
+
+| Sprache | Projekt | Gelesene Tests | Dauer |
+|---|---|---|---|
+| Python | pip-Projekt (`pyproject.toml`), pytest und unittest, ohne eigenes pytest | 5 (2 bestanden, 2 fehlgeschlagen, 1 übersprungen) | ca. 2 s |
+| Rust | Crate mit Unit-, Integrations- und Doctest | 5 | ca. 10 s |
+| C# | xUnit, Testprojekt für `net8.0` mit Theory | 5 | ca. 20 s |
+| Java | Maven mit JUnit Jupiter 6.1.3, Surefire 3.6.1 | 3 | ca. 15 s |
+| Java | Gradle 9.9.1 mit JUnit Jupiter 6.1.3 | 3 | ca. 15 s |
+| JavaScript | Vitest 5.1.0; Jest 30.5.2; `node:test` | je 3 | 5–20 s |
+| C | CMake mit vcpkg-Manifest, zwei `add_test` | 2 | ca. 5 s |
+
+: Testläufe der Beispielprojekte {#tbl-ausfuehren-tests}
+
+Einzelne Beobachtungen:
+
+- **Kein Netzwerk:** Ein Python-Test, der `pypi.org` erreichen will, schlägt mit „socket.gaierror: [Errno -3] Temporary failure in name resolution“ fehl. Der Testlauf hat also wirklich kein Netzwerk.
+- **pytest ergänzt:** Das Projekt installiert kein pytest. Das Tool ergänzt pytest 9.2.0, und der Bericht nennt „pytest 9.2.0, Python 3.13.18“.
+- **Abgleich mit HEAD:** Im Python-Projekt wurde nach dem Commit `add` zu `a - b` geändert, wie es eine fehlerhafte Korrektur in Schritt 2 tun könnte. Das Tool meldet genau die zwei Tests, die nach Schritt 2 fehlschlagen und bei HEAD bestehen.
+- **Maven-Provider:** Der erste Entwurf des Vorlaufs (`-Dtest=<keine Klasse>`) lud den Surefire-Provider nicht, und der Offline-Lauf scheiterte (@sec-ausfuehren). Mit dem Methodenfilter laufen Vorlauf und Testlauf durch.
+- **Gradle-Kennungen:** Gradle benennt JUnit-Platform-Tests nach ihrem Anzeigenamen (`adds()`), Surefire nach dem Methodennamen (`adds`). Innerhalb eines Projekts sind die Kennungen in beiden Ständen gleich; nur das zählt für den Abgleich.
+- **Debug-Build:** Der C-Test mit `assert(1 + 1 == 3)` schlägt fehl („Assertion `1 + 1 == 3' failed“). Er wäre im Release-Build bestanden.
+
+**libgdx** (Commit `464116b74`, Gradle-Wrapper 8.14.3, JUnit 4):
+
+- **Ausgangslage:** Die Arbeitskopie enthielt die 2346 Änderungen eines früheren Laufs von Schritt 2. Schritt 5 lief deshalb in beiden Ständen.
+- **Erster Entwurf:** `gradle test --continue` scheiterte sofort mit „Could not determine the dependencies of task ':backends:gdx-backend-android:testDebugUnitTest'. > SDK location not found.“ Ein einziges Android-Modul verhinderte so alle Tests.
+- **Festlegung daraus:** Das Init-Skript listet seitdem die `test`-Tasks der Java-Projekte (23 Tasks). Das Android-Modul `:backends:gdx-backend-android` wird mit Hinweis ausgelassen.
+- **Ergebnis:**
+  - **Nach Schritt 2:** Status `failed`, kein Test lief. Der Task `:gdx:validateIOSHeader` scheiterte mit „Header file for iosgl20 contains method JNIEXPORT void JNICALL Java_com_badlogic_gdx_backends_iosrobovm_IOSGLES20_init, which is not contained in the implementation“.
+  - **Bei HEAD:** Status `ok`, 23 246 Testfälle aus 55 Berichten, alle bestanden.
+  - Das Tool meldet: „after step 2: failed, no test ran; at HEAD: ok, 23246 tests (23246 passed)“.
+- **Ursache:**
+  - clang-format hat in Schritt 2 in `gdx/jni/iosgl/iosgl20.cpp` die Parameterliste jeder `JNIEXPORT`-Deklaration auf dieselbe Zeile gezogen.
+  - Der Task von libgdx vergleicht die `JNIEXPORT`-Zeilen der Implementierung zeilengenau mit dem aus Java erzeugten Header (`gdx/build.gradle`, `validateIOSHeader`), und `test` hängt von ihm ab.
+  - Die Formatierung ändert das Verhalten des Codes nicht. Sie bricht aber eine Prüfung im Build des Projekts.
+  - Genau diesen Fall soll der Vergleich mit HEAD sichtbar machen: Ohne ihn hätte der Bericht dem Projekt zugeschrieben, dass seine Tests nicht laufen.
+- **Abgleich bei leerem Stand:** Die erste Fassung des Abgleichs listete alle 23 246 Tests einzeln als „missing“ (`summary.json` 4,5 MB). Hat ein Stand gar keine Testergebnisse, werden seitdem nur Status und Anzahlen verglichen (`summary.json` 6 KB).
+- **Ende zu Ende:** `bin/code-analysis` im neu gebauten Scheduler-Container, auf einem kleinen pytest-Projekt. Die Schritte 1 bis 5 liefen durch (Exitcode 0). Schritt 5 las `config/tests.toml` (heute `[tests]` in `code-analysis.toml`) aus dem gemounteten Ordner und meldete „ok, 3 tests: 3 passed“ ohne Netzwerk.
+- **Dauer:** nach Schritt 2 186 s (Vorlauf 105 s, Testlauf 81 s). Die erste Ausführung lud dabei die Gradle-Distribution 8.14.3 und alle Abhängigkeiten.
+
+
+## Grenzen
+
+- **Code im Vorlauf:** Nicht jeder Paketmanager kann laden, ohne Code auszuführen.
+  - Python-Installationen bauen das Projekt und sdists, also `setup.py` und Build-Backends, mit Netzwerk.
+  - Gradle führt im Vorlauf die Build-Skripte aus.
+  - Maven kompiliert im Vorlauf.
+  - CMake führt beim Konfigurieren den CMake-Code des Projekts aus; Conan/vcpkg bauen die Abhängigkeiten.
+  - Die Tests selbst laufen ohne Netzwerk.
+- **Tests, die Netzwerk oder Dienste brauchen,** schlagen ohne Netzwerk fehl, ebenso Tests mit Datenbanken oder Testcontainers: Die Container haben keinen Docker-Socket. Sie zählen als fehlgeschlagene Tests; die Ausgabe weist auf das fehlende Netzwerk hin.
+- **Nicht unterstützt** (`skipped`): Conda-Umgebungen und JavaScript-Tests, die einen Browser brauchen (Playwright, Cypress, Karma). Android-Unit-Tests werden nicht ausgeführt, weil sie das Android SDK brauchen.
+- **Microsoft.Testing.Platform:** Wählt `global.json` diesen Modus für `dotnet test`, wird nur der Exitcode festgehalten (`partial`). Ein TRX-Bericht bräuchte ein Erweiterungspaket im Projekt.
+- **JavaScript ohne bekanntes Framework:** Das Testskript läuft, aber nur sein Exitcode wird festgehalten (`partial`).
+- **Python-Versionen:** Das Image hat Python 3.13. Projekte, die eine andere Version verlangen, laufen nur, wenn uv sie herunterladen kann (uv-Projekte); bei Poetry, PDM und Pipenv nicht.
+- **Ungetestete Wege:** Mocha, Bun, Yarn, pnpm, Conan sowie Maven- und Gradle-Wrapper sind implementiert, aber nur Teile davon an Beispielprojekten getestet.
+
+# Teil 3: Testabdeckung messen {#sec-abdeckung}
+
+## Festlegung
+
+**Ablauf:**
+- Direkt nach dem Testlauf einer Suite (Stand nach Schritt 2) misst ein eigener Lauf die Abdeckung, in derselben Kopie. Abhängigkeiten und Builds sind dort schon vorhanden.
+- Der Lauf ist ohne Netzwerk wie der Testlauf. Nur das Hinzufügen des Messwerkzeugs zur Kopie hat Netzwerk.
+- Suites, deren Tests nicht liefen, werden nicht gemessen (`skipped`).
+- Gemessen wird nur der Stand nach Schritt 2, nicht HEAD.
+- Es gibt keine Mindestabdeckung (Ablaufplan: „no minimum coverage“).
+
+**Ein festes Werkzeug je Sprache:**
+
+| Sprache | Werkzeug | Aufruf | Branches |
+|---|---|---|---|
+| Python | coverage.py 7.17.3 (eine Version des Projekts hat Vorrang) | `coverage run --rcfile=<eigene Einstellungen: branch = True> -m pytest -p no:cov …`, dann `coverage xml` | ja |
+| JS/TS (Jest) | Jests eingebaute Abdeckung | `jest … --coverage --coverageReporters=cobertura` | ja |
+| JS/TS (Vitest) | `@vitest/coverage-v8` passend zu Vitest | `vitest run … --coverage.provider=v8 --coverage.reporter=cobertura --coverage.reportOnFailure=true` | ja |
+| JS/TS (Mocha, `node:test`, andere) | c8 12.0.0 | `c8 --reporter=cobertura <Testbefehl>` | ja |
+| Java | JaCoCo 0.8.16 | Maven: Goals `prepare-agent`, `test`, `report` per Koordinaten; Gradle: Init-Skript mit Plugin `jacoco`, `ignoreFailures`, XML-Bericht | ja |
+| C# | coverlet.collector 10.1.0 | `dotnet test … --collect "XPlat Code Coverage"` mit `DOTNET_ROLL_FORWARD=LatestMajor` | ja |
+| Rust | cargo-llvm-cov 0.9.1 | `cargo llvm-cov --workspace --ignore-run-fail --offline --cobertura` | nein |
+| C/C++ | gcovr 8.8 mit llvm-cov 22 | zweiter CMake-Build (Debug) mit `--coverage`, CTest, `gcovr --gcov-executable "llvm-cov-22 gcov" --cobertura` | ja |
+
+: Teil 3: Werkzeuge der Testabdeckung {#tbl-abdeckung}
+
+**Zählweise:**
+- Gezählt werden die Quelldateien der Sprache unterhalb der Suite. Nicht dazu gehören:
+  - Testcode: die Testdateien aus Teil 1, Dateien in Testordnern (`test/`, `tests/`, `__tests__/`, `spec/`, `src/test/`, …) und `conftest.py`;
+  - generierte Dateien aus Schritt 1;
+  - Build-Skripte und Werkzeugkonfiguration (`setup.py`, `build.rs`, `*.config.js`, …);
+  - Dokumentation und Beispiele.
+- Bei C# ist eine Suite ein Testprojekt; gezählt werden die C#-Dateien außerhalb der Testprojekte.
+- Rusts Quelldateien mit `#[cfg(test)]`-Modulen zählen samt dieser Module.
+- Je Datei gibt es: ausführbare Zeilen, davon ausgeführte, Branches (wo das Werkzeug sie meldet) und die nicht ausgeführten Zeilennummern.
+- Quelldateien ohne Messdaten hat kein Test geladen. Sie werden als `not_loaded` gelistet, aber ohne Zeilen, denn nur die Werkzeuge wissen, welche Zeilen ausführbar sind.
+- Die Quoten in `summary.json` beziehen sich auf die Dateien mit Messdaten.
+- Fehlschlagende Tests verhindern den Bericht nicht.
+
+## Begründung und Belege
+
+**Einheitliche Messung.**
+- Die Messung soll zwischen Projekten vergleichbar sein. Deshalb gibt es ein festes Werkzeug je Sprache, und bei Python werden die Einstellungen des Projekts nicht verwendet.
+- coverage.py liest sonst die erste Datei mit Einstellungen: „If `.coveragerc` doesn’t exist and another file hasn’t been specified, then coverage.py will look for settings in other common configuration files, in this order: `.coveragerc.toml`, `setup.cfg`, `tox.ini`, or `pyproject.toml`.“ Mit `--rcfile=FILE` gilt nur die angegebene Datei [coverage-config].
+- Branches misst coverage.py nur auf Anforderung: „If you want branch coverage measurement, use the `--branch` flag. Otherwise only statement coverage is measured.“ [coverage-run]
+- `-p no:cov` schaltet ein eventuell installiertes pytest-cov aus, das sonst eine zweite Messung starten würde.
+
+**JavaScript.**
+- Jest bringt die Abdeckung mit („Jest ships with two coverage providers: `babel` (default) and `v8`.“), und als Berichtsformat „Any istanbul reporter can be used.“ [jest-config]
+- Vitest wählt den Provider über `coverage.provider` (Standard `'v8'`). Ohne `coverage.reportOnFailure` („Generate coverage report even when tests fail.“, Standard `false`) entsteht bei einem fehlschlagenden Test kein Bericht [vitest-coverage]. Das zeigte auch der eigene Test (@sec-abdeckung-tests).
+- c8 misst mit „Node.js' built in functionality that's compatible with Istanbul's reporters“ und umschließt jeden Befehl, etwa „c8 --100 npm test“ [c8]. Damit sind Mocha, `node:test` und beliebige Testskripte abgedeckt.
+
+**Java (JaCoCo).**
+- `prepare-agent` „Prepares a property pointing to the JaCoCo runtime agent that can be passed as a VM argument to the application under test.“ Die Eigenschaft heißt `argLine`, die Surefire übernimmt. Einschränkung: „If your project already defines VM arguments for test execution, be sure that they will include property defined by JaCoCo.“ [jacoco-prepare-agent]
+- `report` „Creates a code coverage report for tests of a single project in multiple formats (HTML, XML, and CSV).“ [jacoco-report]
+- In Gradle gilt: „If the Java plugin is also applied to your project, a new task named `jacocoTestReport` is created.“ Aber „the `jacocoTestReport` task does not depend on the `test` task.“ [gradle-jacoco]. Das Init-Skript ordnet den Bericht deshalb nach den Tests ein (`mustRunAfter`).
+- Gradles Standard für `toolVersion` ist 0.8.15 [gradle-jacoco]. Das Tool legt 0.8.16 für Maven und Gradle gleich fest.
+- Im Init-Skript nennt jeder Aufruf das Projekt ausdrücklich (`p.pluginManager.apply('jacoco')`). Mit dem kurzen `apply plugin: 'jacoco'` scheiterte libgdx (Gradle 8.14.3) mit „The plugin must be applied in a build script (or to the Project object), but was applied in an init script (or to the Gradle object)“; im kleinen Beispielprojekt (Gradle 9.9.1) war es nicht aufgefallen.
+
+**C# (coverlet).**
+- coverlets Collector: „your project file must reference `coverlet.collector` and a minimum version of `Microsoft.NET.Test.Sdk`“. Das Ergebnis ist „by default in cobertura format“ [coverlet-vstest].
+- Die Dokumentation warnt, dass der Collector nicht mit Microsoft.Testing.Platform zusammenarbeitet [coverlet-vstest]. Solche Projekte werden nicht gemessen.
+- **Laufzeit:** Der Collector läuft auf der Runtime des SDK (.NET 10). Bei einem `net8.0`-Testprojekt meldete er „Failed to unload module … The system cannot open the device or file specified“ und „No coverage hits were collected“ (eigener Test). Mit `net10.0` kamen die Treffer an.
+- Der Messlauf nutzt deshalb `DOTNET_ROLL_FORWARD=LatestMajor`: „Roll-forward to highest available major version […], even if requested major is present.“ Die Umgebungsvariable hat Vorrang vor der `runtimeconfig.json` [ms-roll-forward].
+- Der Testlauf von Teil 2 bleibt auf der Ziel-Runtime.
+- **Microsoft Code Coverage verworfen:** Sowohl `dotnet-coverage collect` („No code coverage data available. Profiler was not initialized.“) als auch `dotnet test --collect "Code Coverage;Format=cobertura"` („number of packages: 0 modules: 2“) lieferten im Test leere Berichte.
+
+**Rust.**
+- cargo-llvm-cov ist ein „wrapper around rustc `-C instrument-coverage`“ [cargo-llvm-cov].
+- `--ignore-run-fail` „Run all tests regardless of failure and generate report“ [cargo-llvm-cov].
+- „branch coverage is currently optional and requires nightly“, und Doctests sind „disabled by default because nightly-only features are required“ [cargo-llvm-cov]. Mit der festen stabilen Toolchain gibt es daher nur Zeilen.
+
+**C/C++.**
+- gcovr braucht den Build mit `--coverage`. Für clang gilt: „If you have used Clang, then you can use its gcov emulation mode. For example: `gcovr --gcov-executable "llvm-cov gcov"`“, und „the `llvm-cov` name may have to include your compiler version“ [gcovr-compiling].
+- clang nennt das „gcov - A GCC-compatible coverage implementation which operates on DebugInfo. This is enabled by `-ftest-coverage` or `--coverage`.“ [clang-coverage]
+- Der Link braucht die Laufzeitbibliothek `libclang_rt.profile.a` (Debian-Paket `libclang-rt-22-dev`). Ohne sie scheiterte schon der Compiler-Test von CMake: „cannot find …/libclang_rt.profile.a“ (eigener Test).
+
+## Testergebnisse {#sec-abdeckung-tests}
+
+**Beispielprojekte:** Jedes Projekt aus @tbl-ausfuehren-tests bekam eine nicht getestete Funktion mit einer Verzweigung. Die Werte sind in `scheduler/tests/test_testing_docker.py` fest geprüft, alle Tests bestanden:
+
+| Sprache | Datei | Zeilen | Branches | Nicht ausgeführt |
+|---|---|---|---|---|
+| Python | `calc/__init__.py` | 3/6 | 0/2 | 6–8 |
+| Rust | `src/lib.rs` | 8/10 | – | 22, 26 (Rest des fehlschlagenden Tests, ignorierter Test) |
+| C# | `Calc/Calculator.cs` | 1/7 | 0/2 | 8–11, 13–14 |
+| Java (Maven, Gradle) | `src/main/java/calc/Calc.java` | 1/5 | 0/2 | 3 (impliziter Konstruktor), 9–10, 12 |
+| JS (Vitest) | `src/calc.js` | 2/2 | – | – |
+| JS (Jest) | `src/calc.cjs` | 1/1 | – | – |
+| JS (`node:test`, c8) | `src/calc.js` | 3/3 | 2/2 | – |
+| C | `src/calc.c` | 2/7 | 0/2 | 5–7, 9–10 |
+
+: Abdeckung der Beispielprojekte {#tbl-abdeckung-tests}
+
+- **Testcode nicht gezählt:**
+  - coverage.py meldet auch die Testdateien; die Gesamtquote im Bericht des Werkzeugs war 82,6 %.
+  - Das Tool zählt nur `calc/__init__.py` und kommt so auf 50 %.
+  - Bei C liegen die Testprogramme in `tests/` und zählen nicht.
+- **Werkzeuge unterscheiden sich:** Dieselbe Funktion `add` ergibt je nach Werkzeug eine bis drei Zeilen, etwa mit oder ohne Zeile der Funktionsdefinition und schließende Klammer. Quoten sind deshalb nur innerhalb einer Sprache und eines Werkzeugs vergleichbar.
+- **Vitest:** Ohne `reportOnFailure` schrieb Vitest keinen Bericht, weil ein Test fehlschlug.
+- **libgdx** (Commit `f4ec02884`, ohne Änderungen aus Schritt 2, als lokaler Klon):
+  - Die Tests liefen mit Status `ok`: 23 246 Testfälle, alle bestanden (191 s).
+  - JaCoCo maß danach in 26 s: Zeilen 9,7 % (5656/58 473), Branches 9,7 % (2580/26 618).
+  - Daten gibt es für 567 Dateien, 766 von 1333 Quelldateien hat kein Test geladen.
+  - Nur das Modul `gdx` hat Tests und damit einen JaCoCo-Bericht. Die nicht geladenen Dateien sind die der Backends und Erweiterungen ohne eigene Tests.
+  - Am meisten abgedeckt sind `CharArray.java` (764/1019 Zeilen) und `ShewchukExactPredicates.java` (702/714).
+  - Die Demo-Anwendungen unter `tests/` zählen nicht, weil sie in einem Testordner liegen.
+
+## Grenzen
+
+- **Unterschiedliche Messgrößen:** coverage.py zählt Anweisungen, JaCoCo Zeilen mit Bytecode, Istanbul/c8 Anweisungen und Zeilen, llvm-cov Regionen und Zeilen. Die Zeilenquote ist zwischen Sprachen nur grob vergleichbar.
+- **Branches fehlen bei Rust** (nur nightly), Doctests werden nicht gemessen.
+- **Nicht geladene Dateien** gehen nicht in die Quote ein. Ein Projekt mit vielen ungetesteten Dateien wirkt über die Quote besser, als es ist; die Liste `not_loaded` zeigt den Umfang.
+- **„Nicht geladen“ hängt vom Werkzeug ab:** JaCoCo meldet alle Klassen eines getesteten Moduls, auch nie ausgeführte (mit 0 Zeilen). coverage.py, Istanbul und c8 melden nur geladene Dateien. Bei Java sind „nicht geladen“ daher die Dateien von Modulen ohne Bericht.
+- **Projekteinstellungen:** Jest und Vitest lesen ihre Projektkonfiguration (z. B. `collectCoverageFrom`, `coveragePathIgnorePatterns`). Bei Maven gehen Surefire-`argLine`-Einstellungen ohne `@{argLine}` am JaCoCo-Agenten vorbei.
+- **C#:** Projekte im Modus Microsoft.Testing.Platform werden nicht gemessen; ältere Zielframeworks laufen in der Messung auf .NET 10.
+- **Bun** wird nicht gemessen.
+
+# Teil 4: Mutation Testing {#sec-mutation}
+
+## Festlegung
+
+**Ablauf:**
+- Nach der Abdeckung prüft ein Mutationslauf die Tests jeder Suite, in derselben Kopie (Stand nach Schritt 2) und ohne Netzwerk.
+- Nur das Hinzufügen des Werkzeugs zur Kopie hat Netzwerk.
+- Jedes Werkzeug arbeitet mit seinen Standard-Mutatoren.
+
+| Sprache | Werkzeug | Dateiauswahl | Fehlschlagende Tests aus Teil 2 |
+|---|---|---|---|
+| Python | mutmut 3.8.1 | `source_paths` in `[tool.mutmut]` der `pyproject.toml` der Kopie | `pytest_add_cli_args_test_selection` mit `--deselect` |
+| JS/TS | StrykerJS 10.1.1 (Runner für Jest, Vitest, Mocha; sonst Command-Runner) | `mutate` in einer eigenen Stryker-Konfiguration | nicht möglich: Suite `skipped` |
+| Java | PIT 1.30.2 (Maven: Plugin in der `pom.xml` der Kopie; Gradle: gradle-pitest-plugin 1.19.0 per Init-Skript) | `targetClasses` | `skipFailingTests` |
+| C# | Stryker.NET 5.1.0 | `--mutate` | `--test-case-filter` |
+| Rust | cargo-mutants 27.1.0 | `--file` | `-- -- --skip <Test>` |
+| C/C++ | – | – (`skipped`, Entscheidung vom 13.11.2026) | – |
+
+: Teil 4: Werkzeuge des Mutation Testing {#tbl-mutation}
+
+**Umfang (`[tests.mutation]` in `code-analysis.toml`, bei jedem Start gelesen):**
+- `mode = "sample"` (Standard): eine Zufallsstichprobe von `sample_files` (Standard 20) Quelldateien, aus den Dateien mit mindestens einer abgedeckten Zeile aus Teil 3.
+  - Die Stichprobe wird mit festem `seed` (Standard 1) gezogen; dasselbe Projekt ergibt dieselbe Stichprobe.
+  - Hat eine Suite weniger abgedeckte Dateien, werden alle mutiert.
+- `mode = "full"`: alle Quelldateien der Suite.
+- `time_limit_minutes` (Standard 60, `0` = kein Limit) je Mutationslauf.
+  - Ist das Limit erreicht, wird der Lauf beendet und bekommt `partial` mit den bis dahin bewerteten Mutanten.
+  - Das eingestellte Limit macht Schritt 5 nicht unvollständig.
+- Die Einstellungen sind die Entscheidungen des Nutzers vom 13.11.2026 (@sec-entscheidungen).
+
+**Ergebnis:**
+- Je Mutant: Datei, Zeile, Mutator, Änderung und Zustand.
+- Die Zustände folgen dem Schema mutation-testing-elements von Stryker; mutmut, PIT und cargo-mutants werden darauf abgebildet. Die Tabelle steht in `Code-Analysis-Tool/docs/testAnalysis/README.md`.
+- Bei nicht erkannten Mutanten (`Survived`, `NoCoverage`) wird die Quellzeile mitgespeichert, für die Bewertung in Schritt 6.
+- Der Score ist (`Killed` + `Timeout`) / (`Killed` + `Timeout` + `Survived` + `NoCoverage`).
+
+## Begründung und Belege
+
+**Score und Zustände.**
+- Stryker definiert: „Mutation score: `detected / valid * 100`“.
+- Zu den Zuständen: „Timeout: […] It is counted as "detected".“, „Compile error: […] It is not represented in your mutation score.“, ebenso „Runtime error“, und „Ignored: […] This will not count against your mutation score but will show up in reports.“ [stryker-states]
+- Dieselben Begriffe für alle Sprachen machen die Ergebnisse in Schritt 6 einheitlich lesbar.
+- PITs Zustände sind dort beschrieben, etwa „No coverage is the same as Survived except there were no tests that exercised the line of code“ und „A non viable mutation is one that could not be loaded by the JVM“ [pit-concepts]. Daraus folgt die Abbildung auf `NoCoverage` bzw. `CompileError`.
+
+**Fehlschlagende Tests.** Alle Werkzeuge brauchen einen Testlauf ohne Mutanten, der besteht:
+
+- **PIT** bricht sonst ab: „1 tests did not pass without mutation when calculating line coverage. Mutation testing requires a green suite.“ (eigener Test).
+  - Der Plugin-Deskriptor von pitest-maven 1.30.2 beschreibt `skipFailingTests`: „When set will ignore failing tests when computing coverage. Otherwise, the run will fail.“
+  - Der Parameter hat keine Kommandozeilen-Property. Er steht deshalb in der Plugin-Konfiguration, die das Tool in die `pom.xml` der Kopie schreibt.
+  - Auch das JUnit-5-Plugin muss dort stehen: „To activate the plugin it must be placed on the classpath of the pitest tool (**not** on the classpath of the project being mutated).“ [pit-junit5]
+  - `excludedTestClasses` wäre keine Alternative: „List of globs to match against test class names.“ [pit-maven] Es schließt ganze Klassen aus, nicht einzelne Tests.
+- **cargo-mutants** prüft zuerst den unveränderten Baum: „This makes sure that your tests are in fact all passing“ [cargo-mutants-baseline]. Andernfalls endet es mit Exitcode 4: „The baseline tests are already failing or hanging before any mutations are applied, so no mutations were tested.“ [cargo-mutants-exit]
+  - Argumente nach einem zweiten `--` gehen an die Testbinaries: „You can use a second double-dash to pass options through to the test targets.“ [cargo-mutants-args]
+  - Damit wird libtests `--skip` übergeben.
+- **mutmut:** „for CLI args that select or deselect tests, use `pytest_add_cli_args_test_selection`“ [mutmut].
+  - Die Einstellungen gelten aus `[tool.mutmut]` der `pyproject.toml`, wenn es diese Tabelle gibt, sonst aus `setup.cfg`. So steht es im Quelltext von mutmut 3.8.1 (`configuration.py`, `_config_reader`).
+  - Das Tool ersetzt daher eine vorhandene Tabelle in der Kopie.
+- **Stryker.NET:** `--test-case-filter` „Filter expression to run selective tests.“ [stryker-net-config]
+- **StrykerJS** hat keine allgemeine Option, einzelne Tests auszuschließen; seine Optionen [stryker-js-config] wählen nur mutierte Dateien (`mutate`) und den Runner. Suites mit fehlschlagenden Tests werden deshalb nicht mutiert.
+
+**Dateiauswahl.**
+- cargo-mutants: „`--file GLOB`: Mutate only functions in files matching the glob.“ [cargo-mutants-files]
+- PIT: „`targetClasses`: The classes to be mutated.“ [pit-maven]
+- StrykerJS: „With `mutate` you configure the subset of files or just one specific file to be mutated.“ [stryker-js-config]
+- Stryker.NET: „With `mutate` you configure the subset of files to use for mutation testing.“ [stryker-net-config]
+- Die Stichprobe auf Dateiebene lässt sich deshalb mit allen Werkzeugen gleich umsetzen.
+- Gezogen wird aus abgedeckten Dateien, weil Mutanten in nie ausgeführtem Code ohne Testlauf `NoCoverage` sind. Sie zeigen nichts über die Qualität der vorhandenen Tests, was die Abdeckung (Teil 3) nicht schon zeigt.
+- Fachliteratur zur Stichprobe von Mutanten ist in `Quellenvorschlaege.md` (Abschnitt F) vorgeschlagen. Sie steht noch nicht in `references.bib`.
+
+**Eigene Konfigurationen statt der des Projekts.**
+- StrykerJS: Optionen auf der Kommandozeile ersetzen die der Konfigurationsdatei vollständig („each option used on the command line will **completely replace** (**not** supplement !)“) [stryker-js-config].
+- Das Tool übergibt eine eigene Konfigurationsdatei, damit Einstellungen des Projekts (z. B. Schwellen) nicht in die Messung eingehen.
+- Bei mutmut ersetzt es die `[tool.mutmut]`-Tabelle.
+- Bei PIT entfernt es ein vorhandenes `pitest-maven`-Plugin aus der `pom.xml` der Kopie.
+
+**Gradle.**
+- gradle-pitest-plugin wird per Init-Skript angewendet (Plugin-ID `info.solidsoft.pitest`, Task `pitest`, Bericht in `build/reports/pitest`) [gradle-pitest].
+- Die neueste Version 1.19.0 steht nur im Gradle Plugin Portal; Maven Central führt 1.15.0 als neueste.
+
+## Testergebnisse {#sec-mutation-tests}
+
+**Beispielprojekte** (`scheduler/tests/test_testing_docker.py`, 11 Tests, alle bestanden). Jedes Projekt hat eine getestete Funktion `add` und eine ungetestete `sign` mit Verzweigung:
+
+| Sprache | Werkzeug | Mutanten | Score | Ausgeschlossene Tests |
+|---|---|---|---|---|
+| Python | mutmut | 1 Killed, 5 NoCoverage | 16,7 % | 2 (`--deselect`) |
+| Rust | cargo-mutants | 5 Killed, 7 Survived | 41,7 % | `tests::broken` |
+| C# | Stryker.NET | 1 Killed, 4 NoCoverage, 2 Ignored | 20 % | `Calc.Tests.CalculatorTests.Broken` |
+| Java (Maven, Gradle) | PIT | 2 Killed, 4 NoCoverage | 33,3 % | `CalcTest.broken` (per `skipFailingTests`) |
+| JS (Vitest, ohne fehlschlagenden Test) | StrykerJS | 2 Killed, 7 NoCoverage | 22,2 % | – |
+| JS (mit fehlschlagendem Test) | StrykerJS | – (`skipped`) | – | – |
+| C | – | – (`skipped`, nicht unterstützt) | – | – |
+
+: Mutation Testing der Beispielprojekte {#tbl-mutation-tests}
+
+- **Unterschiedliche Mutanten:** Dieselbe Funktion ergibt je nach Werkzeug 1 bis 7 Mutanten. mutmut erzeugt für `a + b` nur einen Mutanten, cargo-mutants fünf (Rückgabewerte 0, 1, −1 und zwei Operatoren). Scores sind deshalb nur zwischen Projekten derselben Sprache vergleichbar.
+- **cargo-mutants** kennt keinen Zustand „nicht abgedeckt“: Die Mutanten der ungetesteten Funktion sind `Survived`, bei den anderen Werkzeugen `NoCoverage`.
+- **Stryker.NET** ignoriert Blockentfernungen in nicht abgedeckten Blöcken („Removed by block already covered filter“).
+- **mutmut** liefert die Zeile nur über `mutmut show`. Das Tool ruft es nur für nicht erkannte Mutanten auf; bei getöteten Mutanten bleibt die Zeile leer.
+- **Erster Versuch mit PIT:** `-DskipFailingTests=true` auf der Kommandozeile wirkte nicht; der Lauf brach mit „Mutation testing requires a green suite“ ab. Erst die Einstellung in der `pom.xml` griff (@sec-mutation).
+
+**libgdx** (Commit `f4ec02884`, lokaler Klon ohne Änderungen aus Schritt 2, Standardeinstellungen: `mode = "sample"`, 20 Dateien, Seed 1, 60 Minuten):
+
+- **Tests:** 23 246 bestanden (193 s). Kein Test musste ausgeschlossen werden.
+- **Werkzeug:** PIT 1.30.2 über gradle-pitest-plugin 1.19.0 im Modul `gdx`, das als einziges Tests hat.
+- **Stichprobe:** 20 der 68 Dateien mit mindestens einer abgedeckten Zeile, z. B. `math/Quaternion.java`, `utils/Json.java` und `maps/tiled/TmxMapLoader.java`.
+- **Mutanten:** 3221, davon 573 Killed, 242 Survived, 2404 NoCoverage und 2 Timeout. Der Score ist 17,8 %.
+- **Dauer:** 996 s, davon 986 s PIT. Das Zeitlimit von 60 Minuten wurde nicht erreicht.
+- **Hoher Anteil `NoCoverage`** (2404 von 3221): Auch die abgedeckten Dateien führen die Tests nur zu einem kleinen Teil aus, passend zur Zeilenabdeckung von 9,7 % (@sec-abdeckung-tests).
+- **Beispiele für überlebende Mutanten** mit der gespeicherten Quellzeile:
+  - `Quaternion.java`, Zeile 372: „replaced return value with null for com/badlogic/gdx/math/Quaternion::idt“, Quellzeile `return this.set(0, 0, 0, 1);`. Kein Test prüft den Rückgabewert von `idt()`.
+  - `Json.java`, Zeile 357: „negated conditional“, Quellzeile `if (!usePrototypes) return null;`. Kein Test unterscheidet die beiden Zweige.
+
+## Grenzen
+
+- **Stichprobe auf Dateiebene:** Gezogen werden Dateien, nicht einzelne Mutanten. Dateien mit vielen Mutanten wiegen schwerer. Der Score einer Stichprobe ist eine Schätzung für die abgedeckten Dateien, nicht für das ganze Projekt.
+- **Zeitlimit:** PIT, StrykerJS und Stryker.NET schreiben ihren Bericht erst am Ende. Erreichen sie das Limit, gibt es keine Ergebnisse (`partial` mit Hinweis).
+- **StrykerJS** läuft nur, wenn alle Tests bestehen. **PIT** braucht für TestNG ein weiteres Plugin, das das Tool nicht hinzufügt. **Maven-Multimodule:** Das Plugin steht in der Wurzel-`pom.xml`; Module, die nicht von ihr erben, laufen ohne JUnit-5-Plugin. **Stryker.NET** mutiert bei mehreren referenzierten Projekten nur das mit den meisten ausgewählten Dateien.
+- **Vergleichbarkeit:** Mutatoren und Zählweise unterscheiden sich je Werkzeug (siehe Testergebnisse). Ein Score ist ein Maß innerhalb einer Sprache.
+- **C/C++** wird nicht mutiert.
+
+# Entscheidungen vom 13.11.2026 {#sec-entscheidungen}
+
+Am 13.11.2026 vom Nutzer festgelegt und umgesetzt: Code-Stand und Netzwerk in Teil 2 (@sec-ausfuehren), die Werkzeuge der Abdeckung in Teil 3 (@sec-abdeckung), Umfang und Zeitlimit des Mutation Testing in Teil 4 (@sec-mutation).
+
+- **Code-Stand:**
+  - Die Tests laufen auf dem Stand nach Schritt 2, wie die Schritte 3 und 4; das ist das Hauptergebnis.
+  - Zusätzlich laufen sie auf dem Commit-Stand (HEAD), und die Ergebnisse je Test werden verglichen. Schritt 2 hinterlässt automatische Korrekturen der Linter, die das Verhalten ändern könnten.
+  - Unterschiede kommen in den Bericht, sonst wird der Vergleich nicht erwähnt.
+  - Hat Schritt 2 nichts geändert, entfällt der zweite Lauf.
+- **Netzwerk:**
+  - Die Tests führen Code des Projekts aus. Sie laufen deshalb standardmäßig ohne Netzwerk.
+  - Nur der Vorlauf, der die Abhängigkeiten herunterlädt, hat Netzwerk.
+  - In `code-analysis.toml` lässt sich das Netzwerk für die Tests einschalten. Das soll man nur tun, wenn man dem Code des Projekts vertraut.
+- **Mutation Testing:**
+  - Standard ist eine reproduzierbare Stichprobe von Dateien mit Zeitlimit; ein vollständiger Lauf ist wählbar.
+  - Beides und das Limit in Minuten (`0` = kein Limit) stehen in `code-analysis.toml`.
+- **C/C++:** Tests und Abdeckung ja. Mutation Testing wird als „nicht unterstützt“ vermerkt.
+- **Werkzeuge:**
+  - Die Tests laufen mit dem Framework bzw. Build-Werkzeug des Projekts, mit vom Tool festgelegten Optionen für maschinenlesbare Berichte.
+  - Für die Abdeckung gibt es ein festes Werkzeug je Sprache, damit die Werte vergleichbar sind.
+
+# Ergebnisse im Ausgabeordner
+
+Schritt 5 schreibt nach `OUTPUT_DIR/<Projekt>/<Datum_Zeit>Z/step5-tests/`.
+
+| Datei | Inhalt |
+|---|---|
+| `summary.json` | `detection`: die Suites (Sprache, Ordner, Paketmanager bzw. Build-Werkzeug, Manifest, `tests_found`, Frameworks, `test_files`, `inline_test_files`, Belege, Hinweise), `languages_without_tests`, `languages_not_checked`. `tests`: Netzwerk und Zeitlimit; je Lauf Werkzeug, Version, Status, Dauer, Tests je Ergebnis, fehlgeschlagene Tests, Befehle mit Exitcodes, Hinweise; `differences_to_head` nur bei Unterschieden |
+| `tests.json` | jeder Test nach Schritt 2: Suite, Kennung, Ergebnis, Dauer, Fehlermeldung |
+| `coverage.json` | je Suite jede Quelldatei mit Zeilen, ausgeführten Zeilen, Branches und nicht ausgeführten Zeilennummern; die Quelldateien, die kein Test geladen hat |
+| `mutants.json` | jeder Mutant: Suite, Datei, Zeile, Mutator, Änderung, Zustand; die Quellzeile nicht erkannter Mutanten |
+| `<nn>-<Sprache>-<Ordner>/run/` | Logs jedes Befehls und die Rohberichte (JUnit-XML, TRX, Jest-JSON) |
+| `<nn>-<Sprache>-<Ordner>/run-head/` | dasselbe für den Lauf bei HEAD |
+| `<nn>-<Sprache>-<Ordner>/coverage/` | Logs und Rohberichte der Abdeckung |
+| `<nn>-<Sprache>-<Ordner>/mutation/` | Logs, die für das Werkzeug geschriebenen Einstellungen und sein Rohbericht |
+
+Schritt 5 ist unvollständig (Exitcode 8), wenn die Erkennung scheitert, `[tests]` in `code-analysis.toml` ungültig ist, Docker oder ein Test-Image fehlt oder ein Lauf den Status `failed` hat.
+
+# Offene Punkte {#sec-offen}
+
+- Für die Begründung der Stichprobe im Mutation Testing gibt es Literaturvorschläge in `Quellenvorschlaege.md` (Abschnitt F). Sie sind noch nicht gelesen und nicht in `references.bib`.
+- Mocha, Bun, Yarn, pnpm und Conan sind in Teil 2 implementiert, aber noch nicht an Beispielprojekten getestet.
+
+# Quellen (noch nicht in `references.bib`) {#sec-quellen}
+
+::: {.callout-important}
+Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in `references.bib`. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 13.11.2026.
+:::
+
+**Python**
+
+- **[pytest-discovery]** pytest: *Good Integration Practices*, Abschnitt „Conventions for Python test discovery“ (stable, pytest 9). <https://docs.pytest.org/en/stable/explanation/goodpractices.html>
+- **[pytest-naming]** pytest: *Changing standard (Python) test discovery*, Abschnitt „Changing naming conventions“. <https://docs.pytest.org/en/stable/example/pythoncollection.html>
+- **[pytest-config]** pytest: *Configuration*, Abschnitte zu den Konfigurationsdateien und „Initialization: determining rootdir and configfile“. <https://docs.pytest.org/en/stable/reference/customize.html>
+- **[py-unittest]** Python Software Foundation: *unittest — Unit testing framework*, Abschnitte „Basic example“ und „Test Discovery“ (Python 3.15.2). <https://docs.python.org/3/library/unittest.html>
+
+**JavaScript und TypeScript**
+
+- **[jest-testmatch]** Jest: *Configuring Jest*, Option `testMatch` (Version 30.5). <https://jestjs.io/docs/configuration>
+- **[vitest-include]** Vitest: *include*. <https://vitest.dev/config/include>
+- **[node-test]** Node.js: *Test runner*, Abschnitte „Running tests from the command line“ und „Test reporters“ (v22.23.5). <https://nodejs.org/docs/latest-v22.x/api/test.html>
+- **[mocha-globs]** Mocha: *Test globs*. <https://mochajs.org/running/test-globs/>
+- **[cypress-config]** Cypress: *Configuration*, Option `specPattern` (e2e). <https://docs.cypress.io/app/references/configuration>
+- **[npm-init]** npm Docs: *Creating a package.json file*, Abschnitt „Creating a default package.json file“. <https://docs.npmjs.com/creating-a-package-json-file>
+
+**Java**
+
+- **[gradle-testing]** Gradle: *Testing in Java & JVM projects*, Abschnitte „Test detection“ und „Using JUnit Jupiter“ (Gradle 9.9.1). <https://docs.gradle.org/current/userguide/java_testing.html>
+- **[junit-guide]** JUnit: *JUnit User Guide* (JUnit 6.1.3). <https://docs.junit.org/current/user-guide/>
+- **[junit5-test]** JUnit: *Annotation Interface Test* (`org.junit.jupiter.api`). <https://docs.junit.org/current/api/org.junit.jupiter.api/org/junit/jupiter/api/Test.html>
+- **[junit4-test]** JUnit 4: *Annotation Type Test* (`org.junit`, since 4.0). <https://junit.org/junit4/javadoc/latest/org/junit/Test.html>
+
+**C#**
+
+- **[ms-props]** Microsoft Learn: *MSBuild reference for .NET SDK projects*, Eigenschaft `IsTestProject`. <https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props>
+- **[ms-dotnet-test]** Microsoft Learn: *dotnet test command with VSTest*, Abschnitte „Description“ und „Examples“. <https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-vstest>
+
+**Rust**
+
+- **[rust-book-org]** Klabnik, S.; Nichols, C.: *The Rust Programming Language*, Kapitel 11.3 „Test Organization“. <https://doc.rust-lang.org/book/ch11-03-test-organization.html>
+- **[cargo-test]** The Cargo Book: *cargo test*, Abschnitte „Description“ und „Target Selection“. <https://doc.rust-lang.org/cargo/commands/cargo-test.html>
+- **[rustdoc-doctests]** The rustdoc book: *Documentation tests*, Abschnitte zur Spracherkennung und „Attributes“. <https://doc.rust-lang.org/rustdoc/write-documentation/documentation-tests.html>
+
+**C und C++**
+
+- **[cmake-add-test]** CMake: *add_test* (CMake 4.5.0). <https://cmake.org/cmake/help/latest/command/add_test.html>
+- **[cmake-ctest]** CMake: *CTest* (Modul), Variable `BUILD_TESTING`. <https://cmake.org/cmake/help/latest/module/CTest.html>
+- **[cmake-gtest]** CMake: *GoogleTest* (Modul), Befehle `gtest_add_tests` und `gtest_discover_tests`. <https://cmake.org/cmake/help/latest/module/GoogleTest.html>
+- **[ctest]** CMake: *ctest(1)*, Optionen `--output-junit`, `--test-dir`, `--output-on-failure`. <https://cmake.org/cmake/help/latest/manual/ctest.1.html>
+- **[glibc-assert]** The GNU C Library: *Explicitly Checking Internal Consistency*. <https://sourceware.org/glibc/manual/latest/html_node/Consistency-Checking.html>
+
+**Teil 4: Mutation Testing**
+
+- **[stryker-states]** Stryker: *Mutant states and metrics* (mutation-testing-elements). <https://stryker-mutator.io/docs/mutation-testing-elements/mutant-states-and-metrics/>
+- **[stryker-js-config]** StrykerJS: *Configuration*. <https://stryker-mutator.io/docs/stryker-js/configuration/>
+- **[stryker-net-config]** Stryker.NET: *Configuration*. <https://stryker-mutator.io/docs/stryker-net/configuration/>
+- **[pit-maven]** PIT: *Maven Quick Start*. <https://pitest.org/quickstart/maven/>
+- **[pit-concepts]** PIT: *Basic Concepts*. <https://pitest.org/quickstart/basic_concepts/>
+- **[pit-junit5]** pitest/pitest-junit5-plugin: *README*. <https://github.com/pitest/pitest-junit5-plugin>
+- **[gradle-pitest]** gradle-pitest-plugin: *Dokumentation* (Startseite). <https://gradle-pitest-plugin.solidsoft.info/>
+- **[mutmut]** mutmut: *Documentation*. <https://mutmut.readthedocs.io/en/latest/>
+- **[cargo-mutants-baseline]** cargo-mutants: *Baseline tests*. <https://mutants.rs/baseline.html>
+- **[cargo-mutants-exit]** cargo-mutants: *Exit codes*. <https://mutants.rs/exit-codes.html>
+- **[cargo-mutants-args]** cargo-mutants: *Passing options to Cargo*. <https://mutants.rs/cargo-args.html>
+- **[cargo-mutants-files]** cargo-mutants: *Filtering files*. <https://mutants.rs/skip_files.html>
+- Primärquellen im Werkzeug selbst (keine Webseite): Plugin-Deskriptor `META-INF/maven/plugin.xml` in `pitest-maven-1.30.2.jar` (Parameter `skipFailingTests`); Quelltext von mutmut 3.8.1 (`mutmut/configuration.py`, `mutmut/stats.py`).
+
+**Teil 3: Testabdeckung**
+
+- **[coverage-run]** coverage.py 7.17.3: *Execution: coverage run*. <https://coverage.readthedocs.io/en/7.17.3/commands/cmd_run.html>
+- **[coverage-config]** coverage.py 7.17.3: *Configuration reference*. <https://coverage.readthedocs.io/en/7.17.3/config.html>
+- **[jest-config]** Jest: *Configuring Jest* (Version 30.5), Optionen `collectCoverage`, `coverageProvider`, `coverageReporters`. <https://jestjs.io/docs/configuration>
+- **[vitest-coverage]** Vitest: *coverage* (Konfiguration). <https://vitest.dev/config/coverage>
+- **[c8]** bcoe/c8: *README*. <https://github.com/bcoe/c8>
+- **[jacoco-prepare-agent]** JaCoCo: *prepare-agent* (Maven-Goal). <https://www.jacoco.org/jacoco/trunk/doc/prepare-agent-mojo.html>
+- **[jacoco-report]** JaCoCo: *report* (Maven-Goal). <https://www.jacoco.org/jacoco/trunk/doc/report-mojo.html>
+- **[gradle-jacoco]** Gradle: *The JaCoCo Plugin* (9.9.1). <https://docs.gradle.org/current/userguide/jacoco_plugin.html>
+- **[coverlet-vstest]** coverlet: *VSTest Integration*. <https://github.com/coverlet-coverage/coverlet/blob/master/Documentation/VSTestIntegration.md>
+- **[ms-roll-forward]** Microsoft Learn: *Select which .NET version to use*, Abschnitte „Control roll-forward behavior“, „Precedence“, „Values“. <https://learn.microsoft.com/en-us/dotnet/core/versions/selection>
+- **[cargo-llvm-cov]** taiki-e/cargo-llvm-cov: *README*. <https://github.com/taiki-e/cargo-llvm-cov>
+- **[gcovr-compiling]** gcovr: *Compiling for Coverage*. <https://gcovr.com/en/stable/guide/compiling.html>
+- **[clang-coverage]** Clang: *Source-based Code Coverage*. <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html>
+
+**Teil 2: Ausführen**
+
+- **[pytest-exit]** pytest: *Exit codes*. <https://docs.pytest.org/en/stable/reference/exit-codes.html>
+- **[pytest-ref]** pytest: *API Reference*, Abschnitt „Command-line Flags“ (`--continue-on-collection-errors`, `--junit-xml`). <https://docs.pytest.org/en/stable/reference/reference.html>
+- **[uv-cli]** Astral: *uv – Commands*, `uv sync`. <https://docs.astral.sh/uv/reference/cli/>
+- **[poetry-cli]** Poetry: *Commands*, `install`. <https://python-poetry.org/docs/cli/>
+- **[pdm-cli]** PDM: *CLI Reference*, `pdm install`. <https://pdm-project.org/latest/reference/cli/>
+- **[pipenv-cli]** Pipenv: *Commands*. <https://pipenv.pypa.io/en/latest/commands.html>
+- **[npm-ci]** npm Docs: *npm ci* (v10), mit der Option `ignore-scripts`. <https://docs.npmjs.com/cli/v10/commands/npm-ci>
+- **[jest-cli]** Jest: *Jest CLI Options* (`--ci`, `--json`, `--outputFile`). <https://jestjs.io/docs/cli>
+- **[vitest-reporters]** Vitest: *Reporters*. <https://vitest.dev/guide/reporters>
+- **[surefire-test]** Apache Maven: *maven-surefire-plugin:test* (3.6.1), Parameter `test`, `testFailureIgnore`, `failIfNoSpecifiedTests`. <https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html>
+- **[gradle-cli]** Gradle: *Command-Line Interface* (9.9.1), Optionen `--continue` und `--offline`. <https://docs.gradle.org/current/userguide/command_line_interface.html>
+- **[cargo-fetch]** The Cargo Book: *cargo fetch*. <https://doc.rust-lang.org/cargo/commands/cargo-fetch.html>

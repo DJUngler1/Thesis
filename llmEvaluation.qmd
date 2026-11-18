@@ -1,0 +1,798 @@
+---
+title: "LLM-Auswertung und Audit"
+subtitle: "Dokumentation der Festlegungen für Schritt 6 des Code-Analysis-Tools"
+lang: de
+author: "Felix Krauß"
+date: 2026-11-18
+date-format: "D. MMMM YYYY"
+toc: true
+number-sections: true
+format:
+  html:
+    theme: darkly
+  pdf:
+    geometry:
+      - top=30mm
+      - left=20mm
+---
+
+# Zweck und Vorgehen
+
+Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 6 („LLM evaluation“ und „Final audit“) die Ergebnisse der Schritte 2 bis 5 mit lokalen Sprachmodellen auswertet und daraus das Audit erstellt. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter `Code-Analysis-Tool/docs/LLMAudit/README.md`.
+
+Schritt 6 wertet drei Bereiche aus:
+
+| Bereich | Ergebnisse aus | Frage |
+|---|---|---|
+| Sicherheit | Schritt 4 (OSV-Scanner, Audits der Paketmanager) und die Befunde aus Schritt 3 (OpenGrep, SonarQube), die ihr Werkzeug als Sicherheitsproblem oder Bug einstuft (`security`, `correctness`, `reliability`) oder gar nicht einstuft | Welche Befunde sind echte Sicherheitsprobleme des ausgelieferten Produkts? |
+| Codequalität | Schritt 2 (Linter und Formatter) und die übrigen Befunde aus Schritt 3 (Wartbarkeit, Best Practice, Portabilität, Performance, …) | Welche Befunde sind relevant, und was haben die Formatter geändert? |
+| Testqualität | Schritt 5 (Tests, Abdeckung, Mutation Testing) | Funktionieren die Tests, und was entgeht ihnen? |
+
+Schritt 6 hat vier Teile:
+
+1. **Aufbereitung durch das Tool:** Kennungen, Duplikate, Gruppen, Codeausschnitte (@sec-aufbereitung).
+2. **Entscheidungen** durch ein Entscheidungsmodell (@sec-entscheidung).
+3. **Berichte:** Struktur durch das Tool, Texte durch ein Reasoning-Modell (@sec-berichte).
+4. **Audit:** durch das Tool allein, ohne Modell (@sec-audit).
+
+**Stand am 17.11.2026:** Die Teile 1 und 2 wurden am 13.11.2026 umgesetzt, die Teile 3 und 4 am 17.11.2026. Alle Teile sind mit Unit-Tests gegen ein nachgebildetes Ollama geprüft (@sec-tests). Im ersten Lauf mit den echten Modellen am 17.11.2026 kamen die Entscheidungen zustande; die Berichte scheiterten an der MLX-Variante von qwen3.8 (@sec-erster-lauf). Die Modelle sollen verglichen werden; Kandidaten stehen in @sec-kandidaten. Nach einem zweiten Lauf (87 min für Schritt 6) gehen seit dem 17.11.2026 nur noch die Befunde aus Schritt 3 in den Bereich Sicherheit, die ihr Werkzeug als Sicherheitsproblem oder Bug einstuft oder gar nicht einstuft; die übrigen gehen in die Codequalität (@sec-zweiter-lauf). Ein dritter Lauf mit dieser Aufteilung brauchte für Schritt 6 noch 19 min (@sec-dritter-lauf). Der vierte Lauf an libgdx (17./18.11.2026) ergab 2.527 Sicherheitseinträge. Die Berichte scheiterten zuerst wieder mit HTTP 501, diesmal an `nemotron-3.5-lightning:30b` (MLX). Mit `qwen3.8:27b-q4_K_M` dauerte eine Anfrage etwa 11,7 min (@sec-vierter-lauf). Seit dem 17.11.2026 setzt `--evaluate … --resume` einen Lauf fort und übernimmt die vorhandenen Entscheidungen. Seit dem 18.11.2026 bekommen im Bereich Sicherheit nur noch REAL-Befunde mit `critical`, `high` oder `error` einen eigenen Text, die übrigen einen Text je Regel (oder Paket) und Label (@sec-berichte). Ebenfalls seit dem 18.11.2026 verlangt das Tool vor Schritt 2 ein vom Nutzer bestätigtes Bedrohungsmodell des Projekts, das die Entscheidungen und Berichte im Bereich Sicherheit als Kontext bekommen (@sec-bedrohungsmodell); seine Wirkung ist noch nicht gemessen. Die Entscheidungen vom 13.11., 17.11. und 18.11.2026, die Schritt 6 bestimmen, stehen in @sec-entscheidungen.
+
+## Grundsatz der Festlegung
+
+- **Das Tool rechnet, die Modelle entscheiden und formulieren:** Alles, was sich berechnen lässt, macht das Tool selbst: Kennungen, Duplikate, Gruppen, Zählungen, Sortierung, Statistiken, das Beispiel aus dem Patch und das Audit. Das Entscheidungsmodell vergibt nur Labels, das Reasoning-Modell schreibt nur Texte (Entscheidung vom 13.11.2026).
+- **Die Entscheidungen sind endgültig:** Das Reasoning-Modell ändert kein Label. Hält es eine Entscheidung für falsch, schreibt es einen Prüfhinweis. Diese Regel stammt aus den ersten Prompts des Nutzers (`docs/LLMAudit/prompts/`, im Git-Verlauf bis Commit `911ecab`).
+- **Im Zweifel REAL:** Bekommt ein Befund keine gültige Antwort, erhält er das vorsichtige Label (REAL, PROJECT, CRITICAL, TEST_GAP) und wird zur Prüfung markiert. Kein Befund wird herausgefiltert, nur weil das Modell nicht geantwortet hat.
+- **Lokal:** Beide Modelle laufen in Ollama auf dem Rechner des Nutzers. Codeausschnitte und Befunde verlassen den Rechner in Schritt 6 nicht.
+- **Speicher schonen:** Die beiden Modelle sind nie gleichzeitig geladen, die Anfragen an das Entscheidungsmodell sind klein (@sec-speicher).
+- **Nachvollziehbar:** Jede Anfrage und jede Antwort wird gespeichert, beim Reasoning-Modell auch sein Denkweg (`thinking`).
+
+## Prüfmethode
+
+1. **Dokumentation im Original:** Die Schnittstellen und Modelle wurden am 17.11.2026 in der Dokumentation und im Quellcode von Ollama (Version 0.40.16), auf den Modellseiten der Ollama-Bibliothek und in den Modellkarten von Qwen, OpenAI und Microsoft nachgelesen (@sec-quellen). Zitate sind wörtlich und stehen in der Originalsprache (Englisch).
+2. **Angaben der installierten Modelle:** `POST /api/show` von Ollama 0.40.16 auf dem Rechner des Nutzers (17.11.2026) für beide Modelle (@tbl-modelle). Dieser Aufruf liest nur die Metadaten der Modelle.
+3. **Unit-Tests:** 136 Tests (Stand 18.11.2026) mit einem nachgebildeten Ollama, das wie die echten Endpunkte antwortet und mitzählt, welche Modelle gleichzeitig geladen sind (@sec-tests).
+4. **Beobachtungen aus der Entwicklung:** Ein Probeaufruf und zwei Speicherprobleme am 13.11.2026 (@sec-beobachtungen). Sie sind nicht systematisch gemessen.
+5. **Echte Läufe:** erster, zweiter und dritter Lauf am 17.11.2026 (@sec-erster-lauf, @sec-zweiter-lauf, @sec-dritter-lauf), vierter Lauf an libgdx am 17. und 18.11.2026 (@sec-vierter-lauf); der Vergleich der Modelle folgt (@sec-kandidaten).
+6. **Probe ohne Modell:** Die Gruppierung im Bereich Sicherheit und die Übernahme der Entscheidungen wurden am 18.11.2026 an einer Kopie bzw. an den Ergebnisdateien des vierten Laufs durchgerechnet, ohne Modell (@sec-vierter-lauf).
+
+## Modelle {#sec-modelle}
+
+| | Entscheidungsmodell | Reasoning-Modell |
+|---|---|---|
+| Name | `pplx-decider-flash:latest` | `qwen3.8:latest` |
+| Herkunft | Perplexity, „built on Qwen3.5-4B“ [pplx-decider-flash] | Qwen, Qwen3.8-27B [qwen3.8-card] |
+| Parameter | 4,54 Mrd. (4.539.639.296) | 27,8 Mrd. (27.781.081.984) |
+| Architektur, Format | `qwen3_5`, safetensors, `mxfp8`, Runner MLX | `qwen3_5`, safetensors, `nvfp4`, Runner MLX |
+| Fähigkeiten laut `/api/show` | `decision`, `vision` | `completion`, `vision`, `tools`, `thinking` |
+| Voreinstellungen laut `/api/show` | `num_ctx 32768` | `temperature 1`, `top_k 20`, `top_p 0.95`, `min_p 0`, `presence_penalty 0`, `repeat_penalty 1` |
+| Thinking laut `/api/show` | – | Werte `false`, `low`, `medium`, `xhigh`; Standard `medium` |
+| Kontextlänge (Metadaten) | 262.144 | 262.144 |
+| Größe laut Ollama-Bibliothek | 5,6 GB [pplx-decider-flash] | 18 GB [qwen3.8-ollama] |
+| Lizenz | Apache 2.0 | Apache 2.0 |
+| Schnittstelle | `POST /v1/systemone` | `POST /api/chat` |
+
+: Die Modelle von Schritt 6 (Ollama 0.40.16, abgefragt am 17.11.2026) {#tbl-modelle}
+
+**MLX-Build von qwen3.8.** Die Angaben zu qwen3.8 in @tbl-modelle gelten für das installierte `qwen3.8:latest`. Der Tag `latest` enthält laut seiner Seite zwei Builds, unter „Details“ als `mlx` (`47951e4a6661`, 1199 Tensoren, 18 GB) und `llamacpp` (`aaee06c39dcf`, GGUF Q4_K_M 17 GB und Vision-Projektor 931 MB) [qwen3.8-latest]. Installiert war der MLX-Build: Sein Digest `47951e4a6661…` steht in der `summary.json` des ersten Laufs, und das lokale Manifest vom 23.10.2026 besteht aus rund 1.200 einzelnen Tensor-Dateien statt einer GGUF-Modelldatei. Dass Ollama auf Apple Silicon bei einem Tag mit beiden Builds den MLX-Build lädt, ist aus diesen Befunden geschlossen, nicht dokumentiert. Der Nutzer hat `qwen3.8:latest` danach gelöscht und testet andere Reasoning-Modelle (@sec-kandidaten).
+
+**Stand am 18.11.2026.** In `code-analysis.toml` steht als Reasoning-Modell `qwen3.8:27b-q4_K_M` (Quantisierung `Q4_K_M`, eine GGUF-Modelldatei; `ollama ps` zeigte beim Lauf den Runner `llamacpp`) mit `temperature = 0`. Das zwischendurch eingesetzte `nemotron-3.5-lightning:30b` ist, wie `gemma4:26b`, auf dem Rechner des Nutzers im Format `nvfp4` als einzelne Tensor-Dateien installiert und läuft deshalb auf MLX, ohne Structured Output (@sec-vierter-lauf).
+
+Beide Modelle und alle Einstellungen stehen in `code-analysis.toml` und werden bei jedem Lauf gelesen (@sec-einstellungen). Das Tool prüft beim Start über `/api/tags`, ob beide Modelle installiert sind, und nennt fehlende mit dem Befehl `ollama pull <Modell>`.
+
+## Einstellungen {#sec-einstellungen}
+
+Seit dem 17.11.2026 auf Wunsch des Nutzers feiner einstellbar, jede Zeile in `code-analysis.toml` mit Kommentar:
+
+| Tabelle | Inhalt |
+|---|---|
+| `[llm]` | Adresse von Ollama, Berichtssprache, ausgewertete Bereiche |
+| `[llm.input]` | was das Tool für die Modelle aufbereitet: Zeichen je Meldung (300) und Codeausschnitt (400), Zeilen um die Fundstelle (2), Beispiele je Gruppe (5, davon 3 mit Code; für Gruppen der Codequalität und seit 18.11.2026 der Sicherheit), Meldungen je Gruppe (3), ab welchem Schweregrad ein REAL-Sicherheitsbefund einen eigenen Eintrag bekommt (`security_single_severity`, `"high"`, seit 18.11.2026), Testnamen (5) und Zeichen der Fehlermeldung (600) je Gruppe fehlgeschlagener Tests, Zeichen der Deklarationen (300), Schwelle für schwach getestete Dateien (50 %), Zeilen des Diff-Beispiels (10), Ausschnitt aus `changes.patch` (32 KiB) |
+| `[llm.decision]` | Entscheidungsmodell, Zeitlimit (300 s), Wiederholungen (2), `keep_alive` (10 min), Fragen und Text je Anfrage, Schwelle für niedrige `confidence` |
+| `[llm.report]` | Reasoning-Modell, Zeitlimit (900 s), Wiederholungen (2), `keep_alive` (10 min), `think`, `temperature`, `top_p`, `top_k`, `min_p` (nicht gesetzt), `seed`, `num_ctx`, `num_predict`, Einträge je Anfrage, Zeichen je Token für die Schätzung des Kontexts (2,5) |
+| `[llm.report.security]`, `[llm.report.code_quality]`, `[llm.report.test_quality]` | optional: andere Werte des Reasoning-Modells für einen Bereich, alle Schlüssel aus `[llm.report]` außer `model` |
+| `[llm.threat_model]` | seit 18.11.2026: wie ein fehlendes Bedrohungsmodell entsteht (`create`: `"generate"` oder `"manual"`), wie viel Dokumentation der Entwurf liest (`docs_kib`, 24 KiB), wie viel davon Schritt 6 sieht (`context_chars`, 2.500 Zeichen) (@sec-bedrohungsmodell) |
+
+: Tabellen von `[llm]` in `code-analysis.toml`; in Klammern die Standardwerte {#tbl-einstellungen}
+
+- **Zeitlimit, Wiederholungen und `keep_alive` je Modell** statt für beide gemeinsam: Im zweiten Lauf dauerte eine Anfrage an das Entscheidungsmodell im Mittel 3,7 s (154 Anfragen in 566 s), eine an das Reasoning-Modell 63 s (63 Anfragen in 3.968 s) (@tbl-zweiter-lauf). Ein gemeinsames Zeitlimit von 900 s hätte eine hängende Entscheidungsanfrage erst spät erkannt.
+- **`think` als Stufe:** Ollama erlaubt neben `true` und `false` „A string: select a supported level from `thinking.values`. Use the exact value from `/api/show`.“; „Unsupported names use the model default.“ und für `false`: „Models that cannot disable thinking use their lowest supported level instead.“ [ollama-thinking]. gpt-oss nennt auf seiner Modellseite „Configurable reasoning effort: Easily adjust the reasoning effort (low, medium, high)“ [gpt-oss], qwen3.8 laut `/api/show` `low`, `medium` und `xhigh` (@tbl-modelle). Das Tool reicht den Wert unverändert weiter. Bei `gpt-oss:20b` entspricht `true` der Stufe `medium` (@sec-berichte).
+- **`min_p`** ist die einzige im Schema von `/api/chat` dokumentierte Option („Minimum probability threshold for token selection“ [ollama-chat]), die vorher fehlte. Ist sie nicht gesetzt, schickt das Tool sie nicht mit; dann gilt der Wert des Modells.
+- **Einstellungen je Bereich** erlauben z. B. mehr Denken für die Sicherheitstexte und weniger für die Codequalität. Alle Bereiche nutzen dasselbe Reasoning-Modell, damit nie zwei Reasoning-Modelle nacheinander geladen werden müssen und die Berichte vergleichbar bleiben. Das Audit nennt die abweichenden Werte unter „Methode und Grenzen“.
+- **Unbekannte Schlüssel sind Fehler** (Exitcode 9), ebenso ein Bereich, den es nicht gibt (z. B. `[llm.report.securty]`). Sonst würde ein Tippfehler still ignoriert. `timeout_seconds`, `retries` und `keep_alive` direkt unter `[llm]` werden mit dem Hinweis abgelehnt, dass sie jetzt je Modell gesetzt werden.
+
+# Übersicht der Festlegungen
+
+| Bereich | Einheit, die gelabelt wird | Labels (das erste ist der Standard) | Text vom Reasoning-Modell |
+|---|---|---|---|
+| Sicherheit | jeder statische Befund mit Kategorie `security`, `correctness`, `reliability` oder ohne Kategorie (`S-0001`) und jeder Abhängigkeitsbefund (`D-0001`), ohne Duplikate | REAL, FALSE_POSITIVE, NOISE | je Eintrag; Zusammenfassung, Grenzen des Laufs |
+| Codequalität | Gruppe aus Werkzeug, Regel und Bereich (`L-001`): Lint-Befunde und statische Befunde mit anderer Kategorie | REAL, FALSE_POSITIVE, NOISE | je Gruppe; Zusammenfassung, Arten der Formatter-Änderungen, auffällige Ausschlüsse |
+| Testqualität | Gruppe fehlgeschlagener Tests (`T-001`) | PROJECT, ENVIRONMENT | je Eintrag; Zusammenfassung, Bewertung von Testläufen, Abdeckung und Mutation Testing |
+| | schwach getestete Datei (`F-0001`) | CRITICAL, NON_CRITICAL | |
+| | überlebender Mutant (`M-0001`) | TEST_GAP, LOW_VALUE, POSSIBLY_EQUIVALENT | |
+
+# Teil 1: Aufbereitung durch das Tool {#sec-aufbereitung}
+
+## Festlegung
+
+**Zuordnung der Befunde aus Schritt 3 (seit 17.11.2026).** Entscheidend ist die Einstufung durch das Werkzeug selbst, das Feld `category` in `step3-static-analysis/findings.json`. OpenGrep übernimmt es aus den Metadaten der Regel, SonarQube aus der Software-Qualität des Impacts mit dem höchsten Schweregrad (Security Hotspots immer `security`), siehe `staticAnalysis.qmd`.
+- `security`: Bereich Sicherheit.
+- `correctness` (OpenGrep) und `reliability` (SonarQube): ebenfalls Bereich Sicherheit. Beide bezeichnen Bugs, und Bugs können Sicherheitsfolgen haben. Ein Befund wird so eher zu hoch bewertet als übersehen.
+- keine Kategorie: Bereich Sicherheit. Ohne Kategorie lässt sich nicht ausschließen, dass es ein Sicherheitsbefund ist; er bleibt deshalb dort, wo strenger geprüft wird.
+- jede andere Kategorie (`maintainability`, `best-practice`, `portability`, `performance`, …): Bereich Codequalität, gruppiert wie die Lint-Befunde.
+
+Groß- und Kleinschreibung der Kategorie spielt keine Rolle. Gründe und Zahlen in @sec-zweiter-lauf.
+
+**Kennungen.** Das Tool vergibt eigene Kennungen: `S-0001` für statische Befunde (gezählt über alle Befunde von `findings.json`, `S-0005` ist der fünfte; die Kennungen im Bereich Sicherheit haben deshalb Lücken), `D-0001` für Abhängigkeitsbefunde, `L-001` für Gruppen der Codequalität, `T-001` für Gruppen fehlgeschlagener Tests, `F-0001` für schwach getestete Dateien, `M-0001` für überlebende Mutanten.
+
+**Duplikate (Sicherheit).**
+- **Statische Befunde** gelten als Duplikate, wenn sie in derselben Datei an sich überschneidenden Zeilen liegen und dieselbe Regel oder eine gemeinsame CWE haben, auch über Werkzeuge hinweg (z. B. OpenGrep und SonarQube zur selben SQL-Injection).
+- **Abhängigkeitsbefunde** gelten als Duplikate bei gleichem Paket und Ökosystem, gleicher Advisory (Kennung oder Alias, z. B. eine GHSA und ihre CVE) und gleicher oder unbekannter Version.
+- **Behalten** wird je Gruppe der genaueste Befund: mit CWE und kleinstem Zeilenbereich; bei Abhängigkeiten der Befund von OSV-Scanner mit Version, CVSS und behobenen Versionen. Die anderen bekommen das Label DUPLICATE ohne Modell, mit Verweis auf den behaltenen Befund.
+
+**Gruppen (Codequalität).** Lint-Befunde aus Schritt 2 und statische Befunde mit anderer Kategorie aus Schritt 3 werden getrennt behandelt, aber gemeinsam nummeriert. Exakte Duplikate (gleiches Werkzeug, Regel, Datei, Zeile, Spalte, Meldung) werden entfernt. Die übrigen Befunde werden nach Werkzeug, Regel und Bereich gruppiert. Jede Gruppe enthält die Anzahl, die Zahl der Dateien, den höchsten Schweregrad, bis zu drei Meldungen und bis zu fünf Beispiele aus möglichst verschiedenen Dateien, davon drei mit Code. Lint-Gruppen zeigen zusätzlich, wie viele Befunde das Werkzeug selbst behoben hat, Gruppen aus Schritt 3 die Kategorie und Unterkategorie des Werkzeugs (z. B. `maintainability`, `code_smell`). Außerdem merkt sich das Tool alle Fundstellen jeder Gruppe (Datei und Zeile) für Bericht und Audit; das Modell sieht davon nur die Beispiele, damit die Anfragen klein bleiben.
+
+**Testqualität.**
+- Fehlgeschlagene Tests einer Suite mit derselben Ursache bilden eine Gruppe. Die Ursache ist die erste Zeile der Fehlermeldung ohne Zahlen, Pfade und Text in Anführungszeichen.
+- Schwach getestet ist eine Quelldatei, die kein Test geladen hat oder deren Zeilen zu weniger als der Hälfte abgedeckt sind (`weak_line_rate` in `[llm.input]`). Dazu kommen die Mutanten, die in ihr nicht erkannt wurden, und ihre Deklarationen (Klassen, Funktionen).
+- Überlebende Mutanten (`Survived`) mit Datei, Zeile, Mutator, Änderung und ursprünglicher Zeile.
+
+**Bereich einer Datei** (aus dem Pfad): `generated` (von Schritt 2 ausgelassen), `vendored` (`vendor/`, `third_party/`, `node_modules/`, …), `test` (Testordner und Testdateinamen wie in Schritt 5), `docs/examples`, `ci`, `scripts`, sonst `main`.
+
+**Was ein Modell sieht.** Die Fakten jedes Eintrags in knapper Form, z. B. Werkzeug, Regel, Schweregrad, CWE, Meldung (höchstens 300 Zeichen), Datei, Zeile, Bereich und bis zu zwei Zeilen Code um die Fundstelle (höchstens 400 Zeichen) aus dem Projekt im Stand nach Schritt 2. Nie die vollständigen Ergebnisdateien. Alle diese Grenzen stehen in `[llm.input]` (@tbl-einstellungen).
+
+## Begründung und Belege
+
+**Mengen.** Die Ergebnisdateien sind zu groß, um sie einem Modell unverarbeitet zu geben. Gemessen am 13.11.2026 an echten Läufen:
+
+| Projekt | Lint-Befunde | Patch | Statische Befunde | Abhängigkeitsbefunde |
+|---|---|---|---|---|
+| libgdx | 57.736 (19 MB) | 35 MB | 2.147 | 351 |
+| strapi | 8.143 | 62 MB | 1.577 | 506 |
+| ninakswebshopui | 208 | – | 462 | 6 |
+
+Die `summary.json` von Schritt 2 ist bis zu 1 MB groß.
+
+**Eigene Kennungen.** Die Befunde der Schritte haben keine einheitliche Kennung: Befunde aus Schritt 2 haben weder `id` noch `fingerprint`, Befunde aus Schritt 3 einen `fingerprint`, Befunde aus Schritt 4 die Kennung der Advisory mit Aliasen, die aber nicht je Befund eindeutig ist (stand 13.11.2026).
+
+**Duplikate durch das Tool.** Das Entscheidungsmodell gibt nur ein Label je Frage zurück und kann keinen Verweis auf einen anderen Befund liefern („Returns one JSON response; streaming, video, tools, and generation controls are not supported.“ [ollama-systemone]). Ein Label DUPLICATE mit `duplicate_of`, wie in den ersten Prompts des Nutzers vorgesehen, ist damit nicht möglich. Die Kriterien für Duplikate sind eine eigene Festlegung, nicht aus einer Quelle übernommen.
+
+**Gruppen statt Einzelbefunde bei Lint.** Lint-Befunde wiederholen sich: dieselbe Regel meldet oft Hunderte gleichartige Stellen. Eine Entscheidung je Gruppe hält die Zahl der Anfragen bei libgdx im Bereich von Gruppen statt von 57.736 Befunden (Entscheidung vom 13.11.2026). Für die statischen Befunde ohne Sicherheitsbezug gilt dasselbe: Im zweiten Lauf kamen 494 Befunde von einer einzigen OpenGrep-Regel (@sec-zweiter-lauf).
+
+**Kategorie der Werkzeuge statt Modell.** Ob ein statischer Befund im Bereich Sicherheit ausgewertet wird, entscheidet das Tool aus der Einstufung des Werkzeugs, nicht ein Modell. Das ist deterministisch und nachprüfbar, und das Entscheidungsmodell bekommt im Bereich Sicherheit nur Befunde, für die die Frage „echtes Sicherheitsproblem?“ sinnvoll ist (Entscheidung des Nutzers vom 17.11.2026).
+
+**Woher die Kategorie kommt.** Bei OpenGrep trägt der Autor einer Regel die Kategorie von Hand in die Metadaten ein. Das Schema der Regelsammlung `opengrep-rules` erlaubt `security`, `correctness`, `best-practice`, `maintainability`, `portability`, `performance` und `accessibility`. Nur für `security` verlangt es zusätzlich `cwe`, `likelihood`, `impact` und `subcategory` (`metadata-schema.yaml.schm`, [opengrep-rules]). Nach welchen Kriterien die Autoren die Kategorie wählen, steht nicht in der Sammlung.
+
+**Warum `correctness` und `reliability` als Sicherheit zählen.** Ausgewertet wurden die Regeln von `opengrep-rules` im Commit `f1d2b56` aus `code-analysis.toml`, nur in den Ordnern, die das Tool nutzt (C, C#, Java, JavaScript, TypeScript, Python, Rust), zeilenweise am 17.11.2026:
+- 792 Regeln: 639 `security`, 56 `correctness`, 45 `best-practice`, 25 `compatibility`, 16 `maintainability`, 5 `portability`, 5 `performance`, 1 `caching`.
+- Manche `correctness`-Regeln haben einen Sicherheitsbezug, aber keine CWE:
+  - `double_goto` in `c/lang/correctness/goto-fail.yaml` meldet ein doppeltes `goto` („The second goto statement will always be executed.“). Das ist das Muster des „goto fail“-Fehlers in Apples TLS-Prüfung.
+  - `tempfile-insecure` in `python/lang/correctness/tempfile/mktemp.yaml` meldet `tempfile.mktemp` und zitiert die Python-Dokumentation: „THIS FUNCTION IS UNSAFE AND SHOULD NOT BE USED.“
+- Nur 2 Regeln außerhalb von `security` haben eine CWE, beide für C#: `structured-logging` (`best-practice`, CWE-117) und `correctness-sslcertificatetrust-handshake-no-trust` (`correctness`, CWE-200).
+- Die 49 Regeln von `0xdea-semgrep-rules` (Commit `b994260`) sind alle `security`.
+- `semgrep-rules` wurde wegen seiner Lizenz nicht heruntergeladen und nicht ausgewertet.
+
+SonarQube kennt keine Kategorie `correctness`; sein Gegenstück für Bugs ist die Software-Qualität `reliability`. Im zweiten Lauf hatte sie einen Befund mit Sicherheitsbezug: `typescript:S8786`, „Simplify this regular expression to reduce its runtime, as it has super-linear performance due to backtracking“ (Gefahr eines ReDoS). Der Nutzer entschied am 17.11.2026, `correctness` als Sicherheit zu zählen („eher zu hoch bewertet als übersehen“), und auf den Hinweis auf SonarQube auch `reliability`.
+
+## Grenzen
+
+- Zwei verschiedene Probleme in derselben Zeile mit gemeinsamer CWE werden zu einem Eintrag zusammengeführt. Duplikate mit verschiedener CWE und verschiedener Regel werden nicht erkannt.
+- Ein Label gilt für die ganze Gruppe. Einzelne echte Befunde in einer Gruppe, die als NOISE gilt, gehen im Bericht unter (sie bleiben in den Rohdaten von Schritt 2 bzw. 3).
+- Die Zuordnung ist nur so gut wie die Kategorie der Werkzeuge. Eine Regel mit Sicherheitsbezug, die ihr Autor als `best-practice` oder `maintainability` eingestuft hat (z. B. `structured-logging` mit CWE-117), wird in der Codequalität ausgewertet, mit dem Prompt und den Labels der Codequalität. Bei SonarQube zählt nur der Impact mit dem höchsten Schweregrad; ein zusätzlicher, niedrigerer Sicherheits-Impact geht verloren, wenn der höchste `maintainability` ist, weil Schritt 3 nur eine Kategorie speichert.
+- Mit `correctness` und `reliability` kommen auch Bugs ohne Sicherheitsbezug in den Bereich Sicherheit, z. B. im zweiten Lauf sechsmal „Prefer `Number.parseInt` over `parseInt`“ (SonarQube `typescript:S7773`, `reliability`). Sie kosten Anfragen und sollten dort als NOISE gelabelt werden. Bei Projekten mit vielen SonarQube-Befunden zur Zuverlässigkeit (z. B. Java) kann das den Bereich Sicherheit wieder deutlich vergrößern; gemessen ist das noch nicht.
+- Lint-Befunde und statische Befunde zur selben Stelle (z. B. ESLint und SonarQube) werden nicht als Duplikate erkannt.
+- Der Bereich einer Datei ist eine Heuristik über Pfade und Dateinamen.
+
+# Teil 2: Entscheidungen {#sec-entscheidung}
+
+## Festlegung
+
+- **Schnittstelle:** `POST /v1/systemone`. Jede Anfrage enthält einen gemeinsamen Zustand (`state`: Regeln des Bereichs und kurze Fakten zum Lauf) und je Eintrag eine Frage vom Typ `choice` mit den Labels als Optionen (`criteria`). Die Texte stehen in den Entscheidungs-Prompts (`scheduler/src/scheduler/evaluation/prompts/*_decision.md`).
+- **Ergebnis je Eintrag:** Label, Wahrscheinlichkeit jedes Labels und `confidence`.
+- **Größe einer Anfrage:** höchstens `max_questions = 8` Fragen und `max_input_kib = 20` KiB Text, gerechnet als gemeinsamer Zustand einmal je Frage plus die Fragen. Unabhängig davon bleibt der gesendete Text unter 60 KiB.
+- **Fehler:** Eine gescheiterte Anfrage mit mehreren Fragen wird halbiert und erneut gesendet. Eine einzelne Frage wird `retries = 2` Mal wiederholt. Ein Eintrag ohne gültige Antwort bekommt das Standard-Label und wird zur Prüfung markiert.
+- **Prüfung:** Jede Entscheidung mit `confidence` unter `review_confidence = 0.6` wird markiert und erscheint in der Prüfliste des Audits.
+
+## Begründung und Belege
+
+**Die Schnittstelle.** Ollama beschreibt sie so: „Use System One to classify text, answer yes/no questions, or score text against a rubric.“ [ollama-decision]. Der Fragetyp `choice` hat „2–26 named options with descriptions“ und liefert „The most likely option and each option's probability“ [ollama-decision]. Das Modell selbst „returns a calibrated probability for every answer in a single forward pass. It doesn’t generate text.“ [pplx-decider-flash]
+
+**Folgen für die Prompts.** Weil das Modell keinen Text erzeugt, können die Entscheidungs-Prompts kein JSON wie `{"decisions": […]}` verlangen. Ihre Regeln werden zum gemeinsamen Zustand, die Beschreibung jedes Labels zu seinem `criteria`-Text.
+
+**Grenzen einer Anfrage.**
+- „Local requests' text and schema, excluding images, must fit within 64 KiB, and the whole request within 32 MiB, including base64 and JSON. The complete input must fit the loaded context window. […] Input is never truncated.“ [ollama-systemone]
+- Eine Anfrage hat 1 bis 64 Fragen (`minProperties: 1`, `maxProperties: 64` im OpenAPI-Schema [ollama-systemone]; „1 to 64 named questions“ [pplx-decider-flash]).
+- Die Fragen sind unabhängig: „Named questions about the shared state. Answers are not passed to later questions.“ [ollama-systemone]
+
+**Warum nur 8 Fragen und 20 KiB.**
+- Ollama zählt den gemeinsamen Zustand je Frage erneut: „Shared context is counted again when the model scores questions separately.“ (Feld `usage.input_tokens` [ollama-systemone]).
+- Der Speicherbedarf einer Anfrage wächst deshalb vermutlich mit der Zahl der Fragen. Das ist nicht gemessen, passt aber zu den Beobachtungen vom 13.11.2026 (@sec-beobachtungen).
+- Perplexity nennt für das Modell eine etwas bessere Bewertung mit einer Frage je Anfrage: „Perplexity’s evaluation puts it at 58.88 overall on the Decision Index 0.3 (60.05 with one question per request)“ [pplx-decider-flash]. Mehrere Fragen je Anfrage kosten also nach Herstellerangabe etwas Genauigkeit und sparen Anfragen (@sec-offen).
+
+**Was `confidence` bedeutet.** „For `choice` and `score`, `confidence` measures how strongly the model favors one answer over the others, from 0 to 1. A higher value does not guarantee the answer is correct.“ [ollama-decision]. Ebenso auf der Modellseite: „It isn’t the chance that the answer is right.“ [pplx-decider-flash]. Die Markierung unter 0,6 ist deshalb ein Hinweis für die manuelle Prüfung, kein Maß für die Richtigkeit. Auch Entscheidungen mit hoher `confidence` können falsch sein. Der Schwellenwert 0,6 ist eine eigene Festlegung.
+
+**Halbieren bei Fehlern.** Antworten mit HTTP 400 und 413 bedeuten eine zu große oder ungültige Anfrage („Local text and schema exceed 64 KiB“ für 413 [ollama-systemone]). Eine kleinere Anfrage kann dann gelingen, eine gleiche nicht. HTTP 500 steht für „Model loading, rendering, or scoring failed.“ [ollama-systemone]
+
+## Beobachtungen vom 13.11.2026 {#sec-beobachtungen}
+
+Diese Beobachtungen stammen aus der Entwicklung, nicht aus einer systematischen Messung (Mac mit 32 GB Arbeitsspeicher, Ollama 0.40.16):
+
+- **Probeaufruf:** zwei Befunde in 4 s. Ein Platzhalter-Geheimnis in einer Test-Fixture wurde NOISE (0,90), eine SQL-Injection REAL (0,99).
+- **Speicher:**
+  - Anfragen mit bis zu 32 Fragen und etwa 30 KB verbrauchten den Arbeitsspeicher; macOS meldete Speichermangel, und Ollama stürzte ab. Schon die erste Anfrage mit 32 Fragen beendete den Runner.
+  - Eine Anfrage mit 5 bis 6 Lint-Fragen (etwa 20 KiB) senkte den freien Speicher innerhalb etwa einer Sekunde von 85 % auf 6 %.
+  - Anfragen mit 8 Fragen dauerten etwa 2 s.
+  - Die Gewichte des Modells sind nur etwa 5 GB groß; der Bedarf wächst offenbar mit der Eingabe je Anfrage. Die Ursache ist nicht geprüft.
+
+## Grenzen
+
+- Die Labels stammen von einem Modell mit 4,5 Mrd. Parametern. Es begründet seine Entscheidungen nicht.
+- Die Labels einer Anfrage werden mit denselben Regeln, aber unabhängig voneinander entschieden. Ein Vergleich zwischen Befunden findet nicht statt.
+
+# Teil 3: Berichte {#sec-berichte}
+
+## Festlegung
+
+**Struktur durch das Tool.**
+- **Sicherheit (seit 18.11.2026):**
+  - **Einzelne Einträge** (`E-001`) bekommen nur REAL-Befunde mit Schweregrad `critical`, `high` oder `error` (`security_single_severity = "high"` in `[llm.input]`). Jeder hat alle zusammengeführten Kennungen in `source_ids`, die Werkzeuge, Regeln, CWE/CVE/anderen Kennungen, Ort oder Paket mit behobenen Versionen, den Schweregrad wie von den Werkzeugen gemeldet, Label und `confidence`.
+  - **Gruppen:** Alle anderen Befunde werden gruppiert: statische Befunde nach Werkzeug, Regel und Label, Abhängigkeitsbefunde nach Paket und Label. Eine Gruppe mit nur einem Befund wird wie ein einzelner Eintrag behandelt. Eine Gruppe enthält Anzahl, Dateien, Schweregrade, Bereiche, alle Fundstellen (`locations`) und jeden Befund mit seiner eigenen Entscheidung (`findings`). Bei Abhängigkeiten kommen installierte und behobene Versionen hinzu.
+  - **Was das Modell sieht:** je Gruppe bis zu 5 Beispiele, davon 3 mit Code, und bis zu 3 Meldungen; es schreibt einen Text für die ganze Gruppe.
+  - **Reihenfolge:** REAL nach Schweregrad und Größe, dann FALSE_POSITIVE, dann NOISE.
+  - **Statistik:** zählt weiter je Befund (Labels, REAL nach Schweregrad, niedrige `confidence`), dazu die Zahl der Einträge und Gruppen und, wie viele Befunde aus Schritt 3 in die Codequalität gingen. Jede Eingangskennung steht in genau einem Eintrag.
+  - **Bis 17.11.2026** gab es einen Eintrag je Befund.
+- **Codequalität:** ein Eintrag je Gruppe (`G-001`) mit Werkzeug, Regel, bei Befunden aus Schritt 3 der Kategorie des Werkzeugs, und allen Fundstellen nach Datei mit ihren Zeilen; die Befunde aus Schritt 2 und Schritt 3 getrennt gezählt; dazu die Änderungen der Formatter aus `changes.patch` (Werkzeuge, die Dateien geändert haben, Dateien, hinzugefügte und entfernte Zeilen, der erste Hunk wörtlich als Beispiel mit höchstens 10 Zeilen) und die ausgeschlossenen Dateien nach Grund.
+- **Testqualität:** ein Eintrag je Gruppe fehlgeschlagener Tests, schwach getesteter Datei und überlebendem Mutanten; dazu Testläufe, Abdeckung und Mutation Testing aus Schritt 5.
+
+**Texte durch das Reasoning-Modell** über `POST /api/chat` mit JSON-Schema (`format`), `think` und den Optionen aus `[llm.report]` oder der Tabelle des Bereichs (in `code-analysis.toml` am 17.11.2026: `think true`, `temperature 0.6`, `top_p 0.95`, `top_k 20`, `seed 42`, `num_ctx 16384`, `num_predict 6144`, `min_p` nicht gesetzt; am 18.11.2026 `temperature 0`, sonst gleich):
+- **je Eintrag:** ein Titel; bei Labels, die Handeln verlangen (REAL, PROJECT, CRITICAL, TEST_GAP), eine Beschreibung und eine Empfehlung, sonst eine kurze Begründung; ein Prüfhinweis, wenn das Modell eine Entscheidung bezweifelt. In Stapeln von höchstens `entries_per_request = 10` Einträgen, die in das Kontextfenster passen.
+- **je Bereich:** Zusammenfassung und Grenzen des Laufs; bei Codequalität die Arten der Formatter-Änderungen und auffällige Ausschlüsse; bei Testqualität eine Bewertung der Testläufe, der Abdeckung und des Mutation Testing.
+
+**Prüfung der Antworten.** Jede Antwort muss gültiges JSON sein, jeden angefragten Eintrag genau einmal enthalten und die Texte, die sein Label verlangt. Eine ungültige Antwort wird halbiert und erneut angefragt; ein einzelner Eintrag wird mit anderem Seed (`seed + 1`, `seed + 2`) erneut angefragt, `retries` Mal. Was danach fehlt, bleibt leer und wird gezählt (`texts_missing`). Der Bereich gilt dann als `partial`.
+
+**Prompts.** `security_report.md`, `lint_report.md` und `test_report.md` mit den Abschnitten `## System`, `## Entries` und `## Summary`. Sie übernehmen aus den ersten Prompts des Nutzers die Regeln „The decisions are final“, die Regel zu nicht vertrauenswürdigen Projektdaten und den Platzhalter für die Berichtssprache. Die Anweisungen zum Zählen, Gruppieren und Zusammenführen sind entfallen, weil das Tool sie übernimmt. Am 18.11.2026 kam in `## Entries` von `security_report.md` ein Satz zu Gruppen hinzu, vom Nutzer freigegeben: „An entry with `count` greater than 1 is a group: all findings of one rule (static analysis) or one package (dependencies) with the same label. `samples` shows some of its locations, `files` and `severities` describe the whole group. Write the texts for the group as a whole, not for one sample.“ Enthält eine Gruppe Befunde mit niedriger `confidence`, setzt das Tool `low_confidence: true` und nennt ihre Zahl (`low_confidence_findings`). So gilt der bestehende Satz zu `low_confidence` im System-Prompt auch für Gruppen.
+
+## Begründung und Belege
+
+**JSON-Schema.** „Structured outputs let you enforce a JSON schema on model responses so you can reliably extract structured data, describe images, or keep every reply consistent.“ und „Provide a JSON schema to the `format` field.“ [ollama-structured]. Im Feld `format` von `/api/chat`: „Format to return a response in. Can be `json` or a JSON schema“ [ollama-chat]. Die Dokumentation empfiehlt außerdem: „It is ideal to also pass the JSON schema as a string in the prompt to ground the model's response.“ [ollama-structured]. Das Tool beschreibt die Felder im Prompt in Worten, gibt das Schema aber nicht als Text mit (@sec-offen).
+
+**Thinking.** „Thinking-capable models emit a `thinking` field that separates their reasoning trace from the final answer.“ und „The reasoning output and answer use separate fields. Chat returns `message.thinking` and `message.content`.“ [ollama-thinking]. Das Tool liest die Antwort aus `message.content` und speichert `message.thinking` mit jeder Anfrage. Zu den Werten von `think`: „`true`: request thinking output.“ und „A string: select a supported level from `thinking.values`. Use the exact value from `/api/show`.“ [ollama-thinking]. Für qwen3.8 nennt `/api/show` die Werte `false`, `low`, `medium` und `xhigh` mit Standard `medium` (@tbl-modelle). Welche Stufe `true` wählt, steht nicht in der Dokumentation.
+
+Für `gpt-oss:20b` zeigt es der Quellcode von Ollama 0.40.16:
+
+- **Ollama übersetzt `true` in `medium`:** `ThinkValue.String()` gibt für `true` „medium“ zurück: `return "medium" // Default level when just true` (`types/model/thinking.go`, Zeile 128) [ollama-src-thinking].
+- **Die Stufe geht ins Template:** Hat ein Modell keinen eigenen Renderer, setzt `renderPrompt` diese Stufe in sein Template ein: `thinkLevel = think.String()` (`server/prompt.go`, Zeile 150) [ollama-src-prompt]. Die Konfiguration von `gpt-oss:20b` in der Ollama-Registry nennt keinen Renderer.
+- **Das Template schreibt sie in die Systemnachricht:** Das Template von `gpt-oss:20b` (Tag-Digest `f38aa0c53da5`, derselbe wie in `summary.json` des zweiten und dritten Laufs) schreibt `Reasoning: {{ .ThinkLevel }}` in die Systemnachricht, sonst `Reasoning: medium` [gpt-oss-template].
+
+Bei `gpt-oss:20b` bedeutet `think = true` also „medium“, den Standard des Modells. Für qwen3.8 ist das nicht nachverfolgt. Seit dem 17.11.2026 nimmt `think` in `code-analysis.toml` auch eine Stufe (@sec-einstellungen).
+
+**Optionen.** Aus dem Schema von `/api/chat` [ollama-chat]:
+- `seed`: „Random seed used for reproducible outputs“. Eine Wiederholung mit gleichem Seed brächte deshalb voraussichtlich dieselbe ungültige Antwort; das Tool ändert den Seed bei einer Wiederholung.
+- `num_ctx`: „Context length size (number of tokens)“; `num_predict`: „Maximum number of tokens to generate“.
+- `keep_alive`: „Model keep-alive duration (for example `5m` or `0` to unload immediately)“.
+
+**Kontextfenster.**
+- Ohne Angabe nutzt Ollama ein kleines Fenster: „By default, Ollama uses a context window size of 4096 tokens.“ [ollama-faq]. Das Tool setzt `num_ctx` deshalb ausdrücklich.
+- Das Modell könnte 262.144 Tokens (@tbl-modelle), aber: „Setting a larger context length will increase the amount of memory required to run a model.“ [ollama-context]. 16.384 Tokens sind ein Kompromiss für einen Mac mit 32 GB und eine eigene Festlegung.
+- Wie viele Einträge in eine Anfrage passen, schätzt das Tool mit 2,5 Zeichen je Token auf `num_ctx − num_predict` (`chars_per_token` in `[llm.report]`). Diese Schätzung ist eine eigene, vorsichtige Annahme und nicht gemessen (@sec-offen).
+
+**Sampling-Parameter.** Qwen schreibt in der Modellkarte: „We recommend using the following sets of sampling parameters for generation:“, darunter „Thinking Mode: `temperature=1.0`, `top_p=0.95`, `top_k=20`, `min_p=0.0`, `presence_penalty=0.0`, `repetition_penalty=1.0`“ [qwen3.8-card]. Dieselben Werte setzt Ollama als Voreinstellung des Modells (@tbl-modelle). `top_p` und `top_k` in `code-analysis.toml` entsprechen dem. **`temperature = 0.6` weicht davon ab** und ist durch keine der gelesenen Quellen belegt (@sec-offen).
+
+**Texte für alle Einträge.** Auch Einträge mit FALSE_POSITIVE und NOISE bekommen eine kurze Begründung. So sahen es die ersten Prompts des Nutzers vor („FALSE_POSITIVE and NOISE entries: give one short sentence explaining why“). Seit dem 18.11.2026 gilt die Begründung im Bereich Sicherheit für eine ganze Gruppe statt für jeden Befund.
+
+**Gruppen im Bereich Sicherheit (18.11.2026).** Bei libgdx hätte das Reasoning-Modell 2.527 Texte schreiben müssen, davon 1.797 Begründungen für NOISE und FALSE_POSITIVE. Mit etwa 11,7 min je Anfrage wären das mehr als zwei Tage gewesen (@sec-vierter-lauf).
+- **Was eine Einzelbegründung beiträgt:** Das Label vergibt das Entscheidungsmodell mit Wahrscheinlichkeiten. Die Begründung des Reasoning-Modells erklärt im Nachhinein ein Label, das es nicht selbst vergeben hat. Ein zusätzlicher Beleg für die Entscheidung ist sie nicht.
+- **Was gleich bleibt:** Jeder Befund behält seine eigene Entscheidung und Fundstelle, im Bericht und im Audit.
+- **Was wegfällt:** Für die meisten Befunde schreibt das Modell keinen eigenen Text mehr. Einen eigenen Text behalten nur die REAL-Befunde mit hohem Schweregrad.
+- **Variante:** Mit Einzeltexten für alle Befunde mit hohem Schweregrad, unabhängig vom Label, wären es bei libgdx 449 statt 160 Einträge gewesen, davon 304 Einzelbegründungen für NOISE und FALSE_POSITIVE. Der Nutzer wählte „nur REAL“ (@sec-entscheidungen).
+
+## Grenzen
+
+- Die Texte schreibt ein Sprachmodell. Die Regel, nur mit Fakten aus der Eingabe zu begründen, steht im Prompt, kann aber vom Tool nicht geprüft werden. Geprüft wird nur, ob die Texte vorhanden sind.
+- Bei großen Projekten sind es viele Anfragen, jede mit Thinking. Im zweiten Lauf brauchten 63 Anfragen für 614 Sicherheitseinträge 66 min (@sec-zweiter-lauf). Bei libgdx waren es auch nach der Aufteilung nach Kategorie 2.527 Sicherheitseinträge (@sec-vierter-lauf). Mit den Gruppen sind es dort 160 Einträge. Die Codequalität bleibt mit 359 Gruppen der größte Posten. Bei strapi (1.577 statische Befunde) ist die Dauer noch nicht gemessen.
+- In einer Gruppe steht ein Text für alle Befunde. Weicht ein einzelner Befund vom Rest ab, z. B. ein echter Befund in einer Gruppe mit vielen ähnlichen Stellen, geht das im Text unter. Sein Label vergibt aber weiterhin das Entscheidungsmodell je Befund, und die Prüfliste nennt, wie viele Befunde der Gruppe eine niedrige `confidence` haben.
+- Das Modell sieht von einer Gruppe nur die Beispiele. Bei 489 Befunden einer Regel sind das 5 Stellen, 3 davon mit Code.
+
+# Teil 4: Audit {#sec-audit}
+
+## Festlegung
+
+Das Tool schreibt `audit.md` und `audit.json` in den Ordner des Laufs, allein aus `run.json`, den `summary.json` der Schritte 2 bis 6 und den Berichten von Schritt 6, ohne Modell. Die Texte des Reasoning-Modells werden unverändert übernommen.
+
+`audit.md` hat sieben Abschnitte:
+
+1. **Überblick:** Projekt, Commit, Datum, Sprachen, Modelle, Status der Schritte 2 bis 6.
+2. **Kennzahlen:** REAL-Sicherheitsbefunde nach Schweregrad und die Zahl der statischen Befunde, die in die Codequalität gingen; REAL-Gruppen der Codequalität mit der Zahl der Befunde aus der statischen Analyse; Testergebnisse, Abdeckung, Mutations-Score, Zahl der Entscheidungen zur Prüfung.
+3. **Sicherheit:** Zusammenfassung, REAL-Einträge mit der Zahl ihrer Befunde, Ort und Empfehlung, herausgefilterte mit Begründung. Seit dem 18.11.2026 steht unter den REAL- und den herausgefilterten Einträgen je Gruppe eine aufklappbare Liste aller Befunde: Dateien mit ihren Zeilen, bei Paketen die Advisories mit installierter und behobener Version. Die Überschriften zählen Befunde, nicht Einträge.
+4. **Codequalität:** Zusammenfassung, REAL-Gruppen (bei Befunden aus Schritt 3 mit der Kategorie hinter der Regel) mit ihren Fundstellen: in der Tabelle die erste Fundstelle und die Zahl der weiteren, darunter je Gruppe eine aufklappbare Liste aller Dateien mit ihren Zeilen (seit 17.11.2026, auf Wunsch des Nutzers: Vorher nannte das Audit nur, was gefunden wurde, nicht wo); herausgefilterte Gruppen mit ihrer ersten Fundstelle; Formatter-Änderungen mit Beispiel, ausgeschlossene Dateien.
+5. **Testqualität:** Zusammenfassung, Testläufe, Abdeckung, Mutation Testing, fehlgeschlagene Tests mit Ursache im Projekt, kritische Dateien mit wenig Abdeckung, Testlücken.
+6. **Zu prüfen:** Entscheidungen mit niedriger `confidence` und Einträge mit Prüfhinweis. Bei einer Gruppe im Bereich Sicherheit steht, wie viele ihrer Befunde eine niedrige `confidence` haben (z. B. „2 / 2 low confidence“). Die Kennzahl „Entscheidungen mit niedriger Konfidenz“ zählt Befunde, nicht Gruppen.
+7. **Methode und Grenzen:** Werkzeuge und Versionen je Bereich, Modelle mit Einstellungen, der Hinweis, dass die Labels von einem Sprachmodell stammen und falsch sein können. Nach `--resume` auch, aus welcher Auswertung die übernommenen Entscheidungen stammen.
+
+Die Überschriften sind deutsch, wenn `report_language` Deutsch ist, sonst englisch. Das Audit lässt sich aus den Berichten neu schreiben: `python -m scheduler.evaluation.audit <Ordner des Laufs>`.
+
+## Begründung
+
+- Das Audit enthält keine neuen Aussagen eines Modells. Zahlen und Tabellen sind aus den Berichten berechnet und damit reproduzierbar. Dass ein Python-Skript das Audit aus den Berichten erstellt, hat der Nutzer am 13.11.2026 festgelegt (@sec-entscheidungen).
+- `audit.json` enthält dasselbe als Daten, mit den vollständigen Berichten, für die weitere Auswertung in der Thesis.
+
+## Grenzen
+
+- Die Schweregrade werden übernommen, wie die Werkzeuge sie melden. Statische Befunde nutzen die Stufen `error`, `warning` und `note` (wie in Schritt 2), Abhängigkeitsbefunde die Stufen `critical` bis `low`. Für die Sortierung gelten `error` und `high` als gleich hoch. Das Tool bewertet nicht neu, so wie es die ersten Prompts des Nutzers verlangten („Do not re-rate.“).
+
+# Bedrohungsmodell {#sec-bedrohungsmodell}
+
+::: {.callout-note}
+Die Quellen in diesem Abschnitt sind **Vorschläge**. Sie stehen in `Quellenvorschlaege.md` (Abschnitt G, Recherche vom 18.11.2026), noch nicht in `references.bib`, und sind nicht gelesen. Sie belegen hier nichts. Sie zeigen nur, wo sich die Begriffe nachlesen ließen.
+:::
+
+## Was ein Bedrohungsmodell ist
+
+Ein Bedrohungsmodell hält schriftlich fest, wer eine Software angreifen könnte, über welche Eingaben und was dabei auf dem Spiel steht. Das Threat Modeling Manifesto definiert Threat Modeling als „analyzing representations of a system to highlight concerns about security and privacy characteristics“ und ordnet es um vier Fragen, deren erste „What are we working on?“ ist [Vorschlag: Braiterman et al., Threat Modeling Manifesto; Shostack 2024, Four-Question Framework]. Die gängigen Methoden beschreiben das System mit Vertrauensgrenzen und Datenflüssen [Vorschlag: OWASP Threat Modeling Cheat Sheet; Shostack 2014].
+
+Für die Triage im Tool reicht ein kleiner Teil davon, die Antworten auf drei Fragen:
+
+1. Was ist das für Software, und wie wird sie eingesetzt? (Bibliothek, Web-Server, App, CLI-Tool …)
+2. Wo kommen nicht vertrauenswürdige Daten herein? (die Vertrauensgrenzen)
+3. Was wird ausgeliefert, was nicht? (Tests, Build-Tools, Beispiele …)
+
+**Warum das Tool eines braucht.** Im vierten Lauf an libgdx entschied das Entscheidungsmodell 1.512 von 2.527 Sicherheitsbefunden mit niedriger `confidence`, fast immer als Patt zwischen REAL und NOISE (@sec-vierter-lauf).
+- **Was fehlt:** Bei vielen dieser Befunde fehlt kein Security-Fachwissen, sondern die Antwort auf Frage 2. Beispiel: ein `btAssert` in Bullet prüft einen Index, den der aufrufende Spielcode übergibt. Ob das relevant ist, hängt davon ab, ob ein Angreifer den Index steuert.
+- **Lücke im Prompt:** Bei den Abhängigkeiten nennt der Entscheidungs-Prompt den Scope `tooling` nicht (Frage 3).
+
+Ein Bedrohungsmodell macht diese Antworten für das Modell und für Menschen, die Befunde prüfen, sichtbar.
+
+## Festlegung (18.11.2026) {#sec-bedrohungsmodell-festlegung}
+
+- **Wann:** nach Schritt 1, vor Schritt 2; bei `--evaluate` vor Schritt 6.
+- **Wo:**
+  - Eine im Projekt committete `.code-analysis/threat-model.md` gilt als bestätigt und hat Vorrang, z. B. für CI.
+  - Sonst `OUTPUT_DIR/<Projekt>/threat-model.md` mit `threat-model.json`: Status, Zeitpunkt und SHA-256 der Bestätigung, Antworten, gelesene Dokumentation, Modell.
+  - Im Projekt selbst legt das Tool nichts an, weil Schritt 1 ein sauberes Git-Repo verlangt.
+- **Selbst schreiben (seit 18.11.2026 ausdrücklich in der README):** Das Bedrohungsmodell ist eine Markdown-Datei mit festen Überschriften. Der Nutzer kann sie jederzeit selbst schreiben und ablegen:
+  - im Projekt als `.code-analysis/threat-model.md`, committet; sie wird ohne Rückfrage genutzt, auch in CI,
+  - im Ergebnisordner als `OUTPUT_DIR/<Projekt>/threat-model.md`; das Tool fragt beim nächsten Lauf einmal nach der Bestätigung.
+
+  Eine Datei, die nur Überschriften enthält, zählt nicht.
+- **Erstellen, wenn keines bestätigt ist:** Das legt `create` in `[llm.threat_model]` von `code-analysis.toml` fest (seit 18.11.2026):
+  - `create = "generate"` (Standard):
+    - Der Nutzer beantwortet die drei Fragen im Terminal.
+    - Das Reasoning-Modell aus `[llm.report]` schreibt daraus einen Entwurf. Es nutzt dazu die Fakten aus Schritt 1 (Sprachen, Paketmanager, Ordner der obersten Ebene mit Bereich) und `README*`, `SECURITY*` und `docs/` des Projekts (Prompt `threat_model.md`, JSON-Schema, feste Überschriften). Danach wird es entladen.
+    - Der Nutzer liest den Entwurf, korrigiert ihn im Editor und bestätigt mit `c`. Mit `r` gibt er neue Antworten und erhält einen neuen Entwurf, mit `a` bricht er ab.
+  - `create = "manual"`:
+    - Das Tool schreibt eine Vorlage mit den Überschriften. Die drei Fragen stehen als HTML-Kommentare darin, die die Modelle nicht sehen.
+    - Der Nutzer schreibt das Bedrohungsmodell und bestätigt mit `c` oder bricht mit `a` ab. Ein Modell ist nicht beteiligt.
+- **Geändert:** Ein Text, der nach der Bestätigung geändert wurde, muss erneut bestätigt werden.
+- **Ohne Terminal:** Abbruch mit Exitcode 10 und Hinweis.
+- **Im Lauf:**
+  - Jeder Lauf kopiert das verwendete Bedrohungsmodell in seinen Ordner.
+  - Nur der Bereich Sicherheit nutzt es, in den Entscheidungen (`security_decision.md`, Regel 6) und in den Berichten (`security_report.md`), gekürzt auf `context_chars` (Standard 2.500 Zeichen).
+  - `summary.json` und das Audit nennen Quelle, Bestätigung und Hash. Das Audit enthält den Text aufklappbar.
+  - Ändert sich das Bedrohungsmodell, labelt `--resume` den Bereich Sicherheit neu.
+- **Prompts:** Der Prompt `threat_model.md`, Regel 6 in `security_decision.md` und der Absatz in `security_report.md` sind Entwürfe von Claude. Sie sind dort als solche markiert, der Nutzer prüft sie vor dem ersten echten Lauf.
+
+## Begründung
+
+- **Entwurf durch ein Modell, Bestätigung durch den Nutzer:**
+  - Die Antworten auf die drei Fragen kennt der Nutzer besser als jedes Modell.
+  - Die Formulierung als konkrete Liste, mit Modulen, Ordnern und Dateiformaten aus der Dokumentation, kann ein Modell vorbereiten.
+  - Einen halbseitigen Entwurf zu prüfen braucht kein Security-Fachwissen.
+  - Arbeiten zu LLM-erzeugten Bedrohungsmodellen berichten brauchbare, aber nicht durchgehend richtige Ergebnisse [Vorschlag: Elsharef et al. 2024; Munshi et al. 2025; AbdulGhaffar & Matrawy 2025]. Das spricht gegen eine ungeprüfte Übernahme.
+- **Warum nicht ungeprüft:** Entwirft dieselbe Pipeline das Bedrohungsmodell und entscheidet danach damit, setzen sich Fehler fort. Man könnte dann nicht mehr unterscheiden, ob eine falsche Entscheidung vom Bedrohungsmodell oder vom Entscheidungsmodell kommt.
+- **Mehr Kontext für das Entscheidungsmodell:** Die Ausschnitte aus 5 Zeilen Code reichten bei libgdx für viele Regeln nicht aus (@sec-vierter-lauf). Dass fehlender oder ungenauer Kontext LLMs bei der Bewertung von SAST-Warnungen in die Irre führt, beschreibt [Vorschlag: Chen et al. 2024, LLM4FPM]. Eine Arbeit, die ausdrücklich ein Bedrohungsmodell als Kontext für die LLM-Triage nutzt, wurde bei der Recherche nicht gefunden.
+- **Gleich für alle Modelle:** Im Modellvergleich bleibt das bestätigte Bedrohungsmodell fest. Sonst würden zwei Dinge gleichzeitig verglichen.
+
+## Grenzen
+
+- **Abhängig vom Nutzer:** Das Bedrohungsmodell ist nur so gut wie die Antworten und die Prüfung durch den Nutzer. Ein falsch bestätigtes Bedrohungsmodell verschiebt die Entscheidungen systematisch.
+- **Mehr Anfragen bei langem Text:** Das Entscheidungsmodell liest das Bedrohungsmodell einmal je Frage. Bei libgdx brachten bis etwa 1.200 Zeichen keine zusätzlichen Anfragen. Mit 2.500 Zeichen waren es 843 statt 632 Entscheidungsanfragen (`max_input_kib 20`, gemessen ohne Modell am 18.11.2026).
+- **Kein Beleg für die Wirkung:** Ob die Patts zwischen REAL und NOISE zurückgehen, ist noch nicht gemessen (@sec-offen, Punkt 11).
+- **Committete Projektdatei:** Eine im Projekt committete Datei wird ohne Rückfrage verwendet. Bei `--evaluate` (ohne Schritt 1) gilt das auch für eine nicht committete Datei.
+
+# Modelle und Speicher {#sec-speicher}
+
+## Festlegung
+
+- **Nie beide Modelle gleichzeitig:** Vor den Entscheidungen wird ein noch geladenes Reasoning-Modell entladen. Nach den Entscheidungen wird das Entscheidungsmodell entladen, und die Berichte beginnen erst, wenn es nicht mehr geladen ist (Prüfung über `/api/ps`). Am Ende wird das Reasoning-Modell entladen.
+- **Entladen:** `POST /api/generate` mit `keep_alive: 0`, wie `ollama stop`.
+- **Abbruch:** Nach 3 gescheiterten Anfragen in Folge (Ollama nicht erreichbar oder ein Serverfehler) bricht Schritt 6 ab, statt weitere Anfragen zu senden. Abgelehnte Anfragen (HTTP 4xx) zählen nicht. Was bis dahin entschieden und geschrieben wurde, bleibt erhalten.
+
+## Begründung und Belege
+
+- **Ollama hält mehrere Modelle, wenn der Speicher reicht:** „If your system has sufficient available memory (system memory when using CPU inference, or VRAM for GPU inference) then multiple models can be loaded at the same time.“ und `OLLAMA_MAX_LOADED_MODELS`: „The default is 3 \* the number of GPUs or 3 for CPU inference.“ [ollama-faq]. Ollama verhindert also nicht, dass beide Modelle (zusammen etwa 24 GB laut Ollama-Bibliothek, @tbl-modelle) gleichzeitig geladen sind. Das Tool entlädt deshalb selbst.
+- **Entladen laut Dokumentation:** „If you want to immediately unload a model from memory, use the `ollama stop` command“ und für die API „To unload the model and free up memory use:“ mit `curl http://localhost:11434/api/generate -d '{"model": "llama3.2", "keep_alive": 0}'` [ollama-faq].
+- **Standard-Haltezeit:** „By default models are kept in memory for 5 minutes before being unloaded.“ [ollama-faq]. In `code-analysis.toml` ist `keep_alive = "10m"` gesetzt, damit ein Modell zwischen den Anfragen geladen bleibt; nach seinem Abschnitt entlädt das Tool es sofort.
+- **Abbruch:** Am 13.11.2026 liefen nach einem Absturz des Runners weitere Anfragen, die den Rechner zusätzlich belasteten (@sec-beobachtungen). HTTP 500 steht für „Model loading, rendering, or scoring failed.“ [ollama-systemone]; bei einem abgestürzten oder nicht erreichbaren Server würden weitere Anfragen genauso scheitern.
+
+# Kandidaten für den Modellvergleich {#sec-kandidaten}
+
+Stand der Ollama-Bibliothek am 17.11.2026 [ollama-search-decision] [ollama-search-thinking]. Größe, Kontext und Lizenz stammen von den Modellseiten. Genauigkeitswerte sind Angaben der Herausgeber, keine eigenen Messungen. „–“ heißt: auf der Seite nicht geprüft.
+
+## Rahmenbedingungen
+
+- **Rechner:** Entwickler-Laptop mit 32 GB gemeinsamem Speicher. Neben dem Modell brauchen macOS, die Colima-VM (8 GiB) und der Kontext des Modells Speicher. Für die Modelldatei bleiben realistisch höchstens 18 bis 20 GB. Weil die beiden Modelle nie gleichzeitig geladen sind (@sec-speicher), gilt die Grenze für jedes Modell einzeln.
+- **Nur lokal:** Cloud-Varianten (`:cloud`) scheiden aus, weil Code und Befunde den Rechner nicht verlassen sollen.
+- **Entscheidungsmodelle** brauchen die Fähigkeit `decision` (Schnittstelle `/v1/systemone`). MLX-Builds funktionieren dafür (@sec-erster-lauf). Das Kontextfenster muss die Anfrage fassen: „The complete input must fit the loaded context window.“ [ollama-systemone]. Modelle mit 4.096 Tokens Kontext gehen nur mit deutlich kleineren Anfragen (`max_input_kib`).
+- **Reasoning-Modelle** brauchen Structured Output (`format`). Mit dem MLX-Build von qwen3.8 kam HTTP 501 (@sec-erster-lauf), mit `nemotron-3.5-lightning:30b` (`nvfp4`, MLX) ebenso (@sec-vierter-lauf), daher GGUF-Builds wählen. Am Format `nvfp4` oder an vielen einzelnen Tensor-Dateien im Manifest ist ein MLX-Modell zu erkennen; GGUF-Modelle haben eine Modelldatei und eine Quantisierung wie `Q4_K_M`. Tags ohne Quantisierung im Namen können auf dem Mac den MLX-Build laden, wenn es beide gibt. Ob `format` funktioniert, zeigt ein einzelner kleiner Aufruf vor dem eigentlichen Lauf.
+- **Speicher beim Entscheiden:** Schon das 4,5B-Modell brauchte bei vielen Fragen je Anfrage sehr viel Speicher (@sec-beobachtungen). Bei den 27B-Entscheidungsmodellen mit `max_questions` 1 bis 2 beginnen und den Speicher beobachten.
+
+## Entscheidungsmodelle
+
+| Modell | Herausgeber, Basis | Größe | Kontext | Lizenz | Angaben des Herausgebers | Quelle |
+|---|---|---|---|---|---|---|
+| `pplx-decider-flash:4b` (bisher) | Perplexity, Qwen3.5-4B | 5,6 GB | 256K | Apache 2.0 | Decision Index 0.3: 58,88 (60,05 mit einer Frage je Anfrage) | [pplx-decider-flash] |
+| `pplx-decider:27b` | Perplexity, Qwen3.8-27B | 17 GB | 256K | Apache 2.0 | Decision Index 0.3: 68,09 | [pplx-decider], [pplx-decider-flash] |
+| `clef:27b` | Cloudflare | 18–20 GB | 64K laut Herausgeber | Apache 2.0 | „Clef tops the Decision Index, Cloudflare’s leaderboard of decision models“ | [clef] |
+| `clef-flash:9b` | Cloudflare | 11–12 GB | 64K laut Herausgeber | Apache 2.0 | „Clef Flash had the lowest measured latency of any decision model in Cloudflare’s Decision Index runs“ | [clef-flash] |
+| `nimble:9b` | Bespoke Labs | 9,3 GB | 256K | Apache 2.0 | „Nimble answers in under 100ms on a MacBook Pro with an M5 Max.“ | [nimble] |
+| `nimble-v3:9b` | Bespoke Labs, Qwen3.5-9B | 9,3 GB | 32K | CC BY-NC 4.0 (nicht kommerziell) | Decision Index 0.2.1: 56,88 | [nimble-v3] |
+| `autotrust-jev:9b` | AutoTrust | 11 GB | 256K | Apache 2.0 | – | [autotrust-jev] |
+| `kev:9b-q4_K_M` | Jared Palmer, Qwen3.5 | 5,6 GB | 256K | Apache 2.0 | – | [kev] |
+| `d1:3b` | Liquid AI, LFM2.5-VL-3B | 3,7 GB | 32K | LFM Open License v1.0 | Decision Index 0.2.1: 48,57; mehrsprachig, u. a. Deutsch | [d1] |
+| `tev1:4b` | Together AI | 4,4 GB | 256K | – (MIT nur für Datensatz-Builder und Trainingsskripte) | „Together AI hasn’t fully tested prompt injection, languages other than English, calibration, or how it handles inputs unlike its training data.“ | [tev1] |
+
+: Entscheidungsmodelle bis etwa 20 GB (Ollama-Bibliothek, 17.11.2026) {#tbl-kandidaten-entscheidung}
+
+- **Werte des Decision Index nicht direkt vergleichen:** Sie stammen aus verschiedenen Versionen (0.2.1, 0.3, 0.3.2) und von verschiedenen Herausgebern. Teils gelten sie für die Original-Checkpoints, wie d3 ausdrücklich schreibt: „They are not scores for the Ollama quantized packages.“ [d3]
+- **Nicht oder nur eingeschränkt geeignet:** `d3` (die Ollama-Pakete nutzen laut Seite „a 4,096-token context“ [d3]; `d3:27b` mit 29 GB zu groß), `strands-decider:2b` („4K context“ [strands-decider]), `autotrust-jev:35b` (26 GB), `clef:cloud` (Cloud).
+- **Hinweis zu `tev1`:** Die Befunde enthalten nicht vertrauenswürdige Texte aus dem Projekt; dass Prompt Injection nicht vollständig getestet ist, spricht gegen dieses Modell.
+
+## Reasoning-Modelle
+
+| Modell | Herausgeber | Größe | Architektur | Kontext | Lizenz | Hinweise | Quelle |
+|---|---|---|---|---|---|---|---|
+| `gpt-oss:20b` | OpenAI | 14 GB | MoE, „21B parameters with 3.6B active parameters“, MoE-Gewichte in MXFP4 („4.25 bits per parameter“) | 128K | Apache 2.0 | Denkaufwand low, medium, high; die Seite nennt „structured outputs“; im zweiten und dritten Lauf verwendet | [gpt-oss], [gpt-oss-card] |
+| `nemotron-3.5-lightning:30b` | NVIDIA | 19 GB | MoE, 30B gesamt, 3B aktiv | 1M | – | Thinking; laut Seite auch für Sicherheitsarbeit („classifying incidents […] preparing structured findings for analysts“); knapp an der Speichergrenze; installiert als `nvfp4` (MLX): HTTP 501 im vierten Lauf | [nemotron-3.5-lightning] |
+| `gemma4:26b` | Google | 16 GB | MoE, 4B aktiv | 128K | – | installiert als `nvfp4` (MLX): voraussichtlich kein Structured Output, nicht getestet | [gemma4] |
+| `qwen3.8:27b-q4_K_M` | Qwen | 18 GB | dicht | 256K | Apache 2.0 | Thinking-Stufen low, medium, xhigh | [qwen3.8-tags] |
+| `muse-glimmer:30b` | Meta | 18 GB | 30B | 128K | Apache 2.0 | „Controllable Effort“; über 100 Sprachen | [muse-glimmer] |
+| `gemma4:31b` | Google | 19 GB | dicht | 128K | – | | [gemma4] |
+| `mistral-small3.2:24b` | Mistral | 15 GB | dicht, ohne Thinking | – | – | ohne Denkweg weniger Ausgabe-Tokens, rechnet aber je Token mit allen Parametern | [mistral-small3.2] |
+| `magistral:24b` | Mistral | 14 GB | dicht, Reasoning | – | – | | [magistral] |
+| `phi4-reasoning:14b` | Microsoft | 11 GB | dicht, Reasoning: „14B parameters, dense decoder-only Transformer model“ | 32K | MIT | kleinste Datei der Liste, rechnet aber je Token mit allen 14B Parametern, etwa viermal so vielen wie `gpt-oss:20b`; daher eher langsamer als dieses (geschlossen, nicht gemessen) | [phi4-reasoning], [phi4-reasoning-card] |
+
+: Reasoning-Modelle bis etwa 20 GB (Ollama-Bibliothek, 17.11.2026) {#tbl-kandidaten-bericht}
+
+- **Zu groß für 32 GB:** `qwen3.6:35b` und `ornith-1.5:35b` (je 23 GB), `gpt-oss:120b` (65 GB), `qwen3.8-flash-next` (105 GB).
+- **Tempo:**
+  - **Aktive Parameter zählen, nicht die Dateigröße:** Mixture-of-Experts-Modelle (MoE) rechnen je Token nur mit einem Teil ihrer Parameter. `gpt-oss:20b` hat „21B parameters with 3.6B active parameters“ [gpt-oss-card]. Laut ihren Seiten sind es bei `nemotron-3.5-lightning:30b` 3B und bei `gemma4:26b` 4B aktive Parameter. Die dichten Modelle der Tabelle rechnen je Token mit allen Parametern, 14B bis 31B. Ein kleineres dichtes Modell ist deshalb nicht automatisch schneller als `gpt-oss:20b`.
+  - **Die Zeit geht in die Ausgabe:** Im dritten Lauf gingen 92 % der Zeit für die Texte auf das Erzeugen der Ausgabe. Knapp 60 % der erzeugten Zeichen waren Denkweg (@sec-dritter-lauf).
+  - **`think` bei gpt-oss:** Zu `think: false` schreibt Ollama: „Models that cannot disable thinking use their lowest supported level instead.“ [ollama-thinking]. Für `gpt-oss` nennt die Dokumentation die Stufen `low`, `medium` und `high` mit Standard `medium` [ollama-thinking]. Mit `think = false` liefe `gpt-oss` also auf `low`. Mit `think = true` läuft es auf `medium` (@sec-berichte).
+
+## Vorschlag für den Vergleich
+
+- **Getrennt vergleichen:** Entscheidungsmodelle untereinander bei festem Reasoning-Modell, Reasoning-Modelle untereinander bei festem Entscheidungsmodell. Immer derselbe Ordner eines Laufs und dieselben Einstellungen; Name und Digest jedes Modells stehen in `summary.json`.
+- **Mögliche Auswahl:**
+  - Entscheidung: `pplx-decider-flash:4b` (bisher), `clef-flash:9b`, `nimble:9b`, `pplx-decider:27b` (Speicher beachten).
+  - Bericht: `gpt-oss:20b`, `nemotron-3.5-lightning:30b`, `qwen3.8:27b-q4_K_M`, eventuell `gemma4:26b`.
+- **Kennzahlen Entscheidung** (aus `summary.json` und `decisions.json`): Dauer, Anfragen, Input-Tokens, Verteilung der Labels, Anteil niedriger `confidence`, Standard-Labels; Übereinstimmung mit einer von Hand gelabelten Stichprobe, z. B. alle REAL-Befunde und eine Zufallsstichprobe der NOISE-Befunde; Übereinstimmung der Modelle untereinander.
+- **Kennzahlen Bericht** (aus `summary.json` und `requests/`): Dauer, Anfragen, `prompt_eval_count` und `eval_count`, ungültige Antworten, Halbierungen, fehlende Texte; Bewertung einer Stichprobe der Texte (Fakten richtig, Empfehlung umsetzbar, Sprache).
+- **Wechsel nur des Reasoning-Modells:** Seit dem 17.11.2026 übernimmt `--evaluate <Ordner> --resume` die vorhandenen Entscheidungen, wenn sich nichts geändert hat, was sie bestimmt (@sec-ergebnisse). Bei libgdx spart das 46 min Entscheidungen je Versuch. Ein Lauf nur mit Entscheidungen, für den Vergleich der Entscheidungsmodelle, fehlt noch (@sec-offen).
+
+# Entscheidungen vom 13.11., 17.11. und 18.11.2026 {#sec-entscheidungen}
+
+Am 13.11.2026 vom Nutzer festgelegt (Plan für Schritt 6):
+
+- **Eine Konfigurationsdatei:** `code-analysis.toml` im Repository ersetzt `config/opengrep.toml` und `config/tests.toml` und enthält die Einstellungen beider Modelle (`[llm]`, `[llm.decision]`, `[llm.report]`).
+- **Zwei Modelle:** ein Entscheidungsmodell (`pplx-decider-flash:latest`) und ein Reasoning-Modell, das zusammenfasst und die Berichte schreibt (`qwen3.8:latest`).
+- **Entscheidungen:**
+  - Das Tool erkennt Duplikate und vergibt Kennungen.
+  - Das Entscheidungsmodell labelt die übrigen Einträge: Sicherheit je Befund, Lint je Gruppe, Tests je fehlgeschlagenem Test, je schwach getesteter Datei und je überlebendem Mutanten.
+  - Niedrige `confidence` wird zur Prüfung markiert.
+- **Berichte:** Das Tool bildet Gruppen, Einträge, Statistiken und Beispiele. Das Reasoning-Modell schreibt nur die Texte, als strukturiertes JSON, in Stapeln, die in `num_ctx` passen. Die Berichte behalten die Struktur der Prompts des Nutzers.
+- **Audit:** Ein Python-Skript erstellt aus den Berichten das Audit, `audit.md` und `audit.json` im Ordner des Laufs.
+- **Berichtssprache:** standardmäßig Englisch, einstellbar.
+- **Wiederholung:** `--evaluate <Ordner des Laufs>` führt nur Schritt 6 auf einem früheren Lauf aus, um Prompts und Modelle zu erproben, ohne die Schritte 1 bis 5 zu wiederholen. Exitcode 9, wenn Schritt 6 unvollständig ist.
+
+Am 17.11.2026 nach dem zweiten Lauf vom Nutzer festgelegt (@sec-zweiter-lauf):
+
+- **Aufteilung der Befunde aus Schritt 3 nach der Kategorie des Werkzeugs:** `security`, `correctness` (OpenGrep) und `reliability` (SonarQube) in den Bereich Sicherheit, jede andere Kategorie in die Codequalität. Befunde ohne Kategorie bleiben zur Sicherheit im Bereich Sicherheit. Begründung für die Bugs: Sie können Sicherheitsbezug haben; lieber zu hoch bewertet als übersehen. SonarQube bleibt Teil von Schritt 3.
+- **Feinere Einstellungen** in `code-analysis.toml`, jede Zeile mit Kommentar: Stufen für `think` und `min_p`; Zeitlimit, Wiederholungen und `keep_alive` je Modell; optionale Einstellungen des Reasoning-Modells je Bereich; die bisher festen Grenzen der Aufbereitung in `[llm.input]` (@sec-einstellungen).
+
+Am 17.11.2026 abends nach dem Abbruch des vierten Laufs vom Nutzer gewünscht (@sec-vierter-lauf):
+
+- **Fortsetzen an der Abbruchstelle:** `--evaluate <Ordner des Laufs> --resume` übernimmt die Entscheidungen der früheren Auswertung und schreibt die Berichte neu, auch mit einem anderen Reasoning-Modell. Die Bedingungen stehen in @sec-ergebnisse.
+
+Am 18.11.2026 vom Nutzer festgelegt, nachdem der vierte Lauf mit `qwen3.8:27b-q4_K_M` über Nacht nicht fertig wurde:
+
+- **Gruppen im Bereich Sicherheit:** Befunde werden nach Regel (bei Abhängigkeiten nach Paket) und Label gruppiert. Nur REAL-Befunde mit `critical`, `high` oder `error` werden einzeln beschrieben. Zur Wahl stand auch „alle Befunde mit hohem Schweregrad einzeln, unabhängig vom Label“ (bei libgdx 449 statt 160 Einträge).
+- **Alle Fundstellen bleiben im Bericht:** Die Frage des Nutzers war, ob das Modell alle Fundstellen einer Regel bekommt. Das Modell sieht nur Beispiele, weil das Kontextfenster sonst nicht reicht. Bericht und Audit enthalten aber jede Fundstelle.
+- **Prompt:** Der Satz zu Gruppen in `security_report.md` (@sec-berichte) wurde vom Nutzer freigegeben und eingefügt.
+
+Am 18.11.2026 nach der Analyse der unsicheren Entscheidungen vom Nutzer festgelegt (@sec-bedrohungsmodell):
+
+- **Keine Handlabels an libgdx als Ground Truth:** Der Nutzer kann Security-Befunde nicht kompetent einschätzen. Die Genauigkeit wird, wie im Exposé (Ziel 4) geplant, an Projekten mit bekannten Sicherheitslücken gemessen, zunächst an bestehenden, später an eigenen Beispielen. Die Stichprobe aus libgdx bleibt liegen.
+- **Bedrohungsmodell:** Der Nutzer beantwortet drei Fragen, das Tool erstellt daraus und aus der Dokumentation des Projekts einen Entwurf, der Nutzer prüft und bestätigt ihn. Ein bestätigtes Bedrohungsmodell wird wiederverwendet. Gespeichert wird es im Ergebnisordner, eine im Projekt committete Datei hat Vorrang. Genutzt wird es nur im Bereich Sicherheit. Ohne Terminal bricht das Tool ab. Die Prompt-Teile entwirft Claude, der Nutzer prüft sie.
+- **Selbst geschrieben oder erzeugt:** In `code-analysis.toml` lässt sich festlegen, ob ein fehlendes Bedrohungsmodell vom Tool entworfen (`create = "generate"`) oder vom Nutzer selbst geschrieben wird (`create = "manual"`, Vorlage ohne Modell). Die README nennt ausdrücklich, dass das Bedrohungsmodell auch ohne Tool geschrieben und abgelegt werden kann. Das Ablaufdiagramm (`docs/flowchart_en.html`, `docs/toolflow_en.png`) zeigt den Schritt zwischen Schritt 1 und 2.
+
+# Ergebnisse im Ausgabeordner {#sec-ergebnisse}
+
+Schritt 6 schreibt in den Ordner des Laufs `OUTPUT_DIR/<Projekt>/<Datum_Zeit>Z/`. Ein früheres Ergebnis von Schritt 6 in diesem Ordner wird vorher entfernt, außer mit `--resume`.
+
+**Fortsetzen mit `--resume` (seit 17.11.2026).** `bin/code-analysis --evaluate <Ordner des Laufs> --resume` übernimmt die Entscheidungen eines Bereichs nur, wenn sich nichts geändert hat, was sie bestimmt:
+- das Entscheidungsmodell (Name und Digest),
+- `max_questions`, `max_input_kib` und `review_confidence` aus `[llm.decision]`,
+- die Einträge: `decisions.json` enthält genau die Einträge und Duplikate, die das Tool jetzt aufbereitet,
+- die Frage an jeden Eintrag: gemeinsamer Zustand und Frage wie in den gespeicherten Anfragen (`requests/*-decision.json`). Damit fallen auch geänderte Entscheidungs-Prompts, geänderte Fakten der Einträge und geänderte Werte in `[llm.input]` auf.
+
+Sonst nennt die Konsole den Grund, und der Bereich wird neu gelabelt.
+- **Was erhalten bleibt:** Die Anfragen der übernommenen Entscheidungen bleiben in `requests/`, neue Anfragen werden danach nummeriert.
+- **Was ersetzt wird:** die Berichte, ihre Anfragen, `summary.json` und das Audit.
+- **Wo es vermerkt ist:** `summary.json` (`decisions_reused_from`) und der Abschnitt „Methode und Grenzen“ des Audits nennen die Auswertung, aus der die Entscheidungen stammen.
+- **Ältere Läufe:** Läufe ohne `decisions_info.json` werden aus ihrer `summary.json` ergänzt, bevor diese ersetzt wird. So bleiben die Entscheidungen auch übernehmbar, wenn die Fortsetzung selbst abbricht, z. B. weil Ollama nicht erreichbar ist.
+
+| Datei | Inhalt |
+|---|---|
+| `audit.md`, `audit.json` | das Audit (@sec-audit) |
+| `threat-model.md`, `threat-model.json` | seit 18.11.2026: das Bedrohungsmodell, das der Lauf verwendet hat (@sec-bedrohungsmodell): Text, Quelle, Bestätigung, SHA-256 |
+| `step6-llm-evaluation/summary.json` | Modelle (Name, Digest), Bedrohungsmodell (Quelle, Bestätigung, SHA-256, Zeichen, gekürzt), Einstellungen aus `[llm]`, je Bereich: Status (`ok`, `partial`, `failed`, `skipped`), Einträge, Duplikate, Anfragen, Dauer, Tokens, Labels, Entscheidungen mit niedriger `confidence`, Hinweise |
+| `step6-llm-evaluation/<Bereich>/items.json` | die aufbereiteten Einträge: Kennungen, Fakten, Duplikate, Codeausschnitte; bei Gruppen der Codequalität alle Fundstellen |
+| `step6-llm-evaluation/<Bereich>/decisions.json` | je Eintrag: Label, Wahrscheinlichkeiten, `confidence`, Prüfmarkierung, wer entschieden hat (Modell, Standard, Tool); Duplikate mit `duplicate_of` |
+| `step6-llm-evaluation/<Bereich>/decisions_info.json` | seit 17.11.2026: die Auswertung, aus der die Entscheidungen stammen: Start, Entscheidungsmodell (Name, Digest), Einstellungen, Statistik; für `--resume` |
+| `step6-llm-evaluation/<Bereich>/report.json` | der Bericht des Bereichs: Struktur vom Tool, Texte vom Reasoning-Modell; im Bereich Sicherheit bei Gruppen jeder Befund mit eigener Entscheidung (`findings`) |
+| `step6-llm-evaluation/<Bereich>/requests/` | jede Anfrage und Antwort (`NNN-decision.json`, `NNN-report.json`), mit dem Denkweg des Reasoning-Modells |
+
+Schritt 6 ist unvollständig (Exitcode 9), wenn `[llm]` ungültig ist, Ollama nicht erreichbar ist oder ein Modell fehlt, oder wenn ein Bereich keine Labels oder nicht alle Texte bekommen hat.
+
+# Testergebnisse {#sec-tests}
+
+**Unit-Tests** (18.11.2026, alle bestanden): 136 Tests mit einem nachgebildeten Ollama (`scheduler/tests/evaluation_data.py`), das `/v1/systemone`, `/api/chat`, `/api/tags`, `/api/ps` und das Entladen nachbildet. Ein kleiner Lauf mit Ergebnissen der Schritte 2 bis 5 dient als Testdaten: Duplikate über Werkzeuge hinweg (OpenGrep und SonarQube; OSV-Scanner und npm audit), Lint-Befunde mit exaktem Duplikat, fehlgeschlagene Tests, Abdeckung und Mutanten. Für die Aufteilung nach Kategorie kommen statische Befunde der Kategorien `maintainability`, `Best-Practice`, `reliability` und `Correctness` sowie einer ohne Kategorie hinzu (`add_quality_findings`). Für die Gruppen im Bereich Sicherheit kommen vier Befunde einer Regel in `src/` und `tests/`, ein einzelner REAL-Befund mit `error` und drei Advisories eines Pakets hinzu (`add_security_groups`). Die Testdaten nehmen die Modellnamen aus `code-analysis.toml`, damit ein Wechsel des Modells die Tests nicht bricht.
+
+| Datei | Tests | Geprüft |
+|---|---|---|
+| `test_evaluation_items.py` | 47 | Konfiguration und Fehlermeldungen (auch unbekannte Schlüssel und Bereiche, verschobene Schlüssel, `think` als Stufe, `min_p`, Einstellungen je Bereich), Prompts, Bereiche von Dateien, Kennungen und Duplikate, Lint-Gruppen, Zuordnung nach Kategorie (`security`, `correctness`, `reliability`, ohne Kategorie, Großschreibung), Gruppen aus Schritt 3, Codequalität nur mit Schritt 3, Test-Einträge |
+| `test_evaluation_decide.py` | 8 | Grenzen je Anfrage, Fragen und Labels, `confidence` und Prüfmarkierung, Halbieren und Standard-Label, Abbruch nach 3 Fehlern in Folge, Zeitlimit, Wiederholungen und `keep_alive` des Entscheidungsmodells |
+| `test_evaluation_report.py` | 15 | jede Kennung in genau einem Eintrag, Zählung der verschobenen Befunde und Kategorie in den Gruppen, Fundstellen je Datei, Statistiken, Patch-Statistik und Beispiel, Prüfung der Texte, Stapel, Wiederholung mit neuem Seed, Halbieren, Kürzen der Fakten auf das Kontextfenster; seit 18.11.2026: Gruppen im Bereich Sicherheit (Einzeleinträge, Gruppen nach Regel bzw. Paket und Label, Gruppe aus einem Befund, alle Fundstellen und Entscheidungen erhalten, Beispiele mit und ohne Code), `security_single_severity` und seine Prüfung |
+| `test_evaluation_run.py` | 32 | ganzer Ablauf, Fundstellen der Codequalität im Audit (Englisch und Deutsch), Aufteilung nach Kategorie bis ins Audit, `think` je Bereich und Grenzen aus `[llm.input]` bis ins Audit, nie zwei Modelle gleichzeitig, Reihenfolge, übersprungene Bereiche, fehlendes Modell, Ollama nicht erreichbar, Ausfall während der Berichte, Audit auf Deutsch und Englisch; seit 17.11.2026 `--resume`: Übernahme nach gescheiterten Berichten, Ergänzung aus `summary.json`, neu labeln bei geänderten Einstellungen, geänderten Fragen oder anderem Modell-Digest, ohne frühere Auswertung, Übernahme nach gescheiterter Fortsetzung, übersprungene Bereiche; seit 18.11.2026 Gruppen der Sicherheit im Audit und in der Anfrage an das Modell; Bedrohungsmodell nur in den Prompts der Sicherheit, in `summary.json` und im Audit, Hinweis ohne Bedrohungsmodell, neu labeln nach geändertem Bedrohungsmodell |
+| `test_threat_model.py` (neu) | 16 | Projektdatei vor Ergebnisordner, bestätigtes Modell ohne Rückfrage, Abbruch ohne Terminal, nach der Bestätigung geändert, Fragen, Entwurf und Bestätigung (Anfrage an das Modell, Dokumentation, Entladen), neu erzeugen und abbrechen, vorhandener Entwurf, Ende der Eingabe, keine gültige Antwort des Modells, Warnung bei langem Text, Grenze für die Dokumentation, Bereiche der Ordner, Kopie im Lauf; `create = "manual"` mit Vorlage (leere Vorlage wird nicht bestätigt, kein Modell, kein „neu erzeugen“), leere Vorlage im Projekt zählt nicht, Prüfung von `create` |
+| `test_cli.py` | 18 | Exitcode 9, Vorrang früherer Schritte, `--evaluate` mit gültigen und ungültigen Ordnern, Hinweis auf fehlende Modelle; `--resume` nur mit `--evaluate`; Bedrohungsmodell vor Schritt 2 und Kopie in den Lauf, Exitcode 10, `--check-only` ohne Bedrohungsmodell, echte Prüfung ohne Terminal, `--evaluate` mit Bedrohungsmodell |
+
+## Erster Lauf mit den echten Modellen (17.11.2026) {#sec-erster-lauf}
+
+Projekt `ninakswebshopui`, Lauf `2026-11-17_170834Z`. Schritt 6 lief von 17:09:25 bis 17:23:54 UTC (14,5 min). Entscheidungsmodell `pplx-decider-flash:latest` (MLX), Reasoning-Modell `qwen3.8:latest` (MLX-Build, @tbl-modelle), Einstellungen wie in `code-analysis.toml` (`max_questions 8`, `max_input_kib 20`, `review_confidence 0.6`).
+
+| Bereich | Einträge | Duplikate | Anfragen | Dauer | Input-Tokens | Labels | Niedrige `confidence` |
+|---|---|---|---|---|---|---|---|
+| Sicherheit | 614 | 15 | 103 | 793 s | 297.819 | 606 NOISE, 8 REAL | 10 |
+| Codequalität | 21 Gruppen | – | 4 | 41 s | 13.158 | 21 REAL | 2 |
+| Testqualität | 0 (keine Tests im Projekt) | – | 0 | – | – | – | – |
+
+: Entscheidungen im ersten Lauf (`step6-llm-evaluation/summary.json`) {#tbl-erster-lauf}
+
+- **Entscheidungen:** keine gescheiterte Anfrage, kein Standard-Label; im Mittel etwa 7,7 s und 2.900 Input-Tokens je Anfrage im Bereich Sicherheit. Die Verteilung der Labels (606 von 614 Sicherheitsbefunden NOISE, alle 21 Lint-Gruppen REAL) ist noch nicht von Hand geprüft.
+- **Berichte:** Ollama beantwortete jede Anfrage an `/api/chat` sofort mit **HTTP 501: „structured output is unavailable“**. Nach drei Fehlern in Folge brach Schritt 6 ab, wie vorgesehen. Die Meldung des Tools verwies dabei fälschlich auf zu wenig Speicher (@sec-offen). Die Berichte enthalten die Struktur, aber keine Texte; das Audit wurde ohne Texte geschrieben.
+- **Ursache:** der MLX-Build von qwen3.8 (@tbl-modelle). Die Ollama-Dokumentation nennt diese Einschränkung nicht; sie ist aus der Fehlermeldung geschlossen. Das Entscheidungsmodell lief ebenfalls auf MLX, braucht aber kein Structured Output.
+
+## Zweiter Lauf und Aufteilung nach Kategorie (17.11.2026) {#sec-zweiter-lauf}
+
+Projekt `ninakswebshopui`, Lauf `2026-11-17_173733Z`. Reasoning-Modell `gpt-oss:20b`, Entscheidungsmodell `pplx-decider-flash:latest`, `max_questions 4`, sonst wie in `code-analysis.toml`. Die Schritte 2 bis 5 brauchten zusammen knapp 1 min (17:37:33 bis 17:38:30 UTC), Schritt 6 87 min (17:38:30 bis 19:05:31 UTC). Alle Bereiche `ok`, keine fehlenden Texte. Die Zahlen stammen aus `step6-llm-evaluation/summary.json`.
+
+| Bereich | Einträge | Entscheidungen: Anfragen, Dauer | Texte: Anfragen, Dauer | Texte: Prompt- / Ausgabe-Tokens |
+|---|---|---|---|---|
+| Sicherheit | 614 (16 Duplikate) | 154, 566 s | 63, **3.968 s** | 177.178 / 66.257 |
+| Codequalität | 21 Gruppen | 6, 29 s | 5, 627 s | 16.874 / 12.418 |
+| Testqualität | 0 | 0 | 1, 31 s | 848 / 724 |
+
+: Zweiter Lauf, vor der Aufteilung nach Kategorie {#tbl-zweiter-lauf}
+
+**Wo die Zeit hinging.** 66 der 87 min schrieb das Reasoning-Modell Texte für die 614 Sicherheitseinträge: für jeden einen Titel und, bei den 606 NOISE-Einträgen, eine Begründung. Eine Anfrage mit bis zu 10 Einträgen dauerte im Mittel 63 s, in der Codequalität 125 s.
+
+**Woher die Einträge im Bereich Sicherheit kamen** (Kategorie laut Werkzeug, Einträge nach dem Zusammenführen der Duplikate, ermittelt aus `items.json` und `decisions.json`):
+
+| Werkzeug | Kategorie | Einträge | Labels |
+|---|---|---|---|
+| OpenGrep | `portability`, davon 494 von der Regel `typescript.react.portability.i18next.i18next-key-format` | 498 | 498 NOISE |
+| SonarQube | `maintainability` | 74 | 74 NOISE |
+| SonarQube | `reliability` | 11 | 11 NOISE |
+| OpenGrep | `best-practice` | 11 | 10 NOISE, 1 REAL |
+| OpenGrep | `correctness` | 5 | 4 NOISE, 1 FALSE_POSITIVE |
+| OpenGrep | `security` | 6 | 4 NOISE, 2 REAL |
+| SonarQube | `security` | 6 | 5 NOISE, 1 REAL |
+| OSV-Scanner, npm audit | – | 3 | 3 REAL |
+
+: Einträge im Bereich Sicherheit nach Kategorie, zweiter Lauf {#tbl-kategorien}
+
+Nur 15 der 614 Einträge waren nach Einstufung ihres Werkzeugs Sicherheitsbefunde. Der Großteil kam nicht von SonarQube (91 Einträge), sondern von einer einzigen OpenGrep-Regel zur Portabilität. Die Frage des Nutzers war, ob SonarQube entfernt oder in die Codequalität verschoben werden soll. SonarQube zu entfernen hätte nur 91 Einträge gespart und 6 Sicherheitsbefunde gekostet, darunter einen REAL (`Web:S5725` in `index.html`).
+
+**Entscheidung des Nutzers (17.11.2026):** Befunde aus Schritt 3, die ihr Werkzeug als `security` einstuft, kommen in den Bereich Sicherheit, alle anderen in die Codequalität. Befunde ohne Kategorie bleiben zur Sicherheit im Bereich Sicherheit. Am selben Tag ergänzt: Auch `correctness` (OpenGrep) und `reliability` (SonarQube) zählen als Sicherheit, weil Bugs Sicherheitsfolgen haben können (@sec-aufbereitung).
+
+**Wirkung auf diesen Lauf.** Die neue Aufbereitung, auf die Ergebnisdateien des Laufs angewendet (nur Teil 1, ohne Modell):
+- **Sicherheit:** 31 Einträge statt 614: 12 `security`, 11 `reliability`, 5 `correctness` (aus 7 Befunden, 2 als Duplikate zusammengeführt), 3 Abhängigkeiten.
+- **Codequalität:** 52 Gruppen statt 21: 21 aus Schritt 2 und 31 aus den 594 übrigen Befunden aus Schritt 3. Die 494 Befunde der i18n-Regel sind eine einzige Gruppe.
+- **Dauer:** vorab nach den Zeiten je Anfrage aus @tbl-zweiter-lauf geschätzt: etwa 5 min für Sicherheit und 13–15 min für Codequalität, zusammen etwa 20 statt 87 min. Im dritten Lauf gemessen: 4,7 min, 14 min und zusammen 19 min (@sec-dritter-lauf).
+
+**Was sich dadurch auch ändert:** Der REAL-Befund der Kategorie `best-practice` (`typescript.react.best-practice.react-props-spreading`) wird künftig als Teil seiner Gruppe in der Codequalität bewertet, mit deren Prompt und Labels.
+
+## Dritter Lauf mit der Aufteilung nach Kategorie (17.11.2026) {#sec-dritter-lauf}
+
+Projekt `ninakswebshopui`, Lauf `2026-11-17_195751Z`. Modelle und Einstellungen wie im zweiten Lauf:
+
+- **Reasoning-Modell:** `gpt-oss:20b` (Digest `f38aa0c53da5`) mit `think = true`, also `medium` (@sec-berichte).
+- **Entscheidungsmodell:** `pplx-decider-flash:latest` mit `max_questions 4`.
+- **Format der Einstellungen:** noch das Format vor @sec-einstellungen, mit einem Zeitlimit für beide Modelle.
+
+Die Schritte 2 bis 5 brauchten zusammen 50 s (19:57:51 bis 19:58:41 UTC), Schritt 6 19 min (19:58:41 bis 20:18:05 UTC). Alle Bereiche liefen mit `ok`, ohne fehlende Texte und ohne ungültige Antworten.
+
+| Bereich | Einträge | Labels | Entscheidungen: Anfragen, Dauer | Texte: Anfragen, Dauer | Texte: Prompt- / Ausgabe-Tokens |
+|---|---|---|---|---|---|
+| Sicherheit | 31 (5 Duplikate) | 24 NOISE, 6 REAL, 1 FALSE_POSITIVE | 8, 26 s | 5, 255 s | 11.073 / 5.737 |
+| Codequalität | 52 Gruppen | 52 REAL | 13, 62 s | 7, 780 s | 26.679 / 13.354 |
+| Testqualität | 0 (keine Tests im Projekt) | – | 0 | 1, 41 s | 848 / 724 |
+
+: Dritter Lauf, nach der Aufteilung nach Kategorie (`step6-llm-evaluation/summary.json`) {#tbl-dritter-lauf}
+
+**Vergleich mit dem zweiten Lauf** (@tbl-zweiter-lauf):
+
+- **Schritt 6:** 19 statt 87 min. Die Schätzung aus @sec-zweiter-lauf (etwa 20 min) trifft zu.
+- **Sicherheit:** 31 statt 614 Einträge. Die Texte dauerten 255 statt 3.968 s, die Entscheidungen 26 statt 566 s.
+- **Codequalität:** 52 statt 21 Gruppen. Die Texte dauerten 780 statt 627 s. Die Codequalität ist jetzt mit 14 von 19 min der größte Posten.
+
+**Wo die Zeit für die Texte hingeht.** Die Werte stammen aus den gespeicherten Antworten in `requests/`: `prompt_eval_count`, `prompt_eval_duration`, `eval_count`, `eval_duration` und die Länge von `message.thinking` und `message.content`.
+
+| Bereich | Prompt: Tokens, Dauer | Ausgabe: Tokens, Dauer, Tokens/s | Anteil des Denkwegs an den erzeugten Zeichen |
+|---|---|---|---|
+| Sicherheit | 11.073, 18 s | 5.737, 233 s, 24,6 | 59 % (14.375 von 24.352) |
+| Codequalität | 26.679, 58 s | 13.354, 721 s, 18,5 | 57 % (33.374 von 58.556) |
+| Testqualität | 848, 2 s | 724, 39 s, 18,8 | 73 % (2.421 von 3.336) |
+
+: Prompt und Ausgabe des Reasoning-Modells im dritten Lauf (`requests/*-report.json`) {#tbl-dritter-lauf-tokens}
+
+- **Die Ausgabe bestimmt die Dauer:** Von 1.076 s für die Texte entfielen 993 s (92 %) auf das Erzeugen der Ausgabe und 78 s auf das Lesen der Prompts.
+- **Der Denkweg ist mehr als die Hälfte:** In Sicherheit und Codequalität waren 57 bis 59 % der erzeugten Zeichen Denkweg.
+- **Keine Gruppe herausgefiltert:** In der Codequalität bekamen alle 52 Gruppen REAL, eine davon mit niedriger `confidence`. Das gilt auch für die Gruppe der 494 Befunde der i18n-Regel. Sie war im zweiten Lauf mit dem Sicherheits-Prompt NOISE, weil sie kein Sicherheitsproblem ist. Schon im ersten Lauf waren alle 21 Lint-Gruppen REAL (@tbl-erster-lauf). Ob alle Gruppen wirklich REAL sind, ist nicht von Hand geprüft.
+
+**Folgerungen für die Wahl des Reasoning-Modells.** Der Nutzer fragte am 17.11.2026, ob für die Texte ein sehr kleines Modell reicht. Aus den Zahlen geschlossen, nicht gemessen:
+
+- **Ein sehr kleines Modell spart wenig Zeit:**
+  - Die Dauer hängt an der Zahl der erzeugten Tokens und an der Rechenarbeit je Token.
+  - Die Rechenarbeit je Token richtet sich nach den aktiven Parametern. Bei `gpt-oss:20b` sind es 3,6B [gpt-oss-card]. Ein dichtes Modell mit 3 bis 4B Parametern rechnet je Token etwa gleich viel.
+  - Spürbar schneller wären nur deutlich kleinere Modelle.
+- **Die Texte müssen stimmen:** Sie gehen unverändert ins Audit (@sec-audit). Das Reasoning-Modell schreibt:
+  - Empfehlungen zur Behebung,
+  - eine Zusammenfassung aus den Zahlen des Tools,
+  - Prüfhinweise, wenn es ein Label für falsch hält. Als zweite Meinung zum Entscheidungsmodell (4B) taugen sie nur, wenn das Reasoning-Modell stärker ist.
+- **Nächster Versuch:** eine niedrigere `think`-Stufe für gpt-oss. Zuerst nur für die Codequalität, mit `think = "low"` in `[llm.report.code_quality]`, auf denselben Ordner des Laufs (@sec-offen, Punkt 5). Ein kleines Modell lässt sich im Modellvergleich an denselben 52 Gruppen prüfen (@sec-kandidaten).
+
+## Vierter Lauf: libgdx (17. und 18.11.2026) {#sec-vierter-lauf}
+
+Projekt `libgdx` (Commit `2cab114`), Lauf `2026-11-17_210624Z`.
+- **Entscheidungsmodell:** `pplx-decider-flash:latest` (Digest `4b41cf615edc`) mit `max_questions 4`, `max_input_kib 20`, `review_confidence 0.6`.
+- **Reasoning-Modell:** zuerst `nemotron-3.5-lightning:30b` (Digest `29a422b3cf50`), danach `qwen3.8:27b-q4_K_M`.
+
+**Entscheidungen.** Schritt 6 lief von 21:19:05 bis 22:06:10 UTC. Die Zahlen stammen aus `summary.json` bzw. `decisions_info.json`:
+
+| Bereich | Einträge | Duplikate | Anfragen | Dauer | Input-Tokens | Labels | Niedrige `confidence` |
+|---|---|---|---|---|---|---|---|
+| Sicherheit | 2.527 | 112 | 632 | 2.036 s | 1.443.329 | 1.791 NOISE, 730 REAL, 6 FALSE_POSITIVE | 1.512 |
+| Codequalität | 359 Gruppen | – | 90 | 737 s | 290.097 | 348 REAL, 11 NOISE | 48 |
+| Testqualität | 0 | – | 0 | – | – | – | – |
+
+: Entscheidungen im vierten Lauf {#tbl-vierter-lauf}
+
+- **Keine Fehler:** keine gescheiterte Anfrage, kein Standard-Label.
+- **REAL nach Schweregrad (je Befund):** 8 `critical`, 7 `error`, 38 `high`, 11 `medium`, 583 `warning`, 5 `low`, 78 `note`.
+- **Niedrige `confidence`:** 1.512 der 2.527 Sicherheitsentscheidungen (60 %), darunter 544 der 730 REAL-Befunde. Das ist nicht von Hand geprüft (@sec-offen).
+
+**Berichte mit `nemotron-3.5-lightning:30b`.** Die Anfragen an `/api/chat` scheiterten wie im ersten Lauf mit **HTTP 501: „structured output is unavailable“**. Nach drei Fehlern in Folge brach Schritt 6 nach 36 s Berichtszeit ab. Die Fehlermeldung des Tools nannte wieder fälschlich den Speicher (@sec-offen, Punkt 2).
+
+**Ursache, aus folgenden Befunden geschlossen:**
+- **Format:** `ollama show` nennt für das Modell die Quantisierung `nvfp4`. Sein Manifest besteht aus 6.527 einzelnen Tensor-Dateien statt einer GGUF-Modelldatei. Daran ist zu erkennen, dass Ollama es auf MLX ausführt.
+- **Fehlende Bibliothek:** Im Homebrew-Paket von Ollama 0.40.16 fehlt `libollama_xgrammar.dylib` im Ordner `mlx_metal_v3`. Am 04.11.2026 (Version 0.40.13) meldete das Server-Log beim Start des MLX-Runners „Structured output is unavailable“ mit „xgrammar library not found“.
+- **Kein Log des Laufs:** Für den 17.11.2026 gibt es kein Log, weil Ollama in einem Terminal lief.
+- **Andere Modelle:** `gemma4:26b` ist ebenfalls `nvfp4`. `qwen3.8:27b-q4_K_M` und `gpt-oss:20b` sind GGUF.
+
+**Fortsetzung mit `--resume` und `qwen3.8:27b-q4_K_M`.** Sie lief am 17.11.2026 ab 22:25 UTC mit `think = true`, `temperature = 0`, `num_ctx 16384`, `num_predict 6144` und `entries_per_request 10`.
+- **Übernahme:** Die Entscheidungen wurden übernommen.
+- **Fortschritt:** Bis 07:25 UTC am 18.11. schrieb das Reasoning-Modell 46 Anfragen im Bereich Sicherheit. Die letzten drei kamen um 07:02, 07:13 und 07:25 UTC. Das sind im Mittel etwa 11,7 min je Anfrage mit bis zu 10 Einträgen, gut 1 min je Text.
+- **Hochrechnung:** etwa 253 Anfragen für die 2.527 Sicherheitseinträge und 36 für die Codequalität, also mehr als zwei Tage.
+- **Nicht fertig:** Am Morgen war der Lauf nicht fertig.
+- **Nicht gemessen:** Beim erneuten Start mit `--resume` um 07:32 UTC wurden die Report-Anfragen der Nacht ersetzt. Wie viel davon Denkweg war und ob Antworten an `num_predict` stießen, ist deshalb nicht gemessen.
+
+**Woher die Sicherheitseinträge kamen.** Ermittelt aus `items.json` und `decisions.json`, 18.11.2026:
+- **Gefiltert:** Die 1.797 NOISE- und FALSE_POSITIVE-Befunde verteilen sich auf 73 Gruppen aus Werkzeug, Regel und Label. Die größten sind:
+  - `rules.c.raptor-missing-return` (489 NOISE),
+  - `rules.c.raptor-typos` (413 NOISE),
+  - `rules.c.raptor-interesting-api-calls` (187 NOISE),
+  - `java.lang.correctness.hardcoded-conditional` (120 NOISE).
+- **REAL:** Die 730 REAL-Befunde verteilen sich auf 31 Regeln bzw. Abhängigkeiten. Die größten sind `rules.c.raptor-suspicious-assert` (298) und `rules.c.raptor-interesting-api-calls` (152).
+- **Gemischte Regeln:** Eine Regel kann in beiden Labels vorkommen und bildet dann zwei Gruppen.
+
+**Wirkung der Gruppen.** Auf die Ergebnisdateien dieses Laufs angewendet, ohne Modell, 18.11.2026:
+
+| Bereich | Einträge vorher | Einträge mit Gruppen | Anfragen für Texte |
+|---|---|---|---|
+| Sicherheit | 2.527 | 160: 53 REAL einzeln (`critical`, `high`, `error`), 30 Gruppen aus einem Befund, 77 Gruppen | 16 + 1 Zusammenfassung |
+| Codequalität | 359 Gruppen | 359 Gruppen (unverändert) | 36 + 1 Zusammenfassung |
+
+: Einträge und Anfragen mit Gruppen im Bereich Sicherheit, vierter Lauf {#tbl-vierter-lauf-gruppen}
+
+- **Alle Befunde erhalten:** Alle 2.639 Befunde, Duplikate eingeschlossen, stehen im Bericht.
+- **Entscheidungen weiter gültig:** Die Prüfung für `--resume` übernimmt die Entscheidungen weiterhin.
+- **Geschätzte Dauer:** Bei 11,7 min je Anfrage wären es etwa 55 Anfragen, also rund 10 Stunden. Das ist geschätzt, nicht gemessen.
+- **Größter Posten:** Danach ist die Codequalität am größten. Als Nächstes ist eine niedrigere `think`-Stufe zu prüfen (@sec-offen, Punkt 5).
+
+# Offene Punkte {#sec-offen}
+
+1. **Modellvergleich** (@sec-kandidaten): Reasoning-Modell mit funktionierendem Structured Output wählen, Entscheidungsmodelle vergleichen, Labels des ersten Laufs an einer Stichprobe von Hand prüfen (@tbl-erster-lauf).
+2. **HTTP 501 im Tool:** Das Tool behandelt eine 501-Antwort wie einen Ausfall von Ollama. Es versucht dreimal, mit Pausen, und meldet dann „Check that Ollama runs and has enough memory“. Richtig wäre ein sofortiger Abbruch mit der Ursache und dem Hinweis auf eine GGUF-Variante. Besser noch wäre eine Prüfung vor den Entscheidungen, ob das Reasoning-Modell Structured Output kann: Im vierten Lauf zeigte sich der Fehler erst nach 47 min Entscheidungen (@sec-vierter-lauf).
+3. **Entscheidungen wiederverwenden:** seit dem 17.11.2026 umgesetzt (`--resume`, @sec-ergebnisse). Offen ist eine Option nur für Entscheidungen, für den Vergleich der Entscheidungsmodelle. Auch fertige Berichte einzelner Bereiche übernimmt `--resume` noch nicht: Bricht ein Lauf in den Berichten der Codequalität ab, wird der Bericht der Sicherheit neu geschrieben.
+4. **`temperature = 0.6`:** Qwen empfiehlt im Thinking-Modus 1,0, und Ollama setzt 1 als Voreinstellung (@sec-berichte). Für 0,6 gibt es in den gelesenen Quellen keinen Beleg. Die Ollama-Dokumentation rät für Structured Output allgemein zu niedrigen Werten: „Lower the temperature (e.g., set it to `0`) for more deterministic completions.“ [ollama-structured]. Zu entscheiden, je nach gewähltem Modell.
+5. **Stufen für `think`:** seit dem 17.11.2026 einstellbar (@sec-einstellungen). Bei `gpt-oss:20b` bedeutet `true` „medium“, belegt im Quellcode von Ollama (@sec-berichte). Offen ist, ob eine niedrigere Stufe die Dauer der Berichte senkt, ohne die Texte zu verschlechtern. Zuerst zu testen: `think = "low"` für gpt-oss in `[llm.report.code_quality]`. Im dritten Lauf waren 57 bis 59 % der erzeugten Zeichen Denkweg (@tbl-dritter-lauf-tokens).
+6. **Zählt der Denkweg zu `num_predict`?** In den Quellen nicht belegt. Prüfen anhand der gespeicherten Anfragen des ersten Laufs (`eval_count`, `done_reason: "length"`).
+7. **Schätzung des Kontexts** (`chars_per_token`, 2,5 Zeichen je Token): prüfen mit `prompt_eval_count` der gespeicherten Anfragen und den Wert in `code-analysis.toml` anpassen.
+8. **Schema als Text im Prompt:** von Ollama empfohlen [ollama-structured], im Tool noch nicht umgesetzt.
+9. **Fragen je Anfrage:** 8 Fragen sparen Anfragen; nach Herstellerangabe ist eine Frage je Anfrage etwas genauer (60,05 statt 58,88). Abwägen nach dem ersten Lauf.
+10. **Dauer:** Für `ninakswebshopui` gemessen: 19 statt 87 min (@sec-dritter-lauf). Bei libgdx mit `qwen3.8:27b-q4_K_M` etwa 11,7 min je Anfrage (@sec-vierter-lauf). Die Gruppen im Bereich Sicherheit senken dort die Zahl der Einträge von 2.527 auf 160 (seit 18.11.2026). Die Dauer mit Gruppen ist noch nicht gemessen. Die Codequalität (359 Gruppen, 348 REAL) bleibt mit 36 Anfragen der größte Posten; als Nächstes eine niedrigere `think`-Stufe (Punkt 5) oder ein schnelleres Modell.
+11. **Niedrige `confidence` bei libgdx:** 1.512 von 2.527 Sicherheitsentscheidungen, darunter 544 der 730 REAL-Befunde (@sec-vierter-lauf). An einer Stichprobe von Hand prüfen, besonders die großen Gruppen (z. B. `rules.c.raptor-suspicious-assert`, 298 REAL).
+    - **Ursachen nach Regeln:** Die Unsicherheit liegt bei bestimmten Regeln. 84 % der unsicheren Entscheidungen stammen aus `0xdea-semgrep-rules`, und sechs Regeln daraus liefern 997 der 1.512 Fälle, jede zu 94–100 % unsicher: `raptor-typos`, `interesting-api-calls`, `signed-unsigned-conversion`, `mismatched-memory-management-cpp`, `integer-truncation`, `insecure-api-rand-srand`. Fast immer ist es ein Patt zwischen NOISE und REAL. `interesting-api-calls` beschreibt sich selbst als Startpunkt für eine manuelle Prüfung („candidate points. The auditor can backtrace from these candidate points …“).
+    - **Lücke im Prompt bei Abhängigkeiten:** Der Entscheidungs-Prompt definiert den Scope `tooling` nicht (199 Funde, 63 % unsicher).
+    - **Stichprobe (18.11.2026):** `Stichproben/libgdx_2026-11-17_210624Z/` in diesem Projekt.
+      - **Umfang:** 104 Funde aus 24 Schichten (Regelgruppe × Konfidenzbereich, dazu REAL `critical`/`high`/`error`, Abhängigkeiten und übrige Regeln), gezogen mit Seed 42 vom Skript `stichprobe_ziehen.py`.
+      - **Labeln:** Gelabelt wird blind in `stichprobe_security.xlsx`; die Entscheidungen des Modells stehen getrennt in `modell_entscheidungen.csv`. Die Labels entsprechen `security_decision.md`, dazu kommt UNKLAR für Fälle, die auch mit dem ganzen Code nicht entscheidbar sind.
+      - **Auswertung:** Die Schichten sind nicht proportional besetzt. Für Aussagen über alle Funde gelten die Gewichte im Blatt „Schichten“.
+    - **Stand 18.11.2026:** Die Stichprobe wird vorerst nicht gelabelt (@sec-entscheidungen). Stattdessen bekommt das Entscheidungsmodell ein bestätigtes Bedrohungsmodell (@sec-bedrohungsmodell). Offen: `--evaluate --resume` auf dem libgdx-Lauf mit Bedrohungsmodell wiederholen und vergleichen, wie viele Entscheidungen danach eine niedrige `confidence` haben.
+12. **Aufteilung prüfen:** an einem großen Projekt (z. B. libgdx) messen, wie viele SonarQube-Befunde mit `reliability` in den Bereich Sicherheit kommen, und an einer Stichprobe prüfen, ob unter den Befunden in der Codequalität sicherheitsrelevante sind. `semgrep-rules` ist noch nicht ausgewertet.
+13. **Literatur:** Ob Einträge aus `references.bib` die Aufteilung in Entscheiden und Formulieren oder das Filtern von False Positives durch Sprachmodelle stützen, ist noch nicht geprüft (Skill `rag-retrieval`).
+
+# Quellen (noch nicht in `references.bib`) {#sec-quellen}
+
+::: {.callout-important}
+Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in `references.bib`. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 17.11.2026.
+:::
+
+**Ollama-Dokumentation**
+
+- **[ollama-decision]** Ollama: *Decision* (Abschnitte „Choose a label“, „Question types“). <https://docs.ollama.com/capabilities/decision>
+- **[ollama-systemone]** Ollama API: *System One*, `POST /v1/systemone` (Beschreibung und OpenAPI-Schema). <https://docs.ollama.com/api/systemone>
+- **[ollama-chat]** Ollama API: *Chat*, `POST /api/chat` (OpenAPI-Schema: `format`, `think`, `keep_alive`, `ModelOptions`). <https://docs.ollama.com/api/chat>
+- **[ollama-structured]** Ollama: *Structured Outputs*. <https://docs.ollama.com/capabilities/structured-outputs>
+- **[ollama-thinking]** Ollama: *Thinking*. <https://docs.ollama.com/capabilities/thinking>
+- **[ollama-faq]** Ollama: *FAQ*, Abschnitte „How can I specify the context window size?“, „How do I keep a model loaded in memory or make it unload immediately?“, „How does Ollama handle concurrent requests?“. <https://docs.ollama.com/faq>
+- **[ollama-context]** Ollama: *Context length*. <https://docs.ollama.com/context-length>
+
+**Ollama-Quellcode und Template**
+
+- **[ollama-src-thinking]** Ollama: `types/model/thinking.go`, Version 0.40.16, Methode `ThinkValue.String()` (Zeilen 118–134). <https://github.com/ollama/ollama/blob/v0.40.16/types/model/thinking.go#L118-L134>
+- **[ollama-src-prompt]** Ollama: `server/prompt.go`, Version 0.40.16, Funktion `renderPrompt` (ab Zeile 135). <https://github.com/ollama/ollama/blob/v0.40.16/server/prompt.go#L135-L156>
+- **[gpt-oss-template]** Ollama-Bibliothek: Template von `gpt-oss:20b`, Blob `fa6710a93d78` (Tag-Digest `f38aa0c53da5`). <https://ollama.com/library/gpt-oss:20b/blobs/fa6710a93d78>
+- Primärquelle ohne Webseite: die Konfiguration von `gpt-oss:20b` in der Ollama-Registry (`registry.ollama.ai`, Manifest des Tags `20b`, Config-Blob `e103573196b6`), ohne Angabe eines Renderers.
+
+**Regelsammlungen**
+
+- **[opengrep-rules]** OpenGrep: *opengrep-rules*, Commit `f1d2b562b414783763fd02a6ed2736eaed622efa` (Dateien `metadata-schema.yaml.schm`, `c/lang/correctness/goto-fail.yaml`, `python/lang/correctness/tempfile/mktemp.yaml`, `csharp/lang/best-practice/structured-logging.yaml`, `csharp/lang/correctness/sslcertificatetrust/sslcertificatetrust-handshake-no-trust.yaml`). <https://github.com/opengrep/opengrep-rules/tree/f1d2b562b414783763fd02a6ed2736eaed622efa>
+- **[0xdea-semgrep-rules]** Marco Ivaldi: *semgrep-rules*, Commit `b9942606d3543e3145a95332e6543fb79a01af00`, Ordner `rules/c`. <https://github.com/0xdea/semgrep-rules/tree/b9942606d3543e3145a95332e6543fb79a01af00>
+
+**Modelle**
+
+- **[pplx-decider-flash]** Ollama-Bibliothek: *pplx-decider-flash* (Readme). <https://ollama.com/library/pplx-decider-flash>
+- **[qwen3.8-ollama]** Ollama-Bibliothek: *qwen3.8*. <https://ollama.com/library/qwen3.8>
+- **[qwen3.8-card]** Qwen: *Qwen3.8-27B*, Modellkarte auf Hugging Face (README.md, Abschnitt zu den Sampling-Parametern). <https://huggingface.co/Qwen/Qwen3.8-27B>
+- **[qwen3.8-latest]** Ollama-Bibliothek: *qwen3.8:latest*, Abschnitt „Details“ mit den Builds `mlx` und `llamacpp`. <https://ollama.com/library/qwen3.8:latest>
+- **[qwen3.8-tags]** Ollama-Bibliothek: *qwen3.8*, Liste der Tags. <https://ollama.com/library/qwen3.8/tags>
+- **[gpt-oss-card]** OpenAI: *gpt-oss-20b*, Modellkarte auf Hugging Face (README.md, Einleitung: „21B parameters with 3.6B active parameters“). <https://huggingface.co/openai/gpt-oss-20b>
+- **[phi4-reasoning-card]** Microsoft: *Phi-4-reasoning*, Modellkarte auf Hugging Face (README.md, Abschnitt „Model Summary“: Architektur, Kontextlänge; Lizenz MIT). <https://huggingface.co/microsoft/Phi-4-reasoning>
+- Primärquellen ohne Webseite: Antworten von `POST /api/show` für `pplx-decider-flash:latest` und `qwen3.8:latest`, Ollama 0.40.16, 17.11.2026 (Fähigkeiten, Thinking-Werte, Voreinstellungen, Parameterzahl, Format, Kontextlänge); `summary.json` und `requests/` des ersten, zweiten und dritten Laufs (`ninakswebshopui/2026-11-17_170834Z`, `2026-11-17_173733Z`, `2026-11-17_195751Z`); das lokale Manifest `~/.ollama/models/manifests/registry.ollama.ai/library/qwen3.8/latest` (Stand 23.10.2026, inzwischen gelöscht).
+- Primärquellen ohne Webseite zum vierten Lauf: `ollama show` und die lokalen Manifeste von `nemotron-3.5-lightning:30b`, `gemma4:26b`, `qwen3.8:27b-q4_K_M` und `gpt-oss:20b` (17.11.2026); das Server-Log `/opt/homebrew/var/log/ollama.log` (Einträge vom 04.11.2026 zu `xgrammar`); der Inhalt von `/opt/homebrew/Cellar/ollama/0.40.16/libexec/lib/ollama/` (ohne `libollama_xgrammar.dylib`); `summary.json`, `decisions_info.json`, `items.json`, `decisions.json` und `requests/` des Laufs `libgdx/2026-11-17_210624Z`; die Zeitstempel der Report-Anfragen vom 18.11.2026 (inzwischen ersetzt).
+
+**Kandidaten für den Modellvergleich**
+
+- **[ollama-search-decision]** Ollama-Bibliothek: *Decision models*. <https://ollama.com/search?c=decision>
+- **[ollama-search-thinking]** Ollama-Bibliothek: *Thinking models*. <https://ollama.com/search?c=thinking>
+- **[pplx-decider]** Ollama-Bibliothek: *pplx-decider*. <https://ollama.com/library/pplx-decider>
+- **[clef]** Ollama-Bibliothek: *clef*. <https://ollama.com/library/clef>
+- **[clef-flash]** Ollama-Bibliothek: *clef-flash*. <https://ollama.com/library/clef-flash>
+- **[nimble]** Ollama-Bibliothek: *nimble*. <https://ollama.com/library/nimble>
+- **[nimble-v3]** Ollama-Bibliothek: *nimble-v3*. <https://ollama.com/library/nimble-v3>
+- **[autotrust-jev]** Ollama-Bibliothek: *autotrust-jev*. <https://ollama.com/library/autotrust-jev>
+- **[kev]** Ollama-Bibliothek: *kev*. <https://ollama.com/library/kev>
+- **[d1]** Ollama-Bibliothek: *d1*. <https://ollama.com/library/d1>
+- **[tev1]** Ollama-Bibliothek: *tev1*. <https://ollama.com/library/tev1>
+- **[d3]** Ollama-Bibliothek: *d3*. <https://ollama.com/library/d3>
+- **[strands-decider]** Ollama-Bibliothek: *strands-decider*. <https://ollama.com/library/strands-decider>
+- **[gpt-oss]** Ollama-Bibliothek: *gpt-oss*. <https://ollama.com/library/gpt-oss>
+- **[nemotron-3.5-lightning]** Ollama-Bibliothek: *nemotron-3.5-lightning*. <https://ollama.com/library/nemotron-3.5-lightning>
+- **[gemma4]** Ollama-Bibliothek: *gemma4*. <https://ollama.com/library/gemma4>
+- **[muse-glimmer]** Ollama-Bibliothek: *muse-glimmer*. <https://ollama.com/library/muse-glimmer>
+- **[mistral-small3.2]** Ollama-Bibliothek: *mistral-small3.2*. <https://ollama.com/library/mistral-small3.2>
+- **[magistral]** Ollama-Bibliothek: *magistral*. <https://ollama.com/library/magistral>
+- **[phi4-reasoning]** Ollama-Bibliothek: *phi4-reasoning*. <https://ollama.com/library/phi4-reasoning>
+- Größen der zu großen Modelle: <https://ollama.com/library/qwen3.6>, <https://ollama.com/library/ornith-1.5>, <https://ollama.com/library/qwen3.8-flash-next>.

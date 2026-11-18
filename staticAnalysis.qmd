@@ -112,7 +112,7 @@ opengrep scan \
 
 ### Festlegung
 
-OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen in `config/opengrep.toml` des Tool-Repositorys: je ein Git-Repository mit festem Commit und den Regelordnern pro Sprache. Welche aktiv sind, legt `rulesets` dort fest. Im aktuellen Stand sind `semgrep-rules` und `0xdea-semgrep-rules` aktiv.
+OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen im Abschnitt `[opengrep]` der Konfigurationsdatei `code-analysis.toml` im Wurzelordner des Tool-Repositorys (bis 13.11.2026 `config/opengrep.toml`): je ein Git-Repository mit festem Commit und den Regelordnern pro Sprache. Welche aktiv sind, legt `active` dort fest. Im aktuellen Stand sind `semgrep-rules` und `0xdea-semgrep-rules` aktiv.
 
 | Regelsammlung | Repository, Commit | Lizenz |
 |---|---|---|
@@ -146,6 +146,7 @@ OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen in `config/opengrep
 - **Kein Kategorie-Filter.**
   - Es laufen alle Regeln der Ordner, neben `security` auch `correctness`, `best-practice`, `performance` und `maintainability`.
   - Jeder Befund behält Kategorie und Unterkategorie (`vuln`: wahrscheinlich ausnutzbar, `audit`: zu prüfen), CWE, OWASP, `confidence`, `likelihood` und `impact`. So kann Schritt 6 filtern.
+  - Schritt 6 nutzt die Kategorie zur Aufteilung (seit 17.11.2026): `security`, `correctness` oder keine Kategorie wird als Sicherheit ausgewertet, jede andere Kategorie als Codequalität (`llmEvaluation.qmd`).
 - **Umschaltbar und erweiterbar.** Eine neue Sammlung braucht nur einen Eintrag in der Konfigurationsdatei (Repository, Commit, Ordner pro Sprache) und einen Neubau des Images. Der Code ändert sich nicht.
 - **Prüfung beim Build.** Der Build lädt jede aktive Sammlung zum festen Commit, behält nur die Regeldateien der angegebenen Ordner (`*.yaml`, `*.yml`, ohne `*.test.yaml`) sowie Lizenz- und README-Dateien. Dann lädt er alle Regeln einmal mit OpenGrep. Lehnt OpenGrep eine Regel ab, bricht der Build ab.
 - **Abgleich bei jedem Lauf.** Fehlt eine aktive Sammlung im Image oder liegt sie dort in einem anderen Commit, stoppt das Tool OpenGrep mit dem Hinweis, das Image neu zu bauen.
@@ -365,7 +366,7 @@ Das Wiki von sonar-cxx begründet das so: „Since the cxx plugin contains a lar
 
 - **Herkunft:** Issues kommen aus `api/issues/search` (nur ungelöste), Security Hotspots aus `api/hotspots/search` (Status `TO_REVIEW`).
 - **Schwere:** aus der höchsten Impact-Schwere: `BLOCKER`/`HIGH` → `error`, `MEDIUM` → `warning`, `LOW`/`INFO` → `note`. Bei Hotspots zählt die Prüfpriorität (`vulnerabilityProbability`).
-- **Kategorie:** die Softwarequalität dieses Impacts (`security`, `reliability`, `maintainability`). Die Unterkategorie ist der Issue-Typ (`bug`, `vulnerability`, `code_smell`) bzw. `hotspot`.
+- **Kategorie:** die Softwarequalität dieses Impacts (`security`, `reliability`, `maintainability`). Die Unterkategorie ist der Issue-Typ (`bug`, `vulnerability`, `code_smell`) bzw. `hotspot`. Schritt 6 wertet `security` und `reliability` (Bugs) als Sicherheit aus, `maintainability` als Codequalität (`llmEvaluation.qmd`).
 - **CWE und OWASP Top 10 2021:**
   - Die Web-API liefert sie nicht direkt pro Regel. Das Tool sucht deshalb jede gefundene Regel einzeln mit den Facetten `cwe` und `owaspTop10-2021` (`api/rules/search`).
   - Beispiel: `python:S4790` ergab `CWE-1240` und `A02:2021`.

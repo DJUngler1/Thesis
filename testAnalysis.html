@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de" xml:lang="de"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.11.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Felix Krauß">
+
+<title>Prüfung der Tests</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="testAnalysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="testAnalysis_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="testAnalysis_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="testAnalysis_files/libs/quarto-html/scrollable-regions/scrollable-regions.js" type="module"></script>
+<script src="testAnalysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="testAnalysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="testAnalysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="testAnalysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="testAnalysis_files/libs/quarto-html/quarto-syntax-highlighting-dark-447e42e69aaa9833c0ba1b986f430b20.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="testAnalysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="testAnalysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="testAnalysis_files/libs/bootstrap/bootstrap-d0a4af45de66b11030a5673244ae2f01.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+
+
+</head>
+
+<body class="quarto-light"><a id="quarto-skip-link" class="visually-hidden-focusable" href="#quarto-document-content">Zum Hauptinhalt springen</a>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" aria-labelledby="toc-title" class="toc-active">
+    <h2 id="toc-title">Inhaltsverzeichnis</h2>
+   
+  <ul>
+  <li><a href="#zweck-und-vorgehen" id="toc-zweck-und-vorgehen" class="nav-link active" data-scroll-target="#zweck-und-vorgehen"><span class="header-section-number">1</span> Zweck und Vorgehen</a>
+  <ul class="collapse">
+  <li><a href="#grundsatz-der-festlegung" id="toc-grundsatz-der-festlegung" class="nav-link" data-scroll-target="#grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</a></li>
+  <li><a href="#prüfmethode" id="toc-prüfmethode" class="nav-link" data-scroll-target="#prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</a></li>
+  <li><a href="#testumgebung" id="toc-testumgebung" class="nav-link" data-scroll-target="#testumgebung"><span class="header-section-number">1.3</span> Testumgebung</a></li>
+  </ul></li>
+  <li><a href="#übersicht-der-festlegungen" id="toc-übersicht-der-festlegungen" class="nav-link" data-scroll-target="#übersicht-der-festlegungen"><span class="header-section-number">2</span> Übersicht der Festlegungen</a></li>
+  <li><a href="#sec-erkennen" id="toc-sec-erkennen" class="nav-link" data-scroll-target="#sec-erkennen"><span class="header-section-number">3</span> Teil 1: Tests erkennen</a>
+  <ul class="collapse">
+  <li><a href="#festlegung" id="toc-festlegung" class="nav-link" data-scroll-target="#festlegung"><span class="header-section-number">3.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege" id="toc-begründung-und-belege" class="nav-link" data-scroll-target="#begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-erkennen-tests" id="toc-sec-erkennen-tests" class="nav-link" data-scroll-target="#sec-erkennen-tests"><span class="header-section-number">3.3</span> Testergebnisse</a></li>
+  <li><a href="#grenzen" id="toc-grenzen" class="nav-link" data-scroll-target="#grenzen"><span class="header-section-number">3.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-ausfuehren" id="toc-sec-ausfuehren" class="nav-link" data-scroll-target="#sec-ausfuehren"><span class="header-section-number">4</span> Teil 2: Tests ausführen</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-1" id="toc-festlegung-1" class="nav-link" data-scroll-target="#festlegung-1"><span class="header-section-number">4.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-1" id="toc-begründung-und-belege-1" class="nav-link" data-scroll-target="#begründung-und-belege-1"><span class="header-section-number">4.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-ausfuehren-tests" id="toc-sec-ausfuehren-tests" class="nav-link" data-scroll-target="#sec-ausfuehren-tests"><span class="header-section-number">4.3</span> Testergebnisse</a></li>
+  <li><a href="#grenzen-1" id="toc-grenzen-1" class="nav-link" data-scroll-target="#grenzen-1"><span class="header-section-number">4.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-abdeckung" id="toc-sec-abdeckung" class="nav-link" data-scroll-target="#sec-abdeckung"><span class="header-section-number">5</span> Teil 3: Testabdeckung messen</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-2" id="toc-festlegung-2" class="nav-link" data-scroll-target="#festlegung-2"><span class="header-section-number">5.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-2" id="toc-begründung-und-belege-2" class="nav-link" data-scroll-target="#begründung-und-belege-2"><span class="header-section-number">5.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-abdeckung-tests" id="toc-sec-abdeckung-tests" class="nav-link" data-scroll-target="#sec-abdeckung-tests"><span class="header-section-number">5.3</span> Testergebnisse</a></li>
+  <li><a href="#grenzen-2" id="toc-grenzen-2" class="nav-link" data-scroll-target="#grenzen-2"><span class="header-section-number">5.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-mutation" id="toc-sec-mutation" class="nav-link" data-scroll-target="#sec-mutation"><span class="header-section-number">6</span> Teil 4: Mutation Testing</a>
+  <ul class="collapse">
+  <li><a href="#festlegung-3" id="toc-festlegung-3" class="nav-link" data-scroll-target="#festlegung-3"><span class="header-section-number">6.1</span> Festlegung</a></li>
+  <li><a href="#begründung-und-belege-3" id="toc-begründung-und-belege-3" class="nav-link" data-scroll-target="#begründung-und-belege-3"><span class="header-section-number">6.2</span> Begründung und Belege</a></li>
+  <li><a href="#sec-mutation-tests" id="toc-sec-mutation-tests" class="nav-link" data-scroll-target="#sec-mutation-tests"><span class="header-section-number">6.3</span> Testergebnisse</a></li>
+  <li><a href="#grenzen-3" id="toc-grenzen-3" class="nav-link" data-scroll-target="#grenzen-3"><span class="header-section-number">6.4</span> Grenzen</a></li>
+  </ul></li>
+  <li><a href="#sec-entscheidungen" id="toc-sec-entscheidungen" class="nav-link" data-scroll-target="#sec-entscheidungen"><span class="header-section-number">7</span> Entscheidungen vom 13.11.2026</a></li>
+  <li><a href="#ergebnisse-im-ausgabeordner" id="toc-ergebnisse-im-ausgabeordner" class="nav-link" data-scroll-target="#ergebnisse-im-ausgabeordner"><span class="header-section-number">8</span> Ergebnisse im Ausgabeordner</a></li>
+  <li><a href="#sec-offen" id="toc-sec-offen" class="nav-link" data-scroll-target="#sec-offen"><span class="header-section-number">9</span> Offene Punkte</a></li>
+  <li><a href="#sec-quellen" id="toc-sec-quellen" class="nav-link" data-scroll-target="#sec-quellen"><span class="header-section-number">10</span> Quellen (noch nicht in <code>references.bib</code>)</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Andere Formate</h2><ul><li><a href="testAnalysis.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content" tabindex="-1">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Prüfung der Tests</h1>
+<p class="subtitle lead">Dokumentation der Werkzeugauswahl für Schritt 5 des Code-Analysis-Tools</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Autor:in</div>
+    <div class="quarto-title-meta-contents">
+             <p>Felix Krauß </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Veröffentlichungsdatum</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">13. November 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="zweck-und-vorgehen" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Zweck und Vorgehen</h1>
+<p>Dieses Dokument hält fest, wie das Code-Analysis-Tool in Schritt 5 („Tests“) die Tests eines Projekts prüft. Zu jeder Festlegung steht, warum sie getroffen wurde und wie sie überprüft wurde. Die knappe technische Beschreibung ohne Begründungen liegt im Tool-Repository unter <code>Code-Analysis-Tool/docs/testAnalysis/README.md</code>.</p>
+<p>Schritt 5 hat laut Ablaufplan vier Teile. Sie werden nacheinander umgesetzt:</p>
+<ol type="1">
+<li><strong>Tests erkennen</strong> („Tests present?“): umgesetzt (<a href="#sec-erkennen" class="quarto-xref">Kapitel&nbsp;3</a>).</li>
+<li><strong>Tests ausführen</strong> („Document results, including failures“): umgesetzt (<a href="#sec-ausfuehren" class="quarto-xref">Kapitel&nbsp;4</a>).</li>
+<li><strong>Testabdeckung messen</strong> („no minimum coverage“): umgesetzt (<a href="#sec-abdeckung" class="quarto-xref">Kapitel&nbsp;5</a>).</li>
+<li><strong>Mutation Testing:</strong> umgesetzt (<a href="#sec-mutation" class="quarto-xref">Kapitel&nbsp;6</a>).</li>
+</ol>
+<p>Die Entscheidungen vom 13.11.2026, die die Teile 2 bis 4 bestimmen, stehen in <a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;7</a>.</p>
+<section id="grundsatz-der-festlegung" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="grundsatz-der-festlegung"><span class="header-section-number">1.1</span> Grundsatz der Festlegung</h2>
+<ul>
+<li><strong>Konventionen der Frameworks statt eigener Regeln:</strong> Ob ein Projekt Tests hat, entscheidet das Tool nach den Standardkonventionen der Test-Frameworks der jeweiligen Sprache, wie sie deren Dokumentation beschreibt. Projektspezifische Konfiguration wird nur gelesen, wo das Framework sie selbst als Ort für die Testerkennung vorsieht (pytest: <code>python_files</code>).</li>
+<li><strong>Nichts ausführen:</strong> Teil 1 liest nur Dateien. Er führt keinen Code des Projekts aus und verändert nichts. Wie viele Tests es genau gibt und ob sie bestehen, ergibt erst Teil 2.</li>
+<li><strong>Ohne Tests im Bericht vermerken:</strong> Hat eine Sprache keine Tests, steht das in der Ausgabe und im Ergebnis, wie im Ablaufplan vorgesehen („no → Note in report“).</li>
+<li><strong>Werkzeug des Projekts, Optionen vom Tool:</strong> Die Tests laufen mit dem Framework bzw. Build-Werkzeug des Projekts. Das Tool legt nur die Optionen fest, die einen maschinenlesbaren Bericht erzeugen. So bleibt das Ergebnis das der Tests des Projekts, und die Berichte sind trotzdem einheitlich auswertbar („Project tool or defined per language“ im Ablaufplan).</li>
+<li><strong>Tests ohne Netzwerk:</strong> Tests führen Code des Projekts aus. Sie laufen deshalb ohne Netzwerk; nur das Herunterladen der Abhängigkeiten davor hat Netzwerk. Das Netzwerk für die Tests lässt sich in <code>code-analysis.toml</code> (<code>[tests] network</code>) einschalten, nur für Code, dem man vertraut (Entscheidung vom 13.11.2026).</li>
+<li><strong>Fehlschlagende Tests sind Ergebnisse:</strong> Ein fehlschlagender Test ist ein Befund über das Projekt, kein Fehler des Tools. Schritt 5 gilt nur dann als unvollständig, wenn Tests gar nicht laufen konnten.</li>
+</ul>
+</section>
+<section id="prüfmethode" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="prüfmethode"><span class="header-section-number">1.2</span> Prüfmethode</h2>
+<ol type="1">
+<li><strong>Dokumentation im Original:</strong> Jede Konvention wurde in der offiziellen Dokumentation des Frameworks nachgelesen. Zitate sind wörtlich und stehen in der Originalsprache (Englisch).</li>
+<li><strong>Eigene Tests:</strong>
+<ul>
+<li>Die Erkennung wurde am 13.11.2026 mit Unit-Tests auf kleinen Beispielprojekten je Sprache geprüft (<code>scheduler/tests/test_testing_detect.py</code>, 16 Tests). Jeder Test enthält auch Gegenbeispiele, die nicht als Test gelten dürfen.</li>
+<li>Das Ausführen wurde am 13.11.2026 in Docker mit festen Versionen (<a href="#tbl-versionen" class="quarto-xref">Tabelle&nbsp;1</a>) auf einem Mac mit Apple Silicon (arm64) getestet (Colima, Docker 29.5.2): je Sprache ein kleines Projekt mit einem bestandenen, einem fehlschlagenden und einem übersprungenen Test (<code>scheduler/tests/test_testing_docker.py</code>, 10 Tests). Die Berichte dieser Läufe sind die Testdaten der Parser (<code>scheduler/tests/fixtures/testing/</code>).</li>
+</ul></li>
+<li><strong>Echte Projekte:</strong> die Spiele-Engine libgdx (Commit <code>464116b74</code>) und das Repository des Tools selbst (<a href="#sec-erkennen-tests" class="quarto-xref">Kapitel&nbsp;3.3</a>, <a href="#sec-ausfuehren-tests" class="quarto-xref">Kapitel&nbsp;4.3</a>).</li>
+</ol>
+</section>
+<section id="testumgebung" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="testumgebung"><span class="header-section-number">1.3</span> Testumgebung</h2>
+<p>Teil 1 braucht keine Container und keine Werkzeuge. Er läuft im Scheduler (Python 3.13) und liest die Dateien, die git kennt. Wie in den Schritten 2 bis 4 werden die Ordner übersprungen, die Schritt 1 überspringt (u. a. <code>node_modules/</code>, <code>build/</code>, <code>target/</code>, <code>vendor/</code>, <code>third_party/</code>, versteckte Ordner).</p>
+<p>Teil 2 läuft in einem Test-Image je Sprache:</p>
+<div id="tbl-versionen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-versionen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;1: Werkzeugversionen der Tests und des Tools
+</figcaption>
+<div aria-describedby="tbl-versionen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Image</th>
+<th>Basis</th>
+<th>Werkzeuge</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>code-analysis/test-python</code></td>
+<td><code>python:3.13.18</code> (volles Image mit C-Compiler)</td>
+<td>Python 3.13.18, uv 0.13.7, Poetry 2.5.1, PDM 2.29.7, Pipenv 2026.11.0; pytest 9.2.0, wenn das Projekt kein pytest installiert</td>
+</tr>
+<tr class="even">
+<td><code>code-analysis/test-node</code></td>
+<td><code>node:22.23.4</code> (volles Image)</td>
+<td>Node.js 22.23.4, npm 10.9.9, corepack 0.36.0 (Yarn, pnpm), Bun 1.4.4, c8 12.0.0</td>
+</tr>
+<tr class="odd">
+<td><code>code-analysis/test-java</code></td>
+<td><code>eclipse-temurin:21-jdk-noble</code></td>
+<td>OpenJDK 21.0.13, Maven 3.9.16, Gradle 9.9.1</td>
+</tr>
+<tr class="even">
+<td><code>code-analysis/test-dotnet</code></td>
+<td><code>mcr.microsoft.com/dotnet/sdk:10.0.403</code></td>
+<td>.NET SDK 10.0.403, Runtimes .NET und ASP.NET Core 8.0.34, 9.0.23, 10.0.14, Stryker.NET 5.1.0</td>
+</tr>
+<tr class="odd">
+<td><code>code-analysis/test-rust</code></td>
+<td><code>rust:1.99.1</code> (volles Image)</td>
+<td>cargo 1.99.1, rustc 1.99.1, cargo-llvm-cov 0.9.1 mit <code>llvm-tools</code>, cargo-mutants 27.1.0</td>
+</tr>
+<tr class="even">
+<td><code>code-analysis/test-cpp</code></td>
+<td><code>debian:trixie-slim</code></td>
+<td>clang 22.1.8, CMake/CTest 3.31.6, Ninja, Conan 2.34.0, vcpkg 2026.10.16, llvm-cov 22.1.8 mit compiler-rt, gcovr 8.8</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Eigene Images:</strong> Die Test-Images sind eigene Images und keine Erweiterung der Images aus den Schritten 2 bis 4. Die Werkzeuge dieser Schritte behalten so ihre Versionen.</li>
+<li><strong>Volle Basis-Images:</strong> Python, Node.js und Rust nutzen die vollen Basis-Images statt <code>-slim</code>. Viele Pakete bauen bei der Installation nativen Code (Python-sdists, node-gyp, <code>build.rs</code>) und brauchen dafür einen Compiler.</li>
+<li><strong>Zur Laufzeit geladen (Teile 3 und 4):</strong> coverage.py 7.17.3 (in die Umgebung des Projekts, falls es keines hat), <code>@vitest/coverage-v8</code> in der Version des Vitest im Projekt, JaCoCo 0.8.16 (über Maven bzw. Gradle), coverlet.collector 10.1.0 (in die Kopie des Testprojekts), mutmut 3.8.1, StrykerJS 10.1.1 mit Runner, PIT 1.30.2 mit pitest-junit5-plugin 1.2.3 und gradle-pitest-plugin 1.19.0. Sie gehören in die Umgebung bzw. den Build des Projekts und werden im Vorlauf mit Netzwerk geladen.</li>
+<li><strong>Ältere .NET-Runtimes:</strong> Das .NET-Image enthält zusätzlich die Runtimes 8 und 9. Ein Testprojekt läuft auf der Runtime seines Zielframeworks; ohne sie würde ein <code>net8.0</code>-Testprojekt nicht starten.</li>
+</ul>
+</section>
+</section>
+<section id="übersicht-der-festlegungen" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Übersicht der Festlegungen</h1>
+<div id="tbl-erkennen" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-erkennen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;2: Teil 1: Testeinheiten und Erkennung
+</figcaption>
+<div aria-describedby="tbl-erkennen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Testeinheit</th>
+<th>Test erkannt an</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>oberster Ordner mit Python-Manifest</td>
+<td>pytest-Dateinamen (<code>python_files</code>, Standard <code>test_*.py</code>, <code>*_test.py</code>) mit Testfunktionen; unittest-Dateinamen (<code>test*.py</code>) mit <code>unittest.TestCase</code>-Klassen</td>
+</tr>
+<tr class="even">
+<td>JavaScript, TypeScript</td>
+<td>jede <code>package.json</code></td>
+<td>Dateinamen und Ordner nach Jest, Vitest, Node.js-Test-Runner, Mocha und Cypress, mit Aufrufen von <code>describe</code>/<code>it</code>/<code>test</code>/<code>suite</code>; Testskript mit bekanntem Framework</td>
+</tr>
+<tr class="odd">
+<td>Java</td>
+<td>oberster Maven- oder Gradle-Build</td>
+<td>Import von JUnit oder TestNG und eine Testannotation (<code>@Test</code> u. a.) oder <code>extends TestCase</code></td>
+</tr>
+<tr class="even">
+<td>C#</td>
+<td>Testprojekt (<code>IsTestProject</code>, <code>Microsoft.NET.Test.Sdk</code>, MSTest.Sdk, xUnit, NUnit, MSTest, TUnit)</td>
+<td>Testattribute (<code>[Fact]</code>, <code>[Test]</code>, <code>[TestMethod]</code>, …)</td>
+</tr>
+<tr class="odd">
+<td>Rust</td>
+<td>oberstes <code>Cargo.toml</code> (Workspace)</td>
+<td><code>#[test]</code> und Varianten; Ordner <code>tests/</code>; Codebeispiele in Doc-Kommentaren von Bibliotheken</td>
+</tr>
+<tr class="even">
+<td>C, C++</td>
+<td><code>CMakeLists.txt</code> im Projektordner</td>
+<td>bei CTest registrierte Tests (<code>add_test</code>, <code>gtest_discover_tests</code>, …) bei aktiviertem Testen</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<div id="tbl-ausfuehren" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ausfuehren-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;3: Teil 2: Ablauf je Sprache
+</figcaption>
+<div aria-describedby="tbl-ausfuehren-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Vorlauf (mit Netzwerk)</th>
+<th>Testlauf (ohne Netzwerk)</th>
+<th>Bericht</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>Installation in <code>.venv</code> mit uv, Poetry, PDM, Pipenv bzw. <code>uv pip</code> (pip-Projekte), dazu pytest</td>
+<td><code>python -m pytest</code></td>
+<td>JUnit-XML</td>
+</tr>
+<tr class="even">
+<td>JavaScript, TypeScript</td>
+<td>Installation ohne Lifecycle-Skripte (<code>--ignore-scripts</code>)</td>
+<td>Install-Skripte der Pakete, dann Vitest, Jest, Mocha, <code>node:test</code> oder Bun</td>
+<td>Jest-JSON, JUnit-XML</td>
+</tr>
+<tr class="odd">
+<td>Java</td>
+<td>Maven: Surefire-Lauf, der keinen Test auswählt; Gradle: Init-Skript lädt alle Konfigurationen</td>
+<td><code>mvn -o test</code> bzw. <code>gradle --offline test</code></td>
+<td>JUnit-XML</td>
+</tr>
+<tr class="even">
+<td>C#</td>
+<td><code>dotnet restore</code></td>
+<td><code>dotnet test --logger trx</code></td>
+<td>TRX</td>
+</tr>
+<tr class="odd">
+<td>Rust</td>
+<td><code>cargo fetch</code></td>
+<td><code>cargo test --offline</code></td>
+<td>Textausgabe von libtest</td>
+</tr>
+<tr class="even">
+<td>C, C++</td>
+<td>CMake konfigurieren (Debug), Conan/vcpkg laden und bauen die Abhängigkeiten</td>
+<td><code>cmake --build</code>, <code>ctest --output-junit</code></td>
+<td>JUnit-XML</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-erkennen" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Teil 1: Tests erkennen</h1>
+<section id="festlegung" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="festlegung"><span class="header-section-number">3.1</span> Festlegung</h2>
+<p><strong>Testeinheiten.</strong> Eine Testeinheit („Suite“) umfasst die Tests einer Build-Einheit. Die Einheiten ergeben sich aus den Paketmanagern, die Schritt 1 gefunden hat:</p>
+<ul>
+<li>Python: der oberste Ordner mit einem Manifest. Ein Manifest in <code>requirements/</code> zählt für den Ordner darüber.</li>
+<li>JavaScript und TypeScript: jede <code>package.json</code>. Eine Datei gehört zur nächsten <code>package.json</code> darüber.</li>
+<li>Java: der oberste Maven- oder Gradle-Build. Es ist dieselbe Regel wie beim Bauen für SonarQube in Schritt 3.</li>
+<li>C#: jedes Testprojekt.</li>
+<li>Rust: das oberste <code>Cargo.toml</code>, also der Workspace.</li>
+<li>C/C++: das <code>CMakeLists.txt</code> im Projektordner. Das ist dieselbe Voraussetzung wie für die Kompilierungsdatenbank in Schritt 2.</li>
+</ul>
+<p>Eine Sprache ohne Paketmanager wird nicht geprüft, ebenso C/C++ ohne <code>CMakeLists.txt</code> im Projektordner. Beides steht mit Grund im Ergebnis.</p>
+<p><strong>Erkennung je Sprache:</strong></p>
+<ul>
+<li><strong>Python:</strong>
+<ul>
+<li>Testdateien sind Dateien, deren Name zu pytests <code>python_files</code> passt (Standard <code>test_*.py</code> und <code>*_test.py</code>) und die Testfunktionen, einfache <code>Test…</code>-Klassen oder <code>import pytest</code> enthalten.</li>
+<li>Dazu kommen Dateien nach unittests Muster <code>test*.py</code> mit <code>unittest.TestCase</code>-Klassen, die <code>test…</code>-Methoden haben.</li>
+<li>Die pytest-Konfiguration wird in pytests eigener Reihenfolge gesucht: <code>pytest.toml</code>, <code>.pytest.toml</code>, <code>pytest.ini</code>, <code>.pytest.ini</code>, <code>pyproject.toml</code>, <code>tox.ini</code>, <code>setup.cfg</code>. Ihr <code>python_files</code> ersetzt die Standardmuster.</li>
+</ul></li>
+<li><strong>JavaScript/TypeScript:</strong>
+<ul>
+<li>Testdateien heißen <code>*.test.*</code>, <code>*.spec.*</code>, <code>*-test.*</code>, <code>*_test.*</code>, <code>test-*.*</code>, <code>test.*</code>, <code>spec.*</code> oder <code>*.cy.*</code>, oder sie liegen in einem Ordner <code>__tests__/</code> oder <code>test/</code>.</li>
+<li>Sie müssen <code>describe(</code>, <code>it(</code>, <code>test(</code> oder <code>suite(</code> aufrufen. So zählen etwa Testdaten in <code>test/fixtures/</code> nicht.</li>
+<li>Die Frameworks ergeben sich aus dem Testskript und den Abhängigkeiten in der <code>package.json</code>. Das Platzhalter-Skript von <code>npm init</code> zählt nicht als Test.</li>
+</ul></li>
+<li><strong>Java:</strong>
+<ul>
+<li>Testdateien importieren JUnit (<code>org.junit…</code>, <code>junit.framework…</code>) oder TestNG (<code>org.testng…</code>).</li>
+<li>Sie enthalten eine Testannotation (<code>@Test</code>, <code>@ParameterizedTest</code>, <code>@RepeatedTest</code>, <code>@TestFactory</code>, <code>@TestTemplate</code>) oder erben von <code>TestCase</code>.</li>
+<li>Der Ordner spielt keine Rolle.</li>
+</ul></li>
+<li><strong>C#:</strong>
+<ul>
+<li>Ein Testprojekt ist eine <code>.csproj</code> mit <code>&lt;IsTestProject&gt;true&lt;/IsTestProject&gt;</code>, mit <code>Sdk="MSTest.Sdk"</code> oder mit einer Paketreferenz auf <code>Microsoft.NET.Test.Sdk</code>, xUnit, NUnit, MSTest oder TUnit. <code>&lt;IsTestProject&gt;false&lt;/IsTestProject&gt;</code> schließt ein Projekt aus.</li>
+<li>Testdateien sind <code>.cs</code>-Dateien des Testprojekts mit Testattributen wie <code>[Fact]</code>, <code>[Theory]</code>, <code>[Test]</code>, <code>[TestCase]</code>, <code>[TestMethod]</code>, <code>[TestClass]</code> oder <code>[TestFixture]</code>.</li>
+</ul></li>
+<li><strong>Rust:</strong>
+<ul>
+<li>Integrationstests sind Dateien im Ordner <code>tests/</code> einer Crate mit <code>#[test]</code>; Varianten wie <code>#[tokio::test]</code>, <code>#[rstest]</code> und <code>#[test_case]</code> zählen mit.</li>
+<li>Unit-Tests sind Quelldateien mit solchen Tests.</li>
+<li>Doctests sind Rust-Codeblöcke in Doc-Kommentaren (<code>///</code>, <code>//!</code>) von Bibliotheks-Crates. Ein Codeblock gilt als Rust, wenn er keine Sprache oder nur rustdoc-Attribute angibt.</li>
+</ul></li>
+<li><strong>C/C++:</strong>
+<ul>
+<li>Tests sind vorhanden, wenn ein <code>CMakeLists.txt</code> oder eine <code>*.cmake</code>-Datei Tests bei CTest registriert (<code>add_test</code>, <code>gtest_discover_tests</code>, <code>gtest_add_tests</code>, <code>catch_discover_tests</code>, <code>doctest_discover_tests</code>) und das Testen mit <code>enable_testing()</code> oder <code>include(CTest)</code> eingeschaltet ist.</li>
+<li>Testdateien binden den Header eines Test-Frameworks ein oder liegen in einem Ordner <code>test/</code>, <code>tests/</code>, <code>unittest/</code> oder <code>unittests/</code>.</li>
+</ul></li>
+</ul>
+<p><strong>Testdateien und Quelldateien.</strong> - <code>test_files</code> enthält Dateien, die nur Tests sind. Teil 3 lässt sie aus der Testabdeckung heraus. - Rusts Unit-Tests und Doctests stehen in Quelldateien. Diese Dateien werden getrennt geführt (<code>inline_test_files</code>) und bleiben in der Abdeckung.</p>
+</section>
+<section id="begründung-und-belege" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="begründung-und-belege"><span class="header-section-number">3.2</span> Begründung und Belege</h2>
+<p><strong>Python.</strong> - pytest sucht „In those directories, search for test_*.py or *_test.py files“ und sammelt daraus „test prefixed test functions or methods outside of class“ sowie Methoden in „Test prefixed test classes (without an __init__ method)“ [pytest-discovery]. - Zusätzlich gilt: „Within Python modules, pytest also discovers tests using the standard unittest.TestCase subclassing technique.“ [pytest-discovery] - Deshalb ist pytest der Maßstab. pytest führt auch unittest-Tests aus, umgekehrt gilt das nicht. - Die Muster sind einstellbar: „You can configure different naming conventions by setting the python_files, python_classes and python_functions in your configuration file.“ [pytest-naming] - Für die Konfigurationsdatei gilt pytests Reihenfolge: „Look for <code>pytest.toml</code>, <code>.pytest.toml</code>, <code>pytest.ini</code>, <code>.pytest.ini</code>, <code>pyproject.toml</code>, <code>tox.ini</code>, and <code>setup.cfg</code> files“, „The files are considered in the order above.“ und „Options from multiple <code>configfiles</code> candidates are never merged - the first match wins.“ [pytest-config] - <code>pytest.toml</code> und <code>pytest.ini</code> zählen auch leer („will always match and take highest precedence, even if empty“). <code>pyproject.toml</code> zählt nur, wenn es „a <code>[tool.pytest]</code> or <code>[tool.pytest.ini_options]</code> table“ enthält; <code>tox.ini</code> und <code>setup.cfg</code> nur mit „a <code>[pytest]</code> section“ bzw. „a <code>[tool:pytest]</code> section“ [pytest-config]. - unittest erkennt Testdateien am Muster „<strong>-p, –pattern pattern</strong>: Pattern to match test files (<code>test*.py</code> default)“ und Tests an der Namenskonvention: „A test case is created by subclassing unittest.TestCase. The three individual tests are defined with methods whose names start with the letters <code>test</code>.“ [py-unittest]</p>
+<p><strong>JavaScript und TypeScript.</strong> Die Dateimuster sind die Vereinigung der Standardmuster der verbreiteten Test-Runner:</p>
+<ul>
+<li><strong>Jest:</strong> Standard ist <code>[ "**/__tests__/**/*.?([mc])[jt]s?(x)", "**/?(*.)+(spec|test).?([mc])[jt]s?(x)" ]</code>, also „<code>.js</code>, <code>.jsx</code>, <code>.ts</code> and <code>.tsx</code> files inside of <code>__tests__</code> folders, as well as any files with a suffix of <code>.test</code> or <code>.spec</code> […] It will also find files called <code>test.js</code> or <code>spec.js</code>.“ [jest-testmatch]</li>
+<li><strong>Vitest:</strong> Standard ist <code>['**/*.{test,spec}.?(c|m)[jt]s?(x)']</code> [vitest-include].</li>
+<li><strong>Node.js-Test-Runner:</strong>
+<ul>
+<li>Er sucht „By default“ nach <code>**/*.test.{cjs,mjs,js}</code>, <code>**/*-test.{cjs,mjs,js}</code>, <code>**/*_test.{cjs,mjs,js}</code>, <code>**/test-*.{cjs,mjs,js}</code>, <code>**/test.{cjs,mjs,js}</code> und <code>**/test/**/*.{cjs,mjs,js}</code> [node-test].</li>
+<li>Ohne <code>--no-experimental-strip-types</code> gelten dieselben Muster auch für <code>.ts</code>, <code>.cts</code> und <code>.mts</code> [node-test].</li>
+</ul></li>
+<li><strong>Mocha:</strong> „By default, <code>mocha</code> looks for the glob <code>"./test/*.{js,cjs,mjs}"</code>“ [mocha-globs].</li>
+<li><strong>Cypress:</strong> Die Option <code>specPattern</code> hat den Standard <code>cypress/e2e/**/*.cy.{js,jsx,ts,tsx}</code>: „A String or Array of glob patterns of the test files to load.“ [cypress-config]</li>
+<li><strong>npm-Platzhalter:</strong> <code>npm init</code> schreibt <code>"test": "echo \"Error: no test specified\" &amp;&amp; exit 1"</code> [npm-init]. Das ist kein Test und wird ignoriert.</li>
+</ul>
+<p>Weil Ordner wie <code>test/</code> auch Testdaten und Hilfsdateien enthalten, zählt eine Datei nur, wenn sie eine der Testfunktionen aufruft. Die Muster sind eine Obermenge der Standardmuster: Ein Projekt, das seinen Runner anders konfiguriert, kann Dateien haben, die hier zählen, die der Runner aber nicht ausführt. Die genaue Zahl liefert Teil 2.</p>
+<p><strong>Java.</strong> - Die Erkennung richtet sich nach dem Inhalt der Dateien statt nach dem Ordner <code>src/test/java</code>, wie es auch Gradle tut: „By default, Gradle will run all tests that it detects, which it does by inspecting the compiled test classes.“ [gradle-testing] - Für JUnit 3 und 4 gilt eine Klasse dort als Test, wenn sie „Ultimately inherits from <code>TestCase</code> or <code>GroovyTestCase</code>“, „Is annotated with <code>@RunWith</code>“ oder „Contains a method annotated with <code>@Test</code> or a super class does“ [gradle-testing]. - Für TestNG gilt: „For <em>TestNG</em>, Gradle scans for methods annotated with <code>@Test</code>.“ [gradle-testing] - Die Annotationen bedeuten in JUnit Jupiter „<code>@Test</code> is used to signal that the annotated method is a <em>test</em> method.“ (Paket <code>org.junit.jupiter.api</code>) [junit5-test] und in JUnit 4 „The Test annotation tells JUnit that the public void method to which it is attached can be run as a test case.“ [junit4-test]. - Dass zusätzlich ein Import von JUnit oder TestNG nötig ist, schließt eigene Annotationen gleichen Namens aus (siehe libgdx, <a href="#sec-erkennen-tests" class="quarto-xref">Kapitel&nbsp;3.3</a>). - Das Framework wird aus dem Import abgeleitet: <code>org.junit.jupiter</code> steht für JUnit Jupiter, sonstiges <code>org.junit.</code> für JUnit 4, <code>junit.framework</code> für JUnit 3. Laut JUnit gilt „JUnit Vintage provides a TestEngine for running JUnit 3 and JUnit 4 based tests on the platform.“ [junit-guide]</p>
+<p><strong>C#.</strong> - „The <code>IsTestProject</code> property is set to <code>true</code> by the Microsoft.NET.Test.Sdk NuGet package. It signifies whether a project is a VSTest test project so that it’s recognized by <code>dotnet test</code>.“ [ms-props] - MSTest.Sdk referenziert dieses Paket selbst („MSTest.Sdk references the Microsoft.NET.Test.Sdk NuGet package“) [ms-props]. - Im Beispiel der Dokumentation von <code>dotnet test</code> steht: „<code>Microsoft.NET.Test.Sdk</code> is the test host, <code>xunit</code> is the test framework.“ [ms-dotnet-test] - Das Framework ergibt sich deshalb aus den Paketreferenzen.</p>
+<p><strong>Rust.</strong> - Unit-Tests: „You’ll put unit tests in the <em>src</em> directory in each file with the code that they’re testing. The convention is to create a module named <code>tests</code> in each file to contain the test functions and to annotate the module with <code>cfg(test)</code>.“ [rust-book-org] - Integrationstests: „We create a <em>tests</em> directory at the top level of our project directory, next to <em>src</em>. Cargo knows to look for integration test files in this directory.“ [rust-book-org] - Hilfsdateien in Unterordnern zählen nicht: „Naming the file this way tells Rust not to treat the <code>common</code> module as an integration test file.“ [rust-book-org] - <code>cargo test</code> führt alle drei Arten aus: „Compile and execute unit, integration, and documentation tests.“ [cargo-test] - Doctests kommen nur aus Bibliotheken: „It extracts code samples from documentation comments of the library target, and then executes them.“ [cargo-test] - Welche Codeblöcke Rust sind: „by default, if no language is set for the block code, rustdoc assumes it is Rust code“ und „unless you specify <code>rust</code> or something that isn’t an attribute (except for <code>custom</code>), the code block is assumed to be Rust source code“ [rustdoc-doctests]. - Die rustdoc-Attribute (<code>ignore</code>, <code>should_panic</code>, <code>no_run</code>, <code>compile_fail</code>, <code>edition…</code>, <code>standalone_crate</code>, <code>test_harness</code>) stehen ebenda [rustdoc-doctests].</p>
+<p><strong>C/C++.</strong> - Es gibt keinen Standard-Testrunner der Sprache. Die Projekte, die Schritt 1 annimmt (Conan, vcpkg), bauen typischerweise mit CMake, dessen Testrunner CTest ist: <code>add_test</code> „Add a test to the project to be run by ctest(1).“ [cmake-add-test] - Registrierung allein genügt nicht: „CMake only generates tests if the enable_testing() command has been invoked.“ [cmake-add-test] - <code>include(CTest)</code> schaltet das Testen ein; die Option <code>BUILD_TESTING</code> wählt aus, „whether <code>include(CTest)</code> calls enable_testing(). The option is ON by default when created by the module.“ [cmake-ctest] - GoogleTest-Tests werden über das Modul GoogleTest registriert: <code>gtest_add_tests</code> „Automatically add tests with CTest by scanning source code for Google Test macros“, <code>gtest_discover_tests</code> „Automatically add tests with CTest by querying the compiled test executable for available tests“ [cmake-gtest].</p>
+</section>
+<section id="sec-erkennen-tests" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="sec-erkennen-tests"><span class="header-section-number">3.3</span> Testergebnisse</h2>
+<p><strong>Unit-Tests</strong> (<code>scheduler/tests/test_testing_detect.py</code>): 16 Tests, alle bestanden. Geprüft werden unter anderem:</p>
+<ul>
+<li><strong>Python:</strong>
+<ul>
+<li>Eine Datei <code>tests/test_helpers.py</code> ohne Tests zählt nicht.</li>
+<li>Eine Django-artige <code>app/tests.py</code> mit <code>unittest.TestCase</code> zählt.</li>
+<li><code>python_files</code> aus <code>pytest.ini</code> ersetzt die Standardmuster.</li>
+<li><code>pytest.toml</code> hat Vorrang vor <code>pyproject.toml</code>.</li>
+</ul></li>
+<li><strong>JavaScript/TypeScript:</strong>
+<ul>
+<li><code>test/fixtures/data.js</code> ohne Testaufrufe zählt nicht.</li>
+<li>Das npm-Platzhalterskript ergibt „keine Tests“.</li>
+<li>Ein Testskript ohne bekanntes Framework (<code>eslint .</code>) wird vermerkt.</li>
+</ul></li>
+<li><strong>Java:</strong>
+<ul>
+<li>Eine Hilfsklasse in <code>src/main</code> mit JUnit-Import, aber ohne Test, zählt nicht.</li>
+<li>Tests in einem eigenen Ordner <code>test/</code> (nicht <code>src/test/java</code>) zählen.</li>
+<li>Android-Instrumentierungstests werden vermerkt.</li>
+</ul></li>
+<li><strong>C#:</strong>
+<ul>
+<li>Ein Projekt mit <code>&lt;IsTestProject&gt;false&lt;/IsTestProject&gt;</code> wird ausgeschlossen.</li>
+<li>MSTest.Sdk wird erkannt.</li>
+<li>Ohne Testprojekt gibt es einen Eintrag „keine Tests“.</li>
+</ul></li>
+<li><strong>Rust:</strong>
+<ul>
+<li><code>tests/common/mod.rs</code> zählt nicht.</li>
+<li>Ein <code>```text</code>-Block zählt nicht als Doctest, ebenso wenig ein Codeblock in einer Binär-Crate.</li>
+</ul></li>
+<li><strong>C/C++:</strong>
+<ul>
+<li>Ein <code>add_test</code> in <code>third_party/</code> zählt nicht.</li>
+<li><code>add_test</code> ohne <code>enable_testing()</code> wird vermerkt.</li>
+</ul></li>
+</ul>
+<p><strong>libgdx</strong> (Commit <code>464116b74</code>, Gradle, 2448 Java-Dateien): - Das Tool findet eine Suite (Gradle, <code>settings.gradle</code>) mit 32 Testklassen, Framework JUnit 4. - Die Tests liegen in <code>gdx/test/</code>, einem in Gradle eigens eingestellten Ordner (nicht <code>src/test/java</code>). Die Erkennung über den Inhalt findet sie trotzdem. - <code>git grep</code> findet 33 Java-Dateien mit <code>@Test</code>. Die 33. ist <code>tests/gdx-tests/src/com/badlogic/gdx/tests/AnnotationTest.java</code>, eine Demo der Engine ohne JUnit-Import. Sie wird zu Recht nicht gezählt. - Die übrigen Klassen unter <code>tests/</code> sind Demo-Anwendungen der Engine, keine automatisierten Tests, und zählen ebenfalls nicht. - C/C++ (vorhanden, aber ohne Conan/vcpkg) wird als „nicht geprüft: kein Paketmanager“ ausgewiesen.</p>
+<p><strong>Repository des Tools:</strong> eine Python-Suite (<code>scheduler/pyproject.toml</code>) mit pytest-Konfiguration, pytest als Abhängigkeit und 22 Testdateien. Das entspricht den Dateien <code>scheduler/tests/test_*.py</code>.</p>
+</section>
+<section id="grenzen" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="grenzen"><span class="header-section-number">3.4</span> Grenzen</h2>
+<ul>
+<li><strong>Statisch:</strong> Teil 1 zählt Dateien, keine Tests. Projektkonfigurationen der Runner (z. B. <code>testMatch</code> in Jest, <code>testDir</code> in Gradle, eigene Mocha-<code>spec</code>-Muster) werden außer bei pytest nicht ausgewertet. Die genauen Zahlen liefert Teil 2.</li>
+<li><strong>Vereinigte Muster bei JavaScript:</strong> Eine Datei kann als Testdatei zählen, die der konfigurierte Runner nicht ausführt, etwa unter Mochas Standard <code>./test/*</code> ohne <code>--recursive</code>.</li>
+<li><strong>C/C++:</strong> Nur CMake mit <code>CMakeLists.txt</code> im Projektordner. Andere Build-Systeme (Make, Meson, Bazel) werden nicht geprüft. Projektoptionen, die Tests standardmäßig ausschalten (z. B. <code>option(… TESTS OFF)</code>), erkennt Teil 1 nicht.</li>
+<li><strong>Sprachen ohne Paketmanager</strong> werden nicht geprüft, wie in Schritt 4.</li>
+</ul>
+</section>
+</section>
+<section id="sec-ausfuehren" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Teil 2: Tests ausführen</h1>
+<section id="festlegung-1" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="festlegung-1"><span class="header-section-number">4.1</span> Festlegung</h2>
+<p><strong>Ablauf je Testeinheit.</strong> - Jede Suite mit Tests läuft in frischen Containern des Test-Images ihrer Sprache, auf einer Kopie des Projekts. - Die Suites laufen nacheinander, nicht parallel. Die Testwerkzeuge nutzen selbst alle Prozessorkerne, und parallele Läufe könnten zeitkritische Tests scheitern lassen. - Jede Suite durchläuft zwei Phasen: 1. <strong>Vorlauf mit Netzwerk:</strong> Der Paketmanager lädt die Abhängigkeiten in einen Cache im Ausgabeordner. Wo er das kann, ohne Code des Projekts oder seiner Pakete auszuführen, tut er es (<a href="#tbl-ausfuehren" class="quarto-xref">Tabelle&nbsp;3</a>). 2. <strong>Testlauf ohne Netzwerk</strong> (<code>--network none</code>): Build und Tests verwenden nur, was der Vorlauf geladen hat. Mit <code>network = true</code> unter <code>[tests]</code> in <code>code-analysis.toml</code> hat auch der Testlauf Netzwerk; das Tool warnt dann.</p>
+<p><strong>Befehle:</strong> - <strong>Python:</strong> - Installation in <code>.venv</code> der Kopie mit dem Paketmanager des Projekts: <code>uv sync --frozen --all-extras --all-groups</code>, <code>poetry install --all-extras --all-groups</code>, <code>pdm install -G :all</code> bzw. <code>pipenv sync --dev</code>. - pip-Projekte installiert <code>uv pip install</code>: das Projekt editierbar mit den Extras <code>test</code>, <code>tests</code>, <code>testing</code> oder <code>dev</code>, die gleichnamigen Abhängigkeitsgruppen, <code>requirements.txt</code> und Requirements-Dateien für Tests und Entwicklung. - Fehlt pytest danach, wird pytest 9.2.0 ergänzt. - Test: <code>.venv/bin/python -m pytest --junitxml=&lt;Bericht&gt; --continue-on-collection-errors -p no:cacheprovider</code>. - <strong>JavaScript/TypeScript:</strong> - Installation ohne Lifecycle-Skripte (<code>npm ci --ignore-scripts</code>, entsprechend Yarn, pnpm, Bun) im Ordner mit dem Lockfile. - Offline laufen dann die Install-Skripte der Pakete (<code>npm rebuild</code>, <code>pnpm rebuild</code>, <code>yarn rebuild</code>) und das Framework mit einem zusätzlichen Reporter: - Vitest <code>--reporter=junit</code>, - Jest <code>--ci --json --outputFile</code>, - Mocha <code>--reporter xunit</code>, - <code>node --test</code> mit <code>--test-reporter=junit</code>, - <code>bun test --reporter=junit</code>. - Ist das Testskript ein einzelner Aufruf des Frameworks, werden dessen Argumente übernommen. - <strong>Java:</strong> - Maven: <code>mvn -fae test -Dtest='*#codeAnalysisSelectsNoTest'</code> im Vorlauf, dann <code>mvn -o -fae test -Dmaven.test.failure.ignore=true</code>. - Gradle: Ein Init-Skript lädt im Vorlauf die externen Abhängigkeiten aller Konfigurationen und listet die <code>test</code>-Tasks der Java-Projekte. Dann <code>gradle --offline --continue &lt;diese Tasks&gt;</code>. - Ein Wrapper (<code>mvnw</code>, <code>gradlew</code>) des Projekts hat Vorrang. - <strong>C#:</strong> <code>dotnet restore</code>, dann <code>dotnet test &lt;Testprojekt&gt; --no-restore --logger "trx;LogFilePrefix=results"</code>. - <strong>Rust:</strong> <code>cargo fetch</code>, dann <code>cargo test --workspace --no-fail-fast --offline</code>. - <strong>C/C++:</strong> - Konfigurieren mit demselben Skript wie in Schritt 2 (Conan oder vcpkg, CMake), aber mit <code>CMAKE_BUILD_TYPE=Debug</code>. - Dann offline <code>cmake --build</code> und <code>ctest --output-junit &lt;Bericht&gt; --output-on-failure</code>.</p>
+<p><strong>Zeitlimit:</strong> <code>time_limit_minutes</code> unter <code>[tests]</code> in <code>code-analysis.toml</code> gilt je Testbefehl (Standard 60 Minuten, <code>0</code> = kein Limit). Der Vorlauf hat 60 Minuten.</p>
+<p><strong>Ergebnis je Test:</strong> - Eine Kennung, die in beiden Ständen gleich ist. - Das Ergebnis (<code>passed</code>, <code>failed</code>, <code>error</code>, <code>skipped</code>), die Dauer und die gekürzte Fehlermeldung. - Doctests in Rust bekommen eine Kennung ohne Zeilennummer, weil die Formatierung in Schritt 2 Zeilen verschiebt.</p>
+<p><strong>Status eines Laufs:</strong> - <code>ok</code>: Die Tests liefen und ihr Bericht wurde gelesen; fehlschlagende Tests eingeschlossen. - <code>partial</code>: Ein Teil der Tests lief, oder nur der Exitcode ist bekannt. - <code>failed</code>: Es gibt kein Testergebnis. - <code>skipped</code>: Conda, oder JavaScript-Tests, die einen Browser brauchen.</p>
+<p><strong>Zwei Stände (<a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;7</a>):</strong> - Hat Schritt 2 das Projekt verändert (<code>git status</code> nicht leer), laufen dieselben Suites zusätzlich auf dem Commit-Stand (HEAD). - Die HEAD-Kopie entsteht über einen temporären Git-Index (<code>read-tree</code>, <code>checkout-index</code>). Das Repository des Projekts bleibt unverändert, und anders als bei <code>git archive</code> fehlen keine mit <code>export-ignore</code> markierten Dateien. - Tests mit unterschiedlichem Ergebnis, oder die nur in einem Stand liefen, werden mit dem Hinweis auf mögliche „flaky“ Tests ausgegeben. Ohne Unterschiede wird der Vergleich nicht erwähnt.</p>
+</section>
+<section id="begründung-und-belege-1" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="begründung-und-belege-1"><span class="header-section-number">4.2</span> Begründung und Belege</h2>
+<p><strong>Offline-Testlauf.</strong> - <strong>Cargo:</strong> <code>cargo fetch</code> lädt nur, und danach kann Cargo offline arbeiten: „this command will ensure that all of the git dependencies and/or registry dependencies are downloaded and locally available. Subsequent Cargo commands will be able to run offline after a <code>cargo fetch</code> unless the lock file changes.“ [cargo-fetch] - <strong>Gradle:</strong> - <code>--offline</code> „Specifies that the build should operate without accessing network resources.“ [gradle-cli] - <code>--continue</code> „Continue task execution after a task failure.“ [gradle-cli]. Ohne diese Option würde der erste fehlschlagende Test-Task die übrigen Module ungeprüft lassen. - <strong>npm:</strong> - <code>npm ci</code> setzt ein Lockfile voraus: „The project <strong>must</strong> have an existing <code>package-lock.json</code> or <code>npm-shrinkwrap.json</code>.“ [npm-ci] - Mit <code>ignore-scripts</code> gilt: „If true, npm does not run scripts specified in package.json files.“ [npm-ci] - <strong>Maven:</strong> - Surefire lädt seinen Test-Provider erst, wenn es Tests startet. Ein erster Versuch mit <code>-Dtest=&lt;keine passende Klasse&gt;</code> lud ihn nicht; der Offline-Lauf scheiterte mit „The following artifacts could not be resolved: org.apache.maven.surefire:surefire-junit-platform:jar:3.6.1“ (eigener Test, <a href="#sec-ausfuehren-tests" class="quarto-xref">Kapitel&nbsp;4.3</a>). - Der Filter <code>*#codeAnalysisSelectsNoTest</code> trifft alle Testklassen, aber keine Methode. Surefire startet dadurch den Provider, ohne einen Test auszuführen. Die Syntax ist dokumentiert: „you can execute a limited number of methods in the test by adding <em>#myMethod</em> or <em>#my*ethod</em>“ [surefire-test]. - Ohne passenden Test bricht Surefire normalerweise ab: „Set this to “true” to cause a failure if none of the tests specified in -Dtest=… are run. Defaults to “true”.“ [surefire-test]. Deshalb wird <code>surefire.failIfNoSpecifiedTests=false</code> gesetzt.</p>
+<p><strong>Fehlschlagende Tests sind Ergebnisse.</strong> - <strong>Maven:</strong> <code>testFailureIgnore</code> („Set this to “true” to ignore a failure during testing.“ [surefire-test]) lässt Maven trotz fehlschlagender Tests weiterlaufen. Ein Exitcode ungleich 0 bedeutet dann, dass etwas anderes scheiterte, etwa die Kompilierung. - <strong>pytest:</strong> Die Exitcodes trennen beides: 0 „All tests were collected and passed successfully“, 1 „Tests were collected and run but some of the tests failed“, 5 „No tests were collected“, dagegen 3 „Internal error happened while executing tests, or a plugin raised while importing“ und 4 „pytest command line usage error, including a plugin that cannot be found or a conftest.py that fails to import“ [pytest-exit]. - <strong><code>--continue-on-collection-errors</code></strong> („Force test execution even if collection errors occur.“ [pytest-ref]) verhindert, dass eine einzige nicht importierbare Testdatei den ganzen Lauf abbricht. - <strong>dotnet test (VSTest):</strong> „If all tests are successful, the test runner returns 0 as an exit code; otherwise if any test fails, it returns 1.“ [ms-dotnet-test]</p>
+<p><strong>Maschinenlesbare Berichte.</strong> - <strong>pytest:</strong> <code>--junit-xml=PATH</code> „Create junit-xml style report file at given path.“ [pytest-ref] - <strong>dotnet test:</strong> schreibt TRX mit <code>--logger trx</code>, mit <code>LogFilePrefix</code> eine Datei je Zielframework: „log with the trx logger to files in the <em>TestResults</em> folder, with file names that are unique for each target framework“ [ms-dotnet-test]. - <strong>Jest:</strong> - <code>--json</code> „Prints the test results in JSON.“ - <code>--outputFile</code> „Write test results to a file when the <code>--json</code> option is also specified.“ - <code>--ci</code> lässt neue Snapshots fehlschlagen statt sie zu speichern [jest-cli]. - <strong>Vitest:</strong> - „Outputs a report of the test results in JUnit XML format.“ - „You can use multiple reporters simultaneously to print your test results in different formats.“ [vitest-reporters] - <strong>Node.js:</strong> - „The <code>junit</code> reporter outputs test results in a jUnit XML format“. - Mehrere Reporter brauchen je ein Ziel: „In this situation it is required to specify a destination for each reporter using <code>--test-reporter-destination</code>.“ [node-test] - <strong>CTest:</strong> <code>--output-junit</code> „Write test results in JUnit format.“ (seit CMake 3.21) [ctest]. - <strong>Rust:</strong> <code>cargo test</code> hat auf dem stabilen Kanal kein Berichtsformat. Ausgewertet wird die Textausgabe von libtest (<code>test &lt;Name&gt; ... ok|FAILED|ignored</code>, <code>test result: …</code>).</p>
+<p><strong>Python-Installation.</strong> - uv: <code>--all-extras</code> „Include all optional dependencies.“, <code>--all-groups</code> „Include dependencies from all dependency groups.“, <code>--frozen</code> „Instead of checking if the lockfile is up-to-date, uses the versions in the lockfile as the source of truth.“ [uv-cli] - Poetry: <code>--all-extras</code> „Install all extra features“, <code>--all-groups</code> „Install dependencies from all groups“ [poetry-cli]. - PDM: <code>-G</code> „use <code>:all</code> to include all groups under the same species.“ [pdm-cli] - Pipenv: <code>sync --dev</code> „Install both development and default packages“ aus <code>Pipfile.lock</code> [pipenv-cli]. - Alle Gruppen werden installiert, weil die Testabhängigkeiten je nach Projekt in einer Gruppe <code>test</code>, <code>dev</code> oder einem Extra stehen.</p>
+<p><strong>C/C++ im Debug-Build.</strong> - „If the preprocessor macro NDEBUG is defined before assert.h is included, the assert macro is defined to do absolutely nothing.“ [glibc-assert] - Im eigenen Test setzt CMake für <code>CMAKE_BUILD_TYPE=Release</code> die Optionen <code>-O3 -DNDEBUG</code>, für <code>Debug</code> nur <code>-g</code> (clang 22, CMake 3.31.6, aus <code>compile_commands.json</code>). - Im Release-Build würde ein Test, der mit <code>assert()</code> prüft, also immer bestehen.</p>
+</section>
+<section id="sec-ausfuehren-tests" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="sec-ausfuehren-tests"><span class="header-section-number">4.3</span> Testergebnisse</h2>
+<p><strong>Beispielprojekte</strong> (<code>scheduler/tests/test_testing_docker.py</code>, 10 Tests, alle bestanden). Jedes Projekt hat einen bestandenen, einen fehlschlagenden und einen übersprungenen Test. Das Tool liest bei allen genau diese Ergebnisse, mit Status <code>ok</code>:</p>
+<div id="tbl-ausfuehren-tests" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-ausfuehren-tests-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;4: Testläufe der Beispielprojekte
+</figcaption>
+<div aria-describedby="tbl-ausfuehren-tests-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Projekt</th>
+<th>Gelesene Tests</th>
+<th>Dauer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>pip-Projekt (<code>pyproject.toml</code>), pytest und unittest, ohne eigenes pytest</td>
+<td>5 (2 bestanden, 2 fehlgeschlagen, 1 übersprungen)</td>
+<td>ca. 2 s</td>
+</tr>
+<tr class="even">
+<td>Rust</td>
+<td>Crate mit Unit-, Integrations- und Doctest</td>
+<td>5</td>
+<td>ca. 10 s</td>
+</tr>
+<tr class="odd">
+<td>C#</td>
+<td>xUnit, Testprojekt für <code>net8.0</code> mit Theory</td>
+<td>5</td>
+<td>ca. 20 s</td>
+</tr>
+<tr class="even">
+<td>Java</td>
+<td>Maven mit JUnit Jupiter 6.1.3, Surefire 3.6.1</td>
+<td>3</td>
+<td>ca. 15 s</td>
+</tr>
+<tr class="odd">
+<td>Java</td>
+<td>Gradle 9.9.1 mit JUnit Jupiter 6.1.3</td>
+<td>3</td>
+<td>ca. 15 s</td>
+</tr>
+<tr class="even">
+<td>JavaScript</td>
+<td>Vitest 5.1.0; Jest 30.5.2; <code>node:test</code></td>
+<td>je 3</td>
+<td>5–20 s</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>CMake mit vcpkg-Manifest, zwei <code>add_test</code></td>
+<td>2</td>
+<td>ca. 5 s</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Einzelne Beobachtungen:</p>
+<ul>
+<li><strong>Kein Netzwerk:</strong> Ein Python-Test, der <code>pypi.org</code> erreichen will, schlägt mit „socket.gaierror: [Errno -3] Temporary failure in name resolution“ fehl. Der Testlauf hat also wirklich kein Netzwerk.</li>
+<li><strong>pytest ergänzt:</strong> Das Projekt installiert kein pytest. Das Tool ergänzt pytest 9.2.0, und der Bericht nennt „pytest 9.2.0, Python 3.13.18“.</li>
+<li><strong>Abgleich mit HEAD:</strong> Im Python-Projekt wurde nach dem Commit <code>add</code> zu <code>a - b</code> geändert, wie es eine fehlerhafte Korrektur in Schritt 2 tun könnte. Das Tool meldet genau die zwei Tests, die nach Schritt 2 fehlschlagen und bei HEAD bestehen.</li>
+<li><strong>Maven-Provider:</strong> Der erste Entwurf des Vorlaufs (<code>-Dtest=&lt;keine Klasse&gt;</code>) lud den Surefire-Provider nicht, und der Offline-Lauf scheiterte (<a href="#sec-ausfuehren" class="quarto-xref">Kapitel&nbsp;4</a>). Mit dem Methodenfilter laufen Vorlauf und Testlauf durch.</li>
+<li><strong>Gradle-Kennungen:</strong> Gradle benennt JUnit-Platform-Tests nach ihrem Anzeigenamen (<code>adds()</code>), Surefire nach dem Methodennamen (<code>adds</code>). Innerhalb eines Projekts sind die Kennungen in beiden Ständen gleich; nur das zählt für den Abgleich.</li>
+<li><strong>Debug-Build:</strong> Der C-Test mit <code>assert(1 + 1 == 3)</code> schlägt fehl („Assertion `1 + 1 == 3’ failed“). Er wäre im Release-Build bestanden.</li>
+</ul>
+<p><strong>libgdx</strong> (Commit <code>464116b74</code>, Gradle-Wrapper 8.14.3, JUnit 4):</p>
+<ul>
+<li><strong>Ausgangslage:</strong> Die Arbeitskopie enthielt die 2346 Änderungen eines früheren Laufs von Schritt 2. Schritt 5 lief deshalb in beiden Ständen.</li>
+<li><strong>Erster Entwurf:</strong> <code>gradle test --continue</code> scheiterte sofort mit „Could not determine the dependencies of task ‘:backends:gdx-backend-android:testDebugUnitTest’. &gt; SDK location not found.“ Ein einziges Android-Modul verhinderte so alle Tests.</li>
+<li><strong>Festlegung daraus:</strong> Das Init-Skript listet seitdem die <code>test</code>-Tasks der Java-Projekte (23 Tasks). Das Android-Modul <code>:backends:gdx-backend-android</code> wird mit Hinweis ausgelassen.</li>
+<li><strong>Ergebnis:</strong>
+<ul>
+<li><strong>Nach Schritt 2:</strong> Status <code>failed</code>, kein Test lief. Der Task <code>:gdx:validateIOSHeader</code> scheiterte mit „Header file for iosgl20 contains method JNIEXPORT void JNICALL Java_com_badlogic_gdx_backends_iosrobovm_IOSGLES20_init, which is not contained in the implementation“.</li>
+<li><strong>Bei HEAD:</strong> Status <code>ok</code>, 23 246 Testfälle aus 55 Berichten, alle bestanden.</li>
+<li>Das Tool meldet: „after step 2: failed, no test ran; at HEAD: ok, 23246 tests (23246 passed)“.</li>
+</ul></li>
+<li><strong>Ursache:</strong>
+<ul>
+<li>clang-format hat in Schritt 2 in <code>gdx/jni/iosgl/iosgl20.cpp</code> die Parameterliste jeder <code>JNIEXPORT</code>-Deklaration auf dieselbe Zeile gezogen.</li>
+<li>Der Task von libgdx vergleicht die <code>JNIEXPORT</code>-Zeilen der Implementierung zeilengenau mit dem aus Java erzeugten Header (<code>gdx/build.gradle</code>, <code>validateIOSHeader</code>), und <code>test</code> hängt von ihm ab.</li>
+<li>Die Formatierung ändert das Verhalten des Codes nicht. Sie bricht aber eine Prüfung im Build des Projekts.</li>
+<li>Genau diesen Fall soll der Vergleich mit HEAD sichtbar machen: Ohne ihn hätte der Bericht dem Projekt zugeschrieben, dass seine Tests nicht laufen.</li>
+</ul></li>
+<li><strong>Abgleich bei leerem Stand:</strong> Die erste Fassung des Abgleichs listete alle 23 246 Tests einzeln als „missing“ (<code>summary.json</code> 4,5 MB). Hat ein Stand gar keine Testergebnisse, werden seitdem nur Status und Anzahlen verglichen (<code>summary.json</code> 6 KB).</li>
+<li><strong>Ende zu Ende:</strong> <code>bin/code-analysis</code> im neu gebauten Scheduler-Container, auf einem kleinen pytest-Projekt. Die Schritte 1 bis 5 liefen durch (Exitcode 0). Schritt 5 las <code>config/tests.toml</code> (heute <code>[tests]</code> in <code>code-analysis.toml</code>) aus dem gemounteten Ordner und meldete „ok, 3 tests: 3 passed“ ohne Netzwerk.</li>
+<li><strong>Dauer:</strong> nach Schritt 2 186 s (Vorlauf 105 s, Testlauf 81 s). Die erste Ausführung lud dabei die Gradle-Distribution 8.14.3 und alle Abhängigkeiten.</li>
+</ul>
+</section>
+<section id="grenzen-1" class="level2" data-number="4.4">
+<h2 data-number="4.4" class="anchored" data-anchor-id="grenzen-1"><span class="header-section-number">4.4</span> Grenzen</h2>
+<ul>
+<li><strong>Code im Vorlauf:</strong> Nicht jeder Paketmanager kann laden, ohne Code auszuführen.
+<ul>
+<li>Python-Installationen bauen das Projekt und sdists, also <code>setup.py</code> und Build-Backends, mit Netzwerk.</li>
+<li>Gradle führt im Vorlauf die Build-Skripte aus.</li>
+<li>Maven kompiliert im Vorlauf.</li>
+<li>CMake führt beim Konfigurieren den CMake-Code des Projekts aus; Conan/vcpkg bauen die Abhängigkeiten.</li>
+<li>Die Tests selbst laufen ohne Netzwerk.</li>
+</ul></li>
+<li><strong>Tests, die Netzwerk oder Dienste brauchen,</strong> schlagen ohne Netzwerk fehl, ebenso Tests mit Datenbanken oder Testcontainers: Die Container haben keinen Docker-Socket. Sie zählen als fehlgeschlagene Tests; die Ausgabe weist auf das fehlende Netzwerk hin.</li>
+<li><strong>Nicht unterstützt</strong> (<code>skipped</code>): Conda-Umgebungen und JavaScript-Tests, die einen Browser brauchen (Playwright, Cypress, Karma). Android-Unit-Tests werden nicht ausgeführt, weil sie das Android SDK brauchen.</li>
+<li><strong>Microsoft.Testing.Platform:</strong> Wählt <code>global.json</code> diesen Modus für <code>dotnet test</code>, wird nur der Exitcode festgehalten (<code>partial</code>). Ein TRX-Bericht bräuchte ein Erweiterungspaket im Projekt.</li>
+<li><strong>JavaScript ohne bekanntes Framework:</strong> Das Testskript läuft, aber nur sein Exitcode wird festgehalten (<code>partial</code>).</li>
+<li><strong>Python-Versionen:</strong> Das Image hat Python 3.13. Projekte, die eine andere Version verlangen, laufen nur, wenn uv sie herunterladen kann (uv-Projekte); bei Poetry, PDM und Pipenv nicht.</li>
+<li><strong>Ungetestete Wege:</strong> Mocha, Bun, Yarn, pnpm, Conan sowie Maven- und Gradle-Wrapper sind implementiert, aber nur Teile davon an Beispielprojekten getestet.</li>
+</ul>
+</section>
+</section>
+<section id="sec-abdeckung" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Teil 3: Testabdeckung messen</h1>
+<section id="festlegung-2" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="festlegung-2"><span class="header-section-number">5.1</span> Festlegung</h2>
+<p><strong>Ablauf:</strong> - Direkt nach dem Testlauf einer Suite (Stand nach Schritt 2) misst ein eigener Lauf die Abdeckung, in derselben Kopie. Abhängigkeiten und Builds sind dort schon vorhanden. - Der Lauf ist ohne Netzwerk wie der Testlauf. Nur das Hinzufügen des Messwerkzeugs zur Kopie hat Netzwerk. - Suites, deren Tests nicht liefen, werden nicht gemessen (<code>skipped</code>). - Gemessen wird nur der Stand nach Schritt 2, nicht HEAD. - Es gibt keine Mindestabdeckung (Ablaufplan: „no minimum coverage“).</p>
+<p><strong>Ein festes Werkzeug je Sprache:</strong></p>
+<div id="tbl-abdeckung" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-abdeckung-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;5: Teil 3: Werkzeuge der Testabdeckung
+</figcaption>
+<div aria-describedby="tbl-abdeckung-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Werkzeug</th>
+<th>Aufruf</th>
+<th>Branches</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>coverage.py 7.17.3 (eine Version des Projekts hat Vorrang)</td>
+<td><code>coverage run --rcfile=&lt;eigene Einstellungen: branch = True&gt; -m pytest -p no:cov …</code>, dann <code>coverage xml</code></td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>JS/TS (Jest)</td>
+<td>Jests eingebaute Abdeckung</td>
+<td><code>jest … --coverage --coverageReporters=cobertura</code></td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>JS/TS (Vitest)</td>
+<td><code>@vitest/coverage-v8</code> passend zu Vitest</td>
+<td><code>vitest run … --coverage.provider=v8 --coverage.reporter=cobertura --coverage.reportOnFailure=true</code></td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>JS/TS (Mocha, <code>node:test</code>, andere)</td>
+<td>c8 12.0.0</td>
+<td><code>c8 --reporter=cobertura &lt;Testbefehl&gt;</code></td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>Java</td>
+<td>JaCoCo 0.8.16</td>
+<td>Maven: Goals <code>prepare-agent</code>, <code>test</code>, <code>report</code> per Koordinaten; Gradle: Init-Skript mit Plugin <code>jacoco</code>, <code>ignoreFailures</code>, XML-Bericht</td>
+<td>ja</td>
+</tr>
+<tr class="even">
+<td>C#</td>
+<td>coverlet.collector 10.1.0</td>
+<td><code>dotnet test … --collect "XPlat Code Coverage"</code> mit <code>DOTNET_ROLL_FORWARD=LatestMajor</code></td>
+<td>ja</td>
+</tr>
+<tr class="odd">
+<td>Rust</td>
+<td>cargo-llvm-cov 0.9.1</td>
+<td><code>cargo llvm-cov --workspace --ignore-run-fail --offline --cobertura</code></td>
+<td>nein</td>
+</tr>
+<tr class="even">
+<td>C/C++</td>
+<td>gcovr 8.8 mit llvm-cov 22</td>
+<td>zweiter CMake-Build (Debug) mit <code>--coverage</code>, CTest, <code>gcovr --gcov-executable "llvm-cov-22 gcov" --cobertura</code></td>
+<td>ja</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Zählweise:</strong> - Gezählt werden die Quelldateien der Sprache unterhalb der Suite. Nicht dazu gehören: - Testcode: die Testdateien aus Teil 1, Dateien in Testordnern (<code>test/</code>, <code>tests/</code>, <code>__tests__/</code>, <code>spec/</code>, <code>src/test/</code>, …) und <code>conftest.py</code>; - generierte Dateien aus Schritt 1; - Build-Skripte und Werkzeugkonfiguration (<code>setup.py</code>, <code>build.rs</code>, <code>*.config.js</code>, …); - Dokumentation und Beispiele. - Bei C# ist eine Suite ein Testprojekt; gezählt werden die C#-Dateien außerhalb der Testprojekte. - Rusts Quelldateien mit <code>#[cfg(test)]</code>-Modulen zählen samt dieser Module. - Je Datei gibt es: ausführbare Zeilen, davon ausgeführte, Branches (wo das Werkzeug sie meldet) und die nicht ausgeführten Zeilennummern. - Quelldateien ohne Messdaten hat kein Test geladen. Sie werden als <code>not_loaded</code> gelistet, aber ohne Zeilen, denn nur die Werkzeuge wissen, welche Zeilen ausführbar sind. - Die Quoten in <code>summary.json</code> beziehen sich auf die Dateien mit Messdaten. - Fehlschlagende Tests verhindern den Bericht nicht.</p>
+</section>
+<section id="begründung-und-belege-2" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="begründung-und-belege-2"><span class="header-section-number">5.2</span> Begründung und Belege</h2>
+<p><strong>Einheitliche Messung.</strong> - Die Messung soll zwischen Projekten vergleichbar sein. Deshalb gibt es ein festes Werkzeug je Sprache, und bei Python werden die Einstellungen des Projekts nicht verwendet. - coverage.py liest sonst die erste Datei mit Einstellungen: „If <code>.coveragerc</code> doesn’t exist and another file hasn’t been specified, then coverage.py will look for settings in other common configuration files, in this order: <code>.coveragerc.toml</code>, <code>setup.cfg</code>, <code>tox.ini</code>, or <code>pyproject.toml</code>.“ Mit <code>--rcfile=FILE</code> gilt nur die angegebene Datei [coverage-config]. - Branches misst coverage.py nur auf Anforderung: „If you want branch coverage measurement, use the <code>--branch</code> flag. Otherwise only statement coverage is measured.“ [coverage-run] - <code>-p no:cov</code> schaltet ein eventuell installiertes pytest-cov aus, das sonst eine zweite Messung starten würde.</p>
+<p><strong>JavaScript.</strong> - Jest bringt die Abdeckung mit („Jest ships with two coverage providers: <code>babel</code> (default) and <code>v8</code>.“), und als Berichtsformat „Any istanbul reporter can be used.“ [jest-config] - Vitest wählt den Provider über <code>coverage.provider</code> (Standard <code>'v8'</code>). Ohne <code>coverage.reportOnFailure</code> („Generate coverage report even when tests fail.“, Standard <code>false</code>) entsteht bei einem fehlschlagenden Test kein Bericht [vitest-coverage]. Das zeigte auch der eigene Test (<a href="#sec-abdeckung-tests" class="quarto-xref">Kapitel&nbsp;5.3</a>). - c8 misst mit „Node.js’ built in functionality that’s compatible with Istanbul’s reporters“ und umschließt jeden Befehl, etwa „c8 –100 npm test“ [c8]. Damit sind Mocha, <code>node:test</code> und beliebige Testskripte abgedeckt.</p>
+<p><strong>Java (JaCoCo).</strong> - <code>prepare-agent</code> „Prepares a property pointing to the JaCoCo runtime agent that can be passed as a VM argument to the application under test.“ Die Eigenschaft heißt <code>argLine</code>, die Surefire übernimmt. Einschränkung: „If your project already defines VM arguments for test execution, be sure that they will include property defined by JaCoCo.“ [jacoco-prepare-agent] - <code>report</code> „Creates a code coverage report for tests of a single project in multiple formats (HTML, XML, and CSV).“ [jacoco-report] - In Gradle gilt: „If the Java plugin is also applied to your project, a new task named <code>jacocoTestReport</code> is created.“ Aber „the <code>jacocoTestReport</code> task does not depend on the <code>test</code> task.“ [gradle-jacoco]. Das Init-Skript ordnet den Bericht deshalb nach den Tests ein (<code>mustRunAfter</code>). - Gradles Standard für <code>toolVersion</code> ist 0.8.15 [gradle-jacoco]. Das Tool legt 0.8.16 für Maven und Gradle gleich fest. - Im Init-Skript nennt jeder Aufruf das Projekt ausdrücklich (<code>p.pluginManager.apply('jacoco')</code>). Mit dem kurzen <code>apply plugin: 'jacoco'</code> scheiterte libgdx (Gradle 8.14.3) mit „The plugin must be applied in a build script (or to the Project object), but was applied in an init script (or to the Gradle object)“; im kleinen Beispielprojekt (Gradle 9.9.1) war es nicht aufgefallen.</p>
+<p><strong>C# (coverlet).</strong> - coverlets Collector: „your project file must reference <code>coverlet.collector</code> and a minimum version of <code>Microsoft.NET.Test.Sdk</code>“. Das Ergebnis ist „by default in cobertura format“ [coverlet-vstest]. - Die Dokumentation warnt, dass der Collector nicht mit Microsoft.Testing.Platform zusammenarbeitet [coverlet-vstest]. Solche Projekte werden nicht gemessen. - <strong>Laufzeit:</strong> Der Collector läuft auf der Runtime des SDK (.NET 10). Bei einem <code>net8.0</code>-Testprojekt meldete er „Failed to unload module … The system cannot open the device or file specified“ und „No coverage hits were collected“ (eigener Test). Mit <code>net10.0</code> kamen die Treffer an. - Der Messlauf nutzt deshalb <code>DOTNET_ROLL_FORWARD=LatestMajor</code>: „Roll-forward to highest available major version […], even if requested major is present.“ Die Umgebungsvariable hat Vorrang vor der <code>runtimeconfig.json</code> [ms-roll-forward]. - Der Testlauf von Teil 2 bleibt auf der Ziel-Runtime. - <strong>Microsoft Code Coverage verworfen:</strong> Sowohl <code>dotnet-coverage collect</code> („No code coverage data available. Profiler was not initialized.“) als auch <code>dotnet test --collect "Code Coverage;Format=cobertura"</code> („number of packages: 0 modules: 2“) lieferten im Test leere Berichte.</p>
+<p><strong>Rust.</strong> - cargo-llvm-cov ist ein „wrapper around rustc <code>-C instrument-coverage</code>“ [cargo-llvm-cov]. - <code>--ignore-run-fail</code> „Run all tests regardless of failure and generate report“ [cargo-llvm-cov]. - „branch coverage is currently optional and requires nightly“, und Doctests sind „disabled by default because nightly-only features are required“ [cargo-llvm-cov]. Mit der festen stabilen Toolchain gibt es daher nur Zeilen.</p>
+<p><strong>C/C++.</strong> - gcovr braucht den Build mit <code>--coverage</code>. Für clang gilt: „If you have used Clang, then you can use its gcov emulation mode. For example: <code>gcovr --gcov-executable "llvm-cov gcov"</code>“, und „the <code>llvm-cov</code> name may have to include your compiler version“ [gcovr-compiling]. - clang nennt das „gcov - A GCC-compatible coverage implementation which operates on DebugInfo. This is enabled by <code>-ftest-coverage</code> or <code>--coverage</code>.“ [clang-coverage] - Der Link braucht die Laufzeitbibliothek <code>libclang_rt.profile.a</code> (Debian-Paket <code>libclang-rt-22-dev</code>). Ohne sie scheiterte schon der Compiler-Test von CMake: „cannot find …/libclang_rt.profile.a“ (eigener Test).</p>
+</section>
+<section id="sec-abdeckung-tests" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="sec-abdeckung-tests"><span class="header-section-number">5.3</span> Testergebnisse</h2>
+<p><strong>Beispielprojekte:</strong> Jedes Projekt aus <a href="#tbl-ausfuehren-tests" class="quarto-xref">Tabelle&nbsp;4</a> bekam eine nicht getestete Funktion mit einer Verzweigung. Die Werte sind in <code>scheduler/tests/test_testing_docker.py</code> fest geprüft, alle Tests bestanden:</p>
+<div id="tbl-abdeckung-tests" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-abdeckung-tests-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;6: Abdeckung der Beispielprojekte
+</figcaption>
+<div aria-describedby="tbl-abdeckung-tests-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Datei</th>
+<th>Zeilen</th>
+<th>Branches</th>
+<th>Nicht ausgeführt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td><code>calc/__init__.py</code></td>
+<td>3/6</td>
+<td>0/2</td>
+<td>6–8</td>
+</tr>
+<tr class="even">
+<td>Rust</td>
+<td><code>src/lib.rs</code></td>
+<td>8/10</td>
+<td>–</td>
+<td>22, 26 (Rest des fehlschlagenden Tests, ignorierter Test)</td>
+</tr>
+<tr class="odd">
+<td>C#</td>
+<td><code>Calc/Calculator.cs</code></td>
+<td>1/7</td>
+<td>0/2</td>
+<td>8–11, 13–14</td>
+</tr>
+<tr class="even">
+<td>Java (Maven, Gradle)</td>
+<td><code>src/main/java/calc/Calc.java</code></td>
+<td>1/5</td>
+<td>0/2</td>
+<td>3 (impliziter Konstruktor), 9–10, 12</td>
+</tr>
+<tr class="odd">
+<td>JS (Vitest)</td>
+<td><code>src/calc.js</code></td>
+<td>2/2</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>JS (Jest)</td>
+<td><code>src/calc.cjs</code></td>
+<td>1/1</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr class="odd">
+<td>JS (<code>node:test</code>, c8)</td>
+<td><code>src/calc.js</code></td>
+<td>3/3</td>
+<td>2/2</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>C</td>
+<td><code>src/calc.c</code></td>
+<td>2/7</td>
+<td>0/2</td>
+<td>5–7, 9–10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Testcode nicht gezählt:</strong>
+<ul>
+<li>coverage.py meldet auch die Testdateien; die Gesamtquote im Bericht des Werkzeugs war 82,6 %.</li>
+<li>Das Tool zählt nur <code>calc/__init__.py</code> und kommt so auf 50 %.</li>
+<li>Bei C liegen die Testprogramme in <code>tests/</code> und zählen nicht.</li>
+</ul></li>
+<li><strong>Werkzeuge unterscheiden sich:</strong> Dieselbe Funktion <code>add</code> ergibt je nach Werkzeug eine bis drei Zeilen, etwa mit oder ohne Zeile der Funktionsdefinition und schließende Klammer. Quoten sind deshalb nur innerhalb einer Sprache und eines Werkzeugs vergleichbar.</li>
+<li><strong>Vitest:</strong> Ohne <code>reportOnFailure</code> schrieb Vitest keinen Bericht, weil ein Test fehlschlug.</li>
+<li><strong>libgdx</strong> (Commit <code>f4ec02884</code>, ohne Änderungen aus Schritt 2, als lokaler Klon):
+<ul>
+<li>Die Tests liefen mit Status <code>ok</code>: 23 246 Testfälle, alle bestanden (191 s).</li>
+<li>JaCoCo maß danach in 26 s: Zeilen 9,7 % (5656/58 473), Branches 9,7 % (2580/26 618).</li>
+<li>Daten gibt es für 567 Dateien, 766 von 1333 Quelldateien hat kein Test geladen.</li>
+<li>Nur das Modul <code>gdx</code> hat Tests und damit einen JaCoCo-Bericht. Die nicht geladenen Dateien sind die der Backends und Erweiterungen ohne eigene Tests.</li>
+<li>Am meisten abgedeckt sind <code>CharArray.java</code> (764/1019 Zeilen) und <code>ShewchukExactPredicates.java</code> (702/714).</li>
+<li>Die Demo-Anwendungen unter <code>tests/</code> zählen nicht, weil sie in einem Testordner liegen.</li>
+</ul></li>
+</ul>
+</section>
+<section id="grenzen-2" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="grenzen-2"><span class="header-section-number">5.4</span> Grenzen</h2>
+<ul>
+<li><strong>Unterschiedliche Messgrößen:</strong> coverage.py zählt Anweisungen, JaCoCo Zeilen mit Bytecode, Istanbul/c8 Anweisungen und Zeilen, llvm-cov Regionen und Zeilen. Die Zeilenquote ist zwischen Sprachen nur grob vergleichbar.</li>
+<li><strong>Branches fehlen bei Rust</strong> (nur nightly), Doctests werden nicht gemessen.</li>
+<li><strong>Nicht geladene Dateien</strong> gehen nicht in die Quote ein. Ein Projekt mit vielen ungetesteten Dateien wirkt über die Quote besser, als es ist; die Liste <code>not_loaded</code> zeigt den Umfang.</li>
+<li><strong>„Nicht geladen“ hängt vom Werkzeug ab:</strong> JaCoCo meldet alle Klassen eines getesteten Moduls, auch nie ausgeführte (mit 0 Zeilen). coverage.py, Istanbul und c8 melden nur geladene Dateien. Bei Java sind „nicht geladen“ daher die Dateien von Modulen ohne Bericht.</li>
+<li><strong>Projekteinstellungen:</strong> Jest und Vitest lesen ihre Projektkonfiguration (z. B. <code>collectCoverageFrom</code>, <code>coveragePathIgnorePatterns</code>). Bei Maven gehen Surefire-<code>argLine</code>-Einstellungen ohne <code>@{argLine}</code> am JaCoCo-Agenten vorbei.</li>
+<li><strong>C#:</strong> Projekte im Modus Microsoft.Testing.Platform werden nicht gemessen; ältere Zielframeworks laufen in der Messung auf .NET 10.</li>
+<li><strong>Bun</strong> wird nicht gemessen.</li>
+</ul>
+</section>
+</section>
+<section id="sec-mutation" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Teil 4: Mutation Testing</h1>
+<section id="festlegung-3" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="festlegung-3"><span class="header-section-number">6.1</span> Festlegung</h2>
+<p><strong>Ablauf:</strong> - Nach der Abdeckung prüft ein Mutationslauf die Tests jeder Suite, in derselben Kopie (Stand nach Schritt 2) und ohne Netzwerk. - Nur das Hinzufügen des Werkzeugs zur Kopie hat Netzwerk. - Jedes Werkzeug arbeitet mit seinen Standard-Mutatoren.</p>
+<div id="tbl-mutation" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-mutation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;7: Teil 4: Werkzeuge des Mutation Testing
+</figcaption>
+<div aria-describedby="tbl-mutation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Werkzeug</th>
+<th>Dateiauswahl</th>
+<th>Fehlschlagende Tests aus Teil 2</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>mutmut 3.8.1</td>
+<td><code>source_paths</code> in <code>[tool.mutmut]</code> der <code>pyproject.toml</code> der Kopie</td>
+<td><code>pytest_add_cli_args_test_selection</code> mit <code>--deselect</code></td>
+</tr>
+<tr class="even">
+<td>JS/TS</td>
+<td>StrykerJS 10.1.1 (Runner für Jest, Vitest, Mocha; sonst Command-Runner)</td>
+<td><code>mutate</code> in einer eigenen Stryker-Konfiguration</td>
+<td>nicht möglich: Suite <code>skipped</code></td>
+</tr>
+<tr class="odd">
+<td>Java</td>
+<td>PIT 1.30.2 (Maven: Plugin in der <code>pom.xml</code> der Kopie; Gradle: gradle-pitest-plugin 1.19.0 per Init-Skript)</td>
+<td><code>targetClasses</code></td>
+<td><code>skipFailingTests</code></td>
+</tr>
+<tr class="even">
+<td>C#</td>
+<td>Stryker.NET 5.1.0</td>
+<td><code>--mutate</code></td>
+<td><code>--test-case-filter</code></td>
+</tr>
+<tr class="odd">
+<td>Rust</td>
+<td>cargo-mutants 27.1.0</td>
+<td><code>--file</code></td>
+<td><code>-- -- --skip &lt;Test&gt;</code></td>
+</tr>
+<tr class="even">
+<td>C/C++</td>
+<td>–</td>
+<td>– (<code>skipped</code>, Entscheidung vom 13.11.2026)</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p><strong>Umfang (<code>[tests.mutation]</code> in <code>code-analysis.toml</code>, bei jedem Start gelesen):</strong> - <code>mode = "sample"</code> (Standard): eine Zufallsstichprobe von <code>sample_files</code> (Standard 20) Quelldateien, aus den Dateien mit mindestens einer abgedeckten Zeile aus Teil 3. - Die Stichprobe wird mit festem <code>seed</code> (Standard 1) gezogen; dasselbe Projekt ergibt dieselbe Stichprobe. - Hat eine Suite weniger abgedeckte Dateien, werden alle mutiert. - <code>mode = "full"</code>: alle Quelldateien der Suite. - <code>time_limit_minutes</code> (Standard 60, <code>0</code> = kein Limit) je Mutationslauf. - Ist das Limit erreicht, wird der Lauf beendet und bekommt <code>partial</code> mit den bis dahin bewerteten Mutanten. - Das eingestellte Limit macht Schritt 5 nicht unvollständig. - Die Einstellungen sind die Entscheidungen des Nutzers vom 13.11.2026 (<a href="#sec-entscheidungen" class="quarto-xref">Kapitel&nbsp;7</a>).</p>
+<p><strong>Ergebnis:</strong> - Je Mutant: Datei, Zeile, Mutator, Änderung und Zustand. - Die Zustände folgen dem Schema mutation-testing-elements von Stryker; mutmut, PIT und cargo-mutants werden darauf abgebildet. Die Tabelle steht in <code>Code-Analysis-Tool/docs/testAnalysis/README.md</code>. - Bei nicht erkannten Mutanten (<code>Survived</code>, <code>NoCoverage</code>) wird die Quellzeile mitgespeichert, für die Bewertung in Schritt 6. - Der Score ist (<code>Killed</code> + <code>Timeout</code>) / (<code>Killed</code> + <code>Timeout</code> + <code>Survived</code> + <code>NoCoverage</code>).</p>
+</section>
+<section id="begründung-und-belege-3" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="begründung-und-belege-3"><span class="header-section-number">6.2</span> Begründung und Belege</h2>
+<p><strong>Score und Zustände.</strong> - Stryker definiert: „Mutation score: <code>detected / valid * 100</code>“. - Zu den Zuständen: „Timeout: […] It is counted as “detected”.“, „Compile error: […] It is not represented in your mutation score.“, ebenso „Runtime error“, und „Ignored: […] This will not count against your mutation score but will show up in reports.“ [stryker-states] - Dieselben Begriffe für alle Sprachen machen die Ergebnisse in Schritt 6 einheitlich lesbar. - PITs Zustände sind dort beschrieben, etwa „No coverage is the same as Survived except there were no tests that exercised the line of code“ und „A non viable mutation is one that could not be loaded by the JVM“ [pit-concepts]. Daraus folgt die Abbildung auf <code>NoCoverage</code> bzw. <code>CompileError</code>.</p>
+<p><strong>Fehlschlagende Tests.</strong> Alle Werkzeuge brauchen einen Testlauf ohne Mutanten, der besteht:</p>
+<ul>
+<li><strong>PIT</strong> bricht sonst ab: „1 tests did not pass without mutation when calculating line coverage. Mutation testing requires a green suite.“ (eigener Test).
+<ul>
+<li>Der Plugin-Deskriptor von pitest-maven 1.30.2 beschreibt <code>skipFailingTests</code>: „When set will ignore failing tests when computing coverage. Otherwise, the run will fail.“</li>
+<li>Der Parameter hat keine Kommandozeilen-Property. Er steht deshalb in der Plugin-Konfiguration, die das Tool in die <code>pom.xml</code> der Kopie schreibt.</li>
+<li>Auch das JUnit-5-Plugin muss dort stehen: „To activate the plugin it must be placed on the classpath of the pitest tool (<strong>not</strong> on the classpath of the project being mutated).“ [pit-junit5]</li>
+<li><code>excludedTestClasses</code> wäre keine Alternative: „List of globs to match against test class names.“ [pit-maven] Es schließt ganze Klassen aus, nicht einzelne Tests.</li>
+</ul></li>
+<li><strong>cargo-mutants</strong> prüft zuerst den unveränderten Baum: „This makes sure that your tests are in fact all passing“ [cargo-mutants-baseline]. Andernfalls endet es mit Exitcode 4: „The baseline tests are already failing or hanging before any mutations are applied, so no mutations were tested.“ [cargo-mutants-exit]
+<ul>
+<li>Argumente nach einem zweiten <code>--</code> gehen an die Testbinaries: „You can use a second double-dash to pass options through to the test targets.“ [cargo-mutants-args]</li>
+<li>Damit wird libtests <code>--skip</code> übergeben.</li>
+</ul></li>
+<li><strong>mutmut:</strong> „for CLI args that select or deselect tests, use <code>pytest_add_cli_args_test_selection</code>“ [mutmut].
+<ul>
+<li>Die Einstellungen gelten aus <code>[tool.mutmut]</code> der <code>pyproject.toml</code>, wenn es diese Tabelle gibt, sonst aus <code>setup.cfg</code>. So steht es im Quelltext von mutmut 3.8.1 (<code>configuration.py</code>, <code>_config_reader</code>).</li>
+<li>Das Tool ersetzt daher eine vorhandene Tabelle in der Kopie.</li>
+</ul></li>
+<li><strong>Stryker.NET:</strong> <code>--test-case-filter</code> „Filter expression to run selective tests.“ [stryker-net-config]</li>
+<li><strong>StrykerJS</strong> hat keine allgemeine Option, einzelne Tests auszuschließen; seine Optionen [stryker-js-config] wählen nur mutierte Dateien (<code>mutate</code>) und den Runner. Suites mit fehlschlagenden Tests werden deshalb nicht mutiert.</li>
+</ul>
+<p><strong>Dateiauswahl.</strong> - cargo-mutants: „<code>--file GLOB</code>: Mutate only functions in files matching the glob.“ [cargo-mutants-files] - PIT: „<code>targetClasses</code>: The classes to be mutated.“ [pit-maven] - StrykerJS: „With <code>mutate</code> you configure the subset of files or just one specific file to be mutated.“ [stryker-js-config] - Stryker.NET: „With <code>mutate</code> you configure the subset of files to use for mutation testing.“ [stryker-net-config] - Die Stichprobe auf Dateiebene lässt sich deshalb mit allen Werkzeugen gleich umsetzen. - Gezogen wird aus abgedeckten Dateien, weil Mutanten in nie ausgeführtem Code ohne Testlauf <code>NoCoverage</code> sind. Sie zeigen nichts über die Qualität der vorhandenen Tests, was die Abdeckung (Teil 3) nicht schon zeigt. - Fachliteratur zur Stichprobe von Mutanten ist in <code>Quellenvorschlaege.md</code> (Abschnitt F) vorgeschlagen. Sie steht noch nicht in <code>references.bib</code>.</p>
+<p><strong>Eigene Konfigurationen statt der des Projekts.</strong> - StrykerJS: Optionen auf der Kommandozeile ersetzen die der Konfigurationsdatei vollständig („each option used on the command line will <strong>completely replace</strong> (<strong>not</strong> supplement !)“) [stryker-js-config]. - Das Tool übergibt eine eigene Konfigurationsdatei, damit Einstellungen des Projekts (z. B. Schwellen) nicht in die Messung eingehen. - Bei mutmut ersetzt es die <code>[tool.mutmut]</code>-Tabelle. - Bei PIT entfernt es ein vorhandenes <code>pitest-maven</code>-Plugin aus der <code>pom.xml</code> der Kopie.</p>
+<p><strong>Gradle.</strong> - gradle-pitest-plugin wird per Init-Skript angewendet (Plugin-ID <code>info.solidsoft.pitest</code>, Task <code>pitest</code>, Bericht in <code>build/reports/pitest</code>) [gradle-pitest]. - Die neueste Version 1.19.0 steht nur im Gradle Plugin Portal; Maven Central führt 1.15.0 als neueste.</p>
+</section>
+<section id="sec-mutation-tests" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="sec-mutation-tests"><span class="header-section-number">6.3</span> Testergebnisse</h2>
+<p><strong>Beispielprojekte</strong> (<code>scheduler/tests/test_testing_docker.py</code>, 11 Tests, alle bestanden). Jedes Projekt hat eine getestete Funktion <code>add</code> und eine ungetestete <code>sign</code> mit Verzweigung:</p>
+<div id="tbl-mutation-tests" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-mutation-tests-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Tabelle&nbsp;8: Mutation Testing der Beispielprojekte
+</figcaption>
+<div aria-describedby="tbl-mutation-tests-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Sprache</th>
+<th>Werkzeug</th>
+<th>Mutanten</th>
+<th>Score</th>
+<th>Ausgeschlossene Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Python</td>
+<td>mutmut</td>
+<td>1 Killed, 5 NoCoverage</td>
+<td>16,7 %</td>
+<td>2 (<code>--deselect</code>)</td>
+</tr>
+<tr class="even">
+<td>Rust</td>
+<td>cargo-mutants</td>
+<td>5 Killed, 7 Survived</td>
+<td>41,7 %</td>
+<td><code>tests::broken</code></td>
+</tr>
+<tr class="odd">
+<td>C#</td>
+<td>Stryker.NET</td>
+<td>1 Killed, 4 NoCoverage, 2 Ignored</td>
+<td>20 %</td>
+<td><code>Calc.Tests.CalculatorTests.Broken</code></td>
+</tr>
+<tr class="even">
+<td>Java (Maven, Gradle)</td>
+<td>PIT</td>
+<td>2 Killed, 4 NoCoverage</td>
+<td>33,3 %</td>
+<td><code>CalcTest.broken</code> (per <code>skipFailingTests</code>)</td>
+</tr>
+<tr class="odd">
+<td>JS (Vitest, ohne fehlschlagenden Test)</td>
+<td>StrykerJS</td>
+<td>2 Killed, 7 NoCoverage</td>
+<td>22,2 %</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>JS (mit fehlschlagendem Test)</td>
+<td>StrykerJS</td>
+<td>– (<code>skipped</code>)</td>
+<td>–</td>
+<td>–</td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td>–</td>
+<td>– (<code>skipped</code>, nicht unterstützt)</td>
+<td>–</td>
+<td>–</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<ul>
+<li><strong>Unterschiedliche Mutanten:</strong> Dieselbe Funktion ergibt je nach Werkzeug 1 bis 7 Mutanten. mutmut erzeugt für <code>a + b</code> nur einen Mutanten, cargo-mutants fünf (Rückgabewerte 0, 1, −1 und zwei Operatoren). Scores sind deshalb nur zwischen Projekten derselben Sprache vergleichbar.</li>
+<li><strong>cargo-mutants</strong> kennt keinen Zustand „nicht abgedeckt“: Die Mutanten der ungetesteten Funktion sind <code>Survived</code>, bei den anderen Werkzeugen <code>NoCoverage</code>.</li>
+<li><strong>Stryker.NET</strong> ignoriert Blockentfernungen in nicht abgedeckten Blöcken („Removed by block already covered filter“).</li>
+<li><strong>mutmut</strong> liefert die Zeile nur über <code>mutmut show</code>. Das Tool ruft es nur für nicht erkannte Mutanten auf; bei getöteten Mutanten bleibt die Zeile leer.</li>
+<li><strong>Erster Versuch mit PIT:</strong> <code>-DskipFailingTests=true</code> auf der Kommandozeile wirkte nicht; der Lauf brach mit „Mutation testing requires a green suite“ ab. Erst die Einstellung in der <code>pom.xml</code> griff (<a href="#sec-mutation" class="quarto-xref">Kapitel&nbsp;6</a>).</li>
+</ul>
+<p><strong>libgdx</strong> (Commit <code>f4ec02884</code>, lokaler Klon ohne Änderungen aus Schritt 2, Standardeinstellungen: <code>mode = "sample"</code>, 20 Dateien, Seed 1, 60 Minuten):</p>
+<ul>
+<li><strong>Tests:</strong> 23 246 bestanden (193 s). Kein Test musste ausgeschlossen werden.</li>
+<li><strong>Werkzeug:</strong> PIT 1.30.2 über gradle-pitest-plugin 1.19.0 im Modul <code>gdx</code>, das als einziges Tests hat.</li>
+<li><strong>Stichprobe:</strong> 20 der 68 Dateien mit mindestens einer abgedeckten Zeile, z. B. <code>math/Quaternion.java</code>, <code>utils/Json.java</code> und <code>maps/tiled/TmxMapLoader.java</code>.</li>
+<li><strong>Mutanten:</strong> 3221, davon 573 Killed, 242 Survived, 2404 NoCoverage und 2 Timeout. Der Score ist 17,8 %.</li>
+<li><strong>Dauer:</strong> 996 s, davon 986 s PIT. Das Zeitlimit von 60 Minuten wurde nicht erreicht.</li>
+<li><strong>Hoher Anteil <code>NoCoverage</code></strong> (2404 von 3221): Auch die abgedeckten Dateien führen die Tests nur zu einem kleinen Teil aus, passend zur Zeilenabdeckung von 9,7 % (<a href="#sec-abdeckung-tests" class="quarto-xref">Kapitel&nbsp;5.3</a>).</li>
+<li><strong>Beispiele für überlebende Mutanten</strong> mit der gespeicherten Quellzeile:
+<ul>
+<li><code>Quaternion.java</code>, Zeile 372: „replaced return value with null for com/badlogic/gdx/math/Quaternion::idt“, Quellzeile <code>return this.set(0, 0, 0, 1);</code>. Kein Test prüft den Rückgabewert von <code>idt()</code>.</li>
+<li><code>Json.java</code>, Zeile 357: „negated conditional“, Quellzeile <code>if (!usePrototypes) return null;</code>. Kein Test unterscheidet die beiden Zweige.</li>
+</ul></li>
+</ul>
+</section>
+<section id="grenzen-3" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="grenzen-3"><span class="header-section-number">6.4</span> Grenzen</h2>
+<ul>
+<li><strong>Stichprobe auf Dateiebene:</strong> Gezogen werden Dateien, nicht einzelne Mutanten. Dateien mit vielen Mutanten wiegen schwerer. Der Score einer Stichprobe ist eine Schätzung für die abgedeckten Dateien, nicht für das ganze Projekt.</li>
+<li><strong>Zeitlimit:</strong> PIT, StrykerJS und Stryker.NET schreiben ihren Bericht erst am Ende. Erreichen sie das Limit, gibt es keine Ergebnisse (<code>partial</code> mit Hinweis).</li>
+<li><strong>StrykerJS</strong> läuft nur, wenn alle Tests bestehen. <strong>PIT</strong> braucht für TestNG ein weiteres Plugin, das das Tool nicht hinzufügt. <strong>Maven-Multimodule:</strong> Das Plugin steht in der Wurzel-<code>pom.xml</code>; Module, die nicht von ihr erben, laufen ohne JUnit-5-Plugin. <strong>Stryker.NET</strong> mutiert bei mehreren referenzierten Projekten nur das mit den meisten ausgewählten Dateien.</li>
+<li><strong>Vergleichbarkeit:</strong> Mutatoren und Zählweise unterscheiden sich je Werkzeug (siehe Testergebnisse). Ein Score ist ein Maß innerhalb einer Sprache.</li>
+<li><strong>C/C++</strong> wird nicht mutiert.</li>
+</ul>
+</section>
+</section>
+<section id="sec-entscheidungen" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Entscheidungen vom 13.11.2026</h1>
+<p>Am 13.11.2026 vom Nutzer festgelegt und umgesetzt: Code-Stand und Netzwerk in Teil 2 (<a href="#sec-ausfuehren" class="quarto-xref">Kapitel&nbsp;4</a>), die Werkzeuge der Abdeckung in Teil 3 (<a href="#sec-abdeckung" class="quarto-xref">Kapitel&nbsp;5</a>), Umfang und Zeitlimit des Mutation Testing in Teil 4 (<a href="#sec-mutation" class="quarto-xref">Kapitel&nbsp;6</a>).</p>
+<ul>
+<li><strong>Code-Stand:</strong>
+<ul>
+<li>Die Tests laufen auf dem Stand nach Schritt 2, wie die Schritte 3 und 4; das ist das Hauptergebnis.</li>
+<li>Zusätzlich laufen sie auf dem Commit-Stand (HEAD), und die Ergebnisse je Test werden verglichen. Schritt 2 hinterlässt automatische Korrekturen der Linter, die das Verhalten ändern könnten.</li>
+<li>Unterschiede kommen in den Bericht, sonst wird der Vergleich nicht erwähnt.</li>
+<li>Hat Schritt 2 nichts geändert, entfällt der zweite Lauf.</li>
+</ul></li>
+<li><strong>Netzwerk:</strong>
+<ul>
+<li>Die Tests führen Code des Projekts aus. Sie laufen deshalb standardmäßig ohne Netzwerk.</li>
+<li>Nur der Vorlauf, der die Abhängigkeiten herunterlädt, hat Netzwerk.</li>
+<li>In <code>code-analysis.toml</code> lässt sich das Netzwerk für die Tests einschalten. Das soll man nur tun, wenn man dem Code des Projekts vertraut.</li>
+</ul></li>
+<li><strong>Mutation Testing:</strong>
+<ul>
+<li>Standard ist eine reproduzierbare Stichprobe von Dateien mit Zeitlimit; ein vollständiger Lauf ist wählbar.</li>
+<li>Beides und das Limit in Minuten (<code>0</code> = kein Limit) stehen in <code>code-analysis.toml</code>.</li>
+</ul></li>
+<li><strong>C/C++:</strong> Tests und Abdeckung ja. Mutation Testing wird als „nicht unterstützt“ vermerkt.</li>
+<li><strong>Werkzeuge:</strong>
+<ul>
+<li>Die Tests laufen mit dem Framework bzw. Build-Werkzeug des Projekts, mit vom Tool festgelegten Optionen für maschinenlesbare Berichte.</li>
+<li>Für die Abdeckung gibt es ein festes Werkzeug je Sprache, damit die Werte vergleichbar sind.</li>
+</ul></li>
+</ul>
+</section>
+<section id="ergebnisse-im-ausgabeordner" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Ergebnisse im Ausgabeordner</h1>
+<p>Schritt 5 schreibt nach <code>OUTPUT_DIR/&lt;Projekt&gt;/&lt;Datum_Zeit&gt;Z/step5-tests/</code>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Datei</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>summary.json</code></td>
+<td><code>detection</code>: die Suites (Sprache, Ordner, Paketmanager bzw. Build-Werkzeug, Manifest, <code>tests_found</code>, Frameworks, <code>test_files</code>, <code>inline_test_files</code>, Belege, Hinweise), <code>languages_without_tests</code>, <code>languages_not_checked</code>. <code>tests</code>: Netzwerk und Zeitlimit; je Lauf Werkzeug, Version, Status, Dauer, Tests je Ergebnis, fehlgeschlagene Tests, Befehle mit Exitcodes, Hinweise; <code>differences_to_head</code> nur bei Unterschieden</td>
+</tr>
+<tr class="even">
+<td><code>tests.json</code></td>
+<td>jeder Test nach Schritt 2: Suite, Kennung, Ergebnis, Dauer, Fehlermeldung</td>
+</tr>
+<tr class="odd">
+<td><code>coverage.json</code></td>
+<td>je Suite jede Quelldatei mit Zeilen, ausgeführten Zeilen, Branches und nicht ausgeführten Zeilennummern; die Quelldateien, die kein Test geladen hat</td>
+</tr>
+<tr class="even">
+<td><code>mutants.json</code></td>
+<td>jeder Mutant: Suite, Datei, Zeile, Mutator, Änderung, Zustand; die Quellzeile nicht erkannter Mutanten</td>
+</tr>
+<tr class="odd">
+<td><code>&lt;nn&gt;-&lt;Sprache&gt;-&lt;Ordner&gt;/run/</code></td>
+<td>Logs jedes Befehls und die Rohberichte (JUnit-XML, TRX, Jest-JSON)</td>
+</tr>
+<tr class="even">
+<td><code>&lt;nn&gt;-&lt;Sprache&gt;-&lt;Ordner&gt;/run-head/</code></td>
+<td>dasselbe für den Lauf bei HEAD</td>
+</tr>
+<tr class="odd">
+<td><code>&lt;nn&gt;-&lt;Sprache&gt;-&lt;Ordner&gt;/coverage/</code></td>
+<td>Logs und Rohberichte der Abdeckung</td>
+</tr>
+<tr class="even">
+<td><code>&lt;nn&gt;-&lt;Sprache&gt;-&lt;Ordner&gt;/mutation/</code></td>
+<td>Logs, die für das Werkzeug geschriebenen Einstellungen und sein Rohbericht</td>
+</tr>
+</tbody>
+</table>
+<p>Schritt 5 ist unvollständig (Exitcode 8), wenn die Erkennung scheitert, <code>[tests]</code> in <code>code-analysis.toml</code> ungültig ist, Docker oder ein Test-Image fehlt oder ein Lauf den Status <code>failed</code> hat.</p>
+</section>
+<section id="sec-offen" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> Offene Punkte</h1>
+<ul>
+<li>Für die Begründung der Stichprobe im Mutation Testing gibt es Literaturvorschläge in <code>Quellenvorschlaege.md</code> (Abschnitt F). Sie sind noch nicht gelesen und nicht in <code>references.bib</code>.</li>
+<li>Mocha, Bun, Yarn, pnpm und Conan sind in Teil 2 implementiert, aber noch nicht an Beispielprojekten getestet.</li>
+</ul>
+</section>
+<section id="sec-quellen" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Quellen (noch nicht in <code>references.bib</code>)</h1>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Wichtig
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Diese Quellen sind noch nicht in Zotero angelegt und stehen deshalb nicht in <code>references.bib</code>. Für die Thesis müssen sie dort erst hinzugefügt werden. Abgerufen am 13.11.2026.</p>
+</div>
+</div>
+<p><strong>Python</strong></p>
+<ul>
+<li><strong>[pytest-discovery]</strong> pytest: <em>Good Integration Practices</em>, Abschnitt „Conventions for Python test discovery“ (stable, pytest 9). <a href="https://docs.pytest.org/en/stable/explanation/goodpractices.html" class="uri">https://docs.pytest.org/en/stable/explanation/goodpractices.html</a></li>
+<li><strong>[pytest-naming]</strong> pytest: <em>Changing standard (Python) test discovery</em>, Abschnitt „Changing naming conventions“. <a href="https://docs.pytest.org/en/stable/example/pythoncollection.html" class="uri">https://docs.pytest.org/en/stable/example/pythoncollection.html</a></li>
+<li><strong>[pytest-config]</strong> pytest: <em>Configuration</em>, Abschnitte zu den Konfigurationsdateien und „Initialization: determining rootdir and configfile“. <a href="https://docs.pytest.org/en/stable/reference/customize.html" class="uri">https://docs.pytest.org/en/stable/reference/customize.html</a></li>
+<li><strong>[py-unittest]</strong> Python Software Foundation: <em>unittest — Unit testing framework</em>, Abschnitte „Basic example“ und „Test Discovery“ (Python 3.15.2). <a href="https://docs.python.org/3/library/unittest.html" class="uri">https://docs.python.org/3/library/unittest.html</a></li>
+</ul>
+<p><strong>JavaScript und TypeScript</strong></p>
+<ul>
+<li><strong>[jest-testmatch]</strong> Jest: <em>Configuring Jest</em>, Option <code>testMatch</code> (Version 30.5). <a href="https://jestjs.io/docs/configuration" class="uri">https://jestjs.io/docs/configuration</a></li>
+<li><strong>[vitest-include]</strong> Vitest: <em>include</em>. <a href="https://vitest.dev/config/include" class="uri">https://vitest.dev/config/include</a></li>
+<li><strong>[node-test]</strong> Node.js: <em>Test runner</em>, Abschnitte „Running tests from the command line“ und „Test reporters“ (v22.23.5). <a href="https://nodejs.org/docs/latest-v22.x/api/test.html" class="uri">https://nodejs.org/docs/latest-v22.x/api/test.html</a></li>
+<li><strong>[mocha-globs]</strong> Mocha: <em>Test globs</em>. <a href="https://mochajs.org/running/test-globs/" class="uri">https://mochajs.org/running/test-globs/</a></li>
+<li><strong>[cypress-config]</strong> Cypress: <em>Configuration</em>, Option <code>specPattern</code> (e2e). <a href="https://docs.cypress.io/app/references/configuration" class="uri">https://docs.cypress.io/app/references/configuration</a></li>
+<li><strong>[npm-init]</strong> npm Docs: <em>Creating a package.json file</em>, Abschnitt „Creating a default package.json file“. <a href="https://docs.npmjs.com/creating-a-package-json-file" class="uri">https://docs.npmjs.com/creating-a-package-json-file</a></li>
+</ul>
+<p><strong>Java</strong></p>
+<ul>
+<li><strong>[gradle-testing]</strong> Gradle: <em>Testing in Java &amp; JVM projects</em>, Abschnitte „Test detection“ und „Using JUnit Jupiter“ (Gradle 9.9.1). <a href="https://docs.gradle.org/current/userguide/java_testing.html" class="uri">https://docs.gradle.org/current/userguide/java_testing.html</a></li>
+<li><strong>[junit-guide]</strong> JUnit: <em>JUnit User Guide</em> (JUnit 6.1.3). <a href="https://docs.junit.org/current/user-guide/" class="uri">https://docs.junit.org/current/user-guide/</a></li>
+<li><strong>[junit5-test]</strong> JUnit: <em>Annotation Interface Test</em> (<code>org.junit.jupiter.api</code>). <a href="https://docs.junit.org/current/api/org.junit.jupiter.api/org/junit/jupiter/api/Test.html" class="uri">https://docs.junit.org/current/api/org.junit.jupiter.api/org/junit/jupiter/api/Test.html</a></li>
+<li><strong>[junit4-test]</strong> JUnit 4: <em>Annotation Type Test</em> (<code>org.junit</code>, since 4.0). <a href="https://junit.org/junit4/javadoc/latest/org/junit/Test.html" class="uri">https://junit.org/junit4/javadoc/latest/org/junit/Test.html</a></li>
+</ul>
+<p><strong>C#</strong></p>
+<ul>
+<li><strong>[ms-props]</strong> Microsoft Learn: <em>MSBuild reference for .NET SDK projects</em>, Eigenschaft <code>IsTestProject</code>. <a href="https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props" class="uri">https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props</a></li>
+<li><strong>[ms-dotnet-test]</strong> Microsoft Learn: <em>dotnet test command with VSTest</em>, Abschnitte „Description“ und „Examples“. <a href="https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-vstest" class="uri">https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test-vstest</a></li>
+</ul>
+<p><strong>Rust</strong></p>
+<ul>
+<li><strong>[rust-book-org]</strong> Klabnik, S.; Nichols, C.: <em>The Rust Programming Language</em>, Kapitel 11.3 „Test Organization“. <a href="https://doc.rust-lang.org/book/ch11-03-test-organization.html" class="uri">https://doc.rust-lang.org/book/ch11-03-test-organization.html</a></li>
+<li><strong>[cargo-test]</strong> The Cargo Book: <em>cargo test</em>, Abschnitte „Description“ und „Target Selection“. <a href="https://doc.rust-lang.org/cargo/commands/cargo-test.html" class="uri">https://doc.rust-lang.org/cargo/commands/cargo-test.html</a></li>
+<li><strong>[rustdoc-doctests]</strong> The rustdoc book: <em>Documentation tests</em>, Abschnitte zur Spracherkennung und „Attributes“. <a href="https://doc.rust-lang.org/rustdoc/write-documentation/documentation-tests.html" class="uri">https://doc.rust-lang.org/rustdoc/write-documentation/documentation-tests.html</a></li>
+</ul>
+<p><strong>C und C++</strong></p>
+<ul>
+<li><strong>[cmake-add-test]</strong> CMake: <em>add_test</em> (CMake 4.5.0). <a href="https://cmake.org/cmake/help/latest/command/add_test.html" class="uri">https://cmake.org/cmake/help/latest/command/add_test.html</a></li>
+<li><strong>[cmake-ctest]</strong> CMake: <em>CTest</em> (Modul), Variable <code>BUILD_TESTING</code>. <a href="https://cmake.org/cmake/help/latest/module/CTest.html" class="uri">https://cmake.org/cmake/help/latest/module/CTest.html</a></li>
+<li><strong>[cmake-gtest]</strong> CMake: <em>GoogleTest</em> (Modul), Befehle <code>gtest_add_tests</code> und <code>gtest_discover_tests</code>. <a href="https://cmake.org/cmake/help/latest/module/GoogleTest.html" class="uri">https://cmake.org/cmake/help/latest/module/GoogleTest.html</a></li>
+<li><strong>[ctest]</strong> CMake: <em>ctest(1)</em>, Optionen <code>--output-junit</code>, <code>--test-dir</code>, <code>--output-on-failure</code>. <a href="https://cmake.org/cmake/help/latest/manual/ctest.1.html" class="uri">https://cmake.org/cmake/help/latest/manual/ctest.1.html</a></li>
+<li><strong>[glibc-assert]</strong> The GNU C Library: <em>Explicitly Checking Internal Consistency</em>. <a href="https://sourceware.org/glibc/manual/latest/html_node/Consistency-Checking.html" class="uri">https://sourceware.org/glibc/manual/latest/html_node/Consistency-Checking.html</a></li>
+</ul>
+<p><strong>Teil 4: Mutation Testing</strong></p>
+<ul>
+<li><strong>[stryker-states]</strong> Stryker: <em>Mutant states and metrics</em> (mutation-testing-elements). <a href="https://stryker-mutator.io/docs/mutation-testing-elements/mutant-states-and-metrics/" class="uri">https://stryker-mutator.io/docs/mutation-testing-elements/mutant-states-and-metrics/</a></li>
+<li><strong>[stryker-js-config]</strong> StrykerJS: <em>Configuration</em>. <a href="https://stryker-mutator.io/docs/stryker-js/configuration/" class="uri">https://stryker-mutator.io/docs/stryker-js/configuration/</a></li>
+<li><strong>[stryker-net-config]</strong> Stryker.NET: <em>Configuration</em>. <a href="https://stryker-mutator.io/docs/stryker-net/configuration/" class="uri">https://stryker-mutator.io/docs/stryker-net/configuration/</a></li>
+<li><strong>[pit-maven]</strong> PIT: <em>Maven Quick Start</em>. <a href="https://pitest.org/quickstart/maven/" class="uri">https://pitest.org/quickstart/maven/</a></li>
+<li><strong>[pit-concepts]</strong> PIT: <em>Basic Concepts</em>. <a href="https://pitest.org/quickstart/basic_concepts/" class="uri">https://pitest.org/quickstart/basic_concepts/</a></li>
+<li><strong>[pit-junit5]</strong> pitest/pitest-junit5-plugin: <em>README</em>. <a href="https://github.com/pitest/pitest-junit5-plugin" class="uri">https://github.com/pitest/pitest-junit5-plugin</a></li>
+<li><strong>[gradle-pitest]</strong> gradle-pitest-plugin: <em>Dokumentation</em> (Startseite). <a href="https://gradle-pitest-plugin.solidsoft.info/" class="uri">https://gradle-pitest-plugin.solidsoft.info/</a></li>
+<li><strong>[mutmut]</strong> mutmut: <em>Documentation</em>. <a href="https://mutmut.readthedocs.io/en/latest/" class="uri">https://mutmut.readthedocs.io/en/latest/</a></li>
+<li><strong>[cargo-mutants-baseline]</strong> cargo-mutants: <em>Baseline tests</em>. <a href="https://mutants.rs/baseline.html" class="uri">https://mutants.rs/baseline.html</a></li>
+<li><strong>[cargo-mutants-exit]</strong> cargo-mutants: <em>Exit codes</em>. <a href="https://mutants.rs/exit-codes.html" class="uri">https://mutants.rs/exit-codes.html</a></li>
+<li><strong>[cargo-mutants-args]</strong> cargo-mutants: <em>Passing options to Cargo</em>. <a href="https://mutants.rs/cargo-args.html" class="uri">https://mutants.rs/cargo-args.html</a></li>
+<li><strong>[cargo-mutants-files]</strong> cargo-mutants: <em>Filtering files</em>. <a href="https://mutants.rs/skip_files.html" class="uri">https://mutants.rs/skip_files.html</a></li>
+<li>Primärquellen im Werkzeug selbst (keine Webseite): Plugin-Deskriptor <code>META-INF/maven/plugin.xml</code> in <code>pitest-maven-1.30.2.jar</code> (Parameter <code>skipFailingTests</code>); Quelltext von mutmut 3.8.1 (<code>mutmut/configuration.py</code>, <code>mutmut/stats.py</code>).</li>
+</ul>
+<p><strong>Teil 3: Testabdeckung</strong></p>
+<ul>
+<li><strong>[coverage-run]</strong> coverage.py 7.17.3: <em>Execution: coverage run</em>. <a href="https://coverage.readthedocs.io/en/7.17.3/commands/cmd_run.html" class="uri">https://coverage.readthedocs.io/en/7.17.3/commands/cmd_run.html</a></li>
+<li><strong>[coverage-config]</strong> coverage.py 7.17.3: <em>Configuration reference</em>. <a href="https://coverage.readthedocs.io/en/7.17.3/config.html" class="uri">https://coverage.readthedocs.io/en/7.17.3/config.html</a></li>
+<li><strong>[jest-config]</strong> Jest: <em>Configuring Jest</em> (Version 30.5), Optionen <code>collectCoverage</code>, <code>coverageProvider</code>, <code>coverageReporters</code>. <a href="https://jestjs.io/docs/configuration" class="uri">https://jestjs.io/docs/configuration</a></li>
+<li><strong>[vitest-coverage]</strong> Vitest: <em>coverage</em> (Konfiguration). <a href="https://vitest.dev/config/coverage" class="uri">https://vitest.dev/config/coverage</a></li>
+<li><strong>[c8]</strong> bcoe/c8: <em>README</em>. <a href="https://github.com/bcoe/c8" class="uri">https://github.com/bcoe/c8</a></li>
+<li><strong>[jacoco-prepare-agent]</strong> JaCoCo: <em>prepare-agent</em> (Maven-Goal). <a href="https://www.jacoco.org/jacoco/trunk/doc/prepare-agent-mojo.html" class="uri">https://www.jacoco.org/jacoco/trunk/doc/prepare-agent-mojo.html</a></li>
+<li><strong>[jacoco-report]</strong> JaCoCo: <em>report</em> (Maven-Goal). <a href="https://www.jacoco.org/jacoco/trunk/doc/report-mojo.html" class="uri">https://www.jacoco.org/jacoco/trunk/doc/report-mojo.html</a></li>
+<li><strong>[gradle-jacoco]</strong> Gradle: <em>The JaCoCo Plugin</em> (9.9.1). <a href="https://docs.gradle.org/current/userguide/jacoco_plugin.html" class="uri">https://docs.gradle.org/current/userguide/jacoco_plugin.html</a></li>
+<li><strong>[coverlet-vstest]</strong> coverlet: <em>VSTest Integration</em>. <a href="https://github.com/coverlet-coverage/coverlet/blob/master/Documentation/VSTestIntegration.md" class="uri">https://github.com/coverlet-coverage/coverlet/blob/master/Documentation/VSTestIntegration.md</a></li>
+<li><strong>[ms-roll-forward]</strong> Microsoft Learn: <em>Select which .NET version to use</em>, Abschnitte „Control roll-forward behavior“, „Precedence“, „Values“. <a href="https://learn.microsoft.com/en-us/dotnet/core/versions/selection" class="uri">https://learn.microsoft.com/en-us/dotnet/core/versions/selection</a></li>
+<li><strong>[cargo-llvm-cov]</strong> taiki-e/cargo-llvm-cov: <em>README</em>. <a href="https://github.com/taiki-e/cargo-llvm-cov" class="uri">https://github.com/taiki-e/cargo-llvm-cov</a></li>
+<li><strong>[gcovr-compiling]</strong> gcovr: <em>Compiling for Coverage</em>. <a href="https://gcovr.com/en/stable/guide/compiling.html" class="uri">https://gcovr.com/en/stable/guide/compiling.html</a></li>
+<li><strong>[clang-coverage]</strong> Clang: <em>Source-based Code Coverage</em>. <a href="https://clang.llvm.org/docs/SourceBasedCodeCoverage.html" class="uri">https://clang.llvm.org/docs/SourceBasedCodeCoverage.html</a></li>
+</ul>
+<p><strong>Teil 2: Ausführen</strong></p>
+<ul>
+<li><strong>[pytest-exit]</strong> pytest: <em>Exit codes</em>. <a href="https://docs.pytest.org/en/stable/reference/exit-codes.html" class="uri">https://docs.pytest.org/en/stable/reference/exit-codes.html</a></li>
+<li><strong>[pytest-ref]</strong> pytest: <em>API Reference</em>, Abschnitt „Command-line Flags“ (<code>--continue-on-collection-errors</code>, <code>--junit-xml</code>). <a href="https://docs.pytest.org/en/stable/reference/reference.html" class="uri">https://docs.pytest.org/en/stable/reference/reference.html</a></li>
+<li><strong>[uv-cli]</strong> Astral: <em>uv – Commands</em>, <code>uv sync</code>. <a href="https://docs.astral.sh/uv/reference/cli/" class="uri">https://docs.astral.sh/uv/reference/cli/</a></li>
+<li><strong>[poetry-cli]</strong> Poetry: <em>Commands</em>, <code>install</code>. <a href="https://python-poetry.org/docs/cli/" class="uri">https://python-poetry.org/docs/cli/</a></li>
+<li><strong>[pdm-cli]</strong> PDM: <em>CLI Reference</em>, <code>pdm install</code>. <a href="https://pdm-project.org/latest/reference/cli/" class="uri">https://pdm-project.org/latest/reference/cli/</a></li>
+<li><strong>[pipenv-cli]</strong> Pipenv: <em>Commands</em>. <a href="https://pipenv.pypa.io/en/latest/commands.html" class="uri">https://pipenv.pypa.io/en/latest/commands.html</a></li>
+<li><strong>[npm-ci]</strong> npm Docs: <em>npm ci</em> (v10), mit der Option <code>ignore-scripts</code>. <a href="https://docs.npmjs.com/cli/v10/commands/npm-ci" class="uri">https://docs.npmjs.com/cli/v10/commands/npm-ci</a></li>
+<li><strong>[jest-cli]</strong> Jest: <em>Jest CLI Options</em> (<code>--ci</code>, <code>--json</code>, <code>--outputFile</code>). <a href="https://jestjs.io/docs/cli" class="uri">https://jestjs.io/docs/cli</a></li>
+<li><strong>[vitest-reporters]</strong> Vitest: <em>Reporters</em>. <a href="https://vitest.dev/guide/reporters" class="uri">https://vitest.dev/guide/reporters</a></li>
+<li><strong>[surefire-test]</strong> Apache Maven: <em>maven-surefire-plugin:test</em> (3.6.1), Parameter <code>test</code>, <code>testFailureIgnore</code>, <code>failIfNoSpecifiedTests</code>. <a href="https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html" class="uri">https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html</a></li>
+<li><strong>[gradle-cli]</strong> Gradle: <em>Command-Line Interface</em> (9.9.1), Optionen <code>--continue</code> und <code>--offline</code>. <a href="https://docs.gradle.org/current/userguide/command_line_interface.html" class="uri">https://docs.gradle.org/current/userguide/command_line_interface.html</a></li>
+<li><strong>[cargo-fetch]</strong> The Cargo Book: <em>cargo fetch</em>. <a href="https://doc.rust-lang.org/cargo/commands/cargo-fetch.html" class="uri">https://doc.rust-lang.org/cargo/commands/cargo-fetch.html</a></li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Kopiert");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Kopiert");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+          if (!link.classList.contains('no-external-icon')) {
+          }
+        }
+      }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          // Each band is positioned against its own containing block, which is
+          // not the offsetParent of the lines, so place it from client rects.
+          const placeBand = (band, firstEl, lastEl, codeBlock) => {
+            const container = band.offsetParent;
+            if (container === null) {
+              return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            // Reveal.js scales slides with a transform, so convert client
+            // pixels back to the CSS pixels of the container.
+            const scale = containerRect.height / container.offsetHeight || 1;
+            const firstRect = firstEl.getBoundingClientRect();
+            const lastRect = lastEl.getBoundingClientRect();
+            const top = (firstRect.top - containerRect.top) / scale - container.clientTop + container.scrollTop;
+            const height = (lastRect.bottom - firstRect.top) / scale;
+            band.style.top = top - 2 + "px";
+            band.style.height = height + 4 + "px";
+            if (codeBlock) {
+              // Without the copy button wrapper, the containing block is wider
+              // than the code block, so span the code block explicitly.
+              const blockRect = codeBlock.getBoundingClientRect();
+              band.style.left = (blockRect.left - containerRect.left) / scale - container.clientLeft + container.scrollLeft + "px";
+              band.style.width = blockRect.width / scale + "px";
+            }
+          };
+          if (lineIds.length > 0) {
+            const el = window.document.getElementById(lineIds[0]);
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const parent = el.parentElement.parentElement;
+            // cook up a div (if necessary) and position it
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            placeBand(div, el, lastEl, parent.closest("div.sourceCode") || parent);
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            placeBand(gutterDiv, el, lastEl);
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+  <script type="application/javascript">
+  window.quartoScrollableRegionsLabels = {"code":"Scrollbarer Code","output":"Scrollbare Ausgabe"};
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

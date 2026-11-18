@@ -354,7 +354,7 @@ Tabelle&nbsp;1: Werkzeugversionen der Tests und des Tools
 <h2 data-number="3.4" class="anchored" data-anchor-id="sec-regelsammlungen"><span class="header-section-number">3.4</span> Regelsammlungen</h2>
 <section id="festlegung-1" class="level3" data-number="3.4.1">
 <h3 data-number="3.4.1" class="anchored" data-anchor-id="festlegung-1"><span class="header-section-number">3.4.1</span> Festlegung</h3>
-<p>OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen in <code>config/opengrep.toml</code> des Tool-Repositorys: je ein Git-Repository mit festem Commit und den Regelordnern pro Sprache. Welche aktiv sind, legt <code>rulesets</code> dort fest. Im aktuellen Stand sind <code>semgrep-rules</code> und <code>0xdea-semgrep-rules</code> aktiv.</p>
+<p>OpenGrep bringt keine Regeln mit. Die Regelsammlungen stehen im Abschnitt <code>[opengrep]</code> der Konfigurationsdatei <code>code-analysis.toml</code> im Wurzelordner des Tool-Repositorys (bis 13.11.2026 <code>config/opengrep.toml</code>): je ein Git-Repository mit festem Commit und den Regelordnern pro Sprache. Welche aktiv sind, legt <code>active</code> dort fest. Im aktuellen Stand sind <code>semgrep-rules</code> und <code>0xdea-semgrep-rules</code> aktiv.</p>
 <div id="tbl-regelsammlungen" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-regelsammlungen-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -490,6 +490,7 @@ Tabelle&nbsp;3: Regeln pro Sprache, gezählt vom Image-Build am 11.11.2026
 <ul>
 <li>Es laufen alle Regeln der Ordner, neben <code>security</code> auch <code>correctness</code>, <code>best-practice</code>, <code>performance</code> und <code>maintainability</code>.</li>
 <li>Jeder Befund behält Kategorie und Unterkategorie (<code>vuln</code>: wahrscheinlich ausnutzbar, <code>audit</code>: zu prüfen), CWE, OWASP, <code>confidence</code>, <code>likelihood</code> und <code>impact</code>. So kann Schritt 6 filtern.</li>
+<li>Schritt 6 nutzt die Kategorie zur Aufteilung (seit 17.11.2026): <code>security</code>, <code>correctness</code> oder keine Kategorie wird als Sicherheit ausgewertet, jede andere Kategorie als Codequalität (<code>llmEvaluation.qmd</code>).</li>
 </ul></li>
 <li><strong>Umschaltbar und erweiterbar.</strong> Eine neue Sammlung braucht nur einen Eintrag in der Konfigurationsdatei (Repository, Commit, Ordner pro Sprache) und einen Neubau des Images. Der Code ändert sich nicht.</li>
 <li><strong>Prüfung beim Build.</strong> Der Build lädt jede aktive Sammlung zum festen Commit, behält nur die Regeldateien der angegebenen Ordner (<code>*.yaml</code>, <code>*.yml</code>, ohne <code>*.test.yaml</code>) sowie Lizenz- und README-Dateien. Dann lädt er alle Regeln einmal mit OpenGrep. Lehnt OpenGrep eine Regel ab, bricht der Build ab.</li>
@@ -946,7 +947,7 @@ Tabelle&nbsp;6: Regeln von sonar-cxx nach Herkunft
 <ul>
 <li><strong>Herkunft:</strong> Issues kommen aus <code>api/issues/search</code> (nur ungelöste), Security Hotspots aus <code>api/hotspots/search</code> (Status <code>TO_REVIEW</code>).</li>
 <li><strong>Schwere:</strong> aus der höchsten Impact-Schwere: <code>BLOCKER</code>/<code>HIGH</code> → <code>error</code>, <code>MEDIUM</code> → <code>warning</code>, <code>LOW</code>/<code>INFO</code> → <code>note</code>. Bei Hotspots zählt die Prüfpriorität (<code>vulnerabilityProbability</code>).</li>
-<li><strong>Kategorie:</strong> die Softwarequalität dieses Impacts (<code>security</code>, <code>reliability</code>, <code>maintainability</code>). Die Unterkategorie ist der Issue-Typ (<code>bug</code>, <code>vulnerability</code>, <code>code_smell</code>) bzw. <code>hotspot</code>.</li>
+<li><strong>Kategorie:</strong> die Softwarequalität dieses Impacts (<code>security</code>, <code>reliability</code>, <code>maintainability</code>). Die Unterkategorie ist der Issue-Typ (<code>bug</code>, <code>vulnerability</code>, <code>code_smell</code>) bzw. <code>hotspot</code>. Schritt 6 wertet <code>security</code> und <code>reliability</code> (Bugs) als Sicherheit aus, <code>maintainability</code> als Codequalität (<code>llmEvaluation.qmd</code>).</li>
 <li><strong>CWE und OWASP Top 10 2021:</strong>
 <ul>
 <li>Die Web-API liefert sie nicht direkt pro Regel. Das Tool sucht deshalb jede gefundene Regel einzeln mit den Facetten <code>cwe</code> und <code>owaspTop10-2021</code> (<code>api/rules/search</code>).</li>
